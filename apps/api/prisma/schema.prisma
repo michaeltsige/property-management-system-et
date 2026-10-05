@@ -1,0 +1,708 @@
+// Property Management System ET — database schema.
+//
+// Design rules that this schema enforces:
+//  - Multi-tenant from day one: almost every table carries `organizationId`, and
+//    the API scopes every query by it. Cross-organization reads return 404.
+//  - Money is always `BigInt` minor units (santim) plus a currency code. Never
+//    Float, never Decimal-with-rounding-drift.
+//  - Dates that represent a *day* (lease start, due date, period boundaries) are
+//    stored as `DateTime` at UTC midnight — the calendar the user sees is applied
+//    at the boundary by @pms/calendar.
+//  - The ledger is append-only. Corrections create reversing entries; nothing
+//    updates or deletes a posted entry.
+//  - Charge generation is idempotent through
+//    `@@unique([leaseId, periodKey])` on Charge.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Organizations, users, access
+// ---------------------------------------------------------------------------
+
+model Organization {
+  id          String    @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String    @unique
+  status      String    @default("active") // ORG_STATUSES
+  currency    String    @default("ETB")
+  // Organization-wide default; each user may override it (User.calendar).
+  calendar    String    @default("ethiopian")
+  language    String    @default("en")
+  timezone    String    @default("Africa/Addis_Ababa")
+  logoUrl     String?
+  createdById String?   @db.Uuid
+  createdBy   User?     @relation("OrganizationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  memberships  Membership[]
+  settings     OrganizationSetting[]
+  properties   Property[]
+  units        Unit[]
+  tenants      Tenant[]
+  leases       Lease[]
+  charges      Charge[]
+  payments     Payment[]
+  ledger       LedgerEntry[]
+  workOrders   WorkOrder[]
+  vendors      Vendor[]
+  documents    Document[]
+  taxRules     TaxRule[]
+  overrides    TranslationOverride[]
+  notifications Notification[]
+  auditLogs    AuditLog[]
+  idTypes      TenantIdType[]
+
+  @@index([status])
+}
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique
+  phone           String?
+  passwordHash    String
+  fullName        String
+  // Per-user calendar override: null means "use the organization default".
+  calendar        String?
+  language        String    @default("en")
+  isPlatformAdmin Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  lastLoginAt     DateTime?
+  failedLoginCount Int      @default(0)
+  lockedUntil     DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  memberships Membership[]
+  sessions    AuthSession[]
+  auditLogs   AuditLog[]
+  createdOrgs Organization[] @relation("OrganizationCreatedBy")
+}
+
+model AuthSession {
+  id               String    @id @default(uuid()) @db.Uuid
+  userId           String    @db.Uuid
+  // Refresh tokens are stored hashed; the raw value never touches the database.
+  refreshTokenHash String    @unique
+  userAgent        String?
+  ipAddress        String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Membership {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  userId         String    @db.Uuid
+  role           String    // ROLES: owner_admin | manager | accountant | maintenance | tenant
+  status         String    @default("active") // invited | active | disabled
+  invitedById    String?   @db.Uuid
+  invitedAt      DateTime?
+  acceptedAt     DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@index([organizationId, role])
+}
+
+/// Key/value settings per organization. Everything the brief requires to be
+/// "configurable data, not hardcoded" lives here (tax rules, fee policy, ...).
+model OrganizationSetting {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  key            String
+  value          Json
+  updatedById    String?  @db.Uuid
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key])
+}
+
+// ---------------------------------------------------------------------------
+// Ethiopian administrative reference data (editable per organization)
+// ---------------------------------------------------------------------------
+
+model Region {
+  id      String @id @default(uuid()) @db.Uuid
+  code    String @unique
+  name    String
+  nameAm  String?
+  nameOm  String?
+  nameTi  String?
+  type    String @default("region") // region | city_administration
+
+  cities City[]
+}
+
+model City {
+  id       String  @id @default(uuid()) @db.Uuid
+  regionId String  @db.Uuid
+  name     String
+  nameAm   String?
+  region   Region  @relation(fields: [regionId], references: [id], onDelete: Cascade)
+
+  @@unique([regionId, name])
+}
+
+/// Configurable ID document types (kebele ID, Fayda national ID, passport, ...).
+model TenantIdType {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String?  @db.Uuid
+  code           String
+  label          String
+  labelAm        String?
+  requiresBackImage Boolean @default(false)
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  documents    TenantIdDocument[]
+
+  @@unique([organizationId, code])
+}
+
+// ---------------------------------------------------------------------------
+// Portfolio
+// ---------------------------------------------------------------------------
+
+model Property {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  name           String
+  code           String?
+  type           String    // PROPERTY_TYPES
+  status         String    @default("active")
+  // Ethiopian administrative hierarchy + free-text landmark (see addressSchema).
+  regionCode     String?
+  region         String?
+  cityOrZone     String?
+  subCity        String?
+  woreda         String?
+  kebele         String?
+  houseNumber    String?
+  street         String?
+  landmark       String?
+  latitude       Float?
+  longitude      Float?
+  yearBuilt      Int?
+  totalFloors    Int?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  units        Unit[]
+  workOrders   WorkOrder[]
+  documents    Document[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, name])
+}
+
+model Unit {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  propertyId     String    @db.Uuid
+  label          String
+  floor          Int?
+  bedrooms       Int?
+  bathrooms      Int?
+  areaSqm        Float?
+  marketRentMinor BigInt?
+  currency       String    @default("ETB")
+  status         String    @default("vacant") // UNIT_STATUSES
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  leases       Lease[]
+  workOrders   WorkOrder[]
+  documents    Document[]
+
+  @@unique([propertyId, label])
+  @@index([organizationId, status])
+}
+
+model Tenant {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  fullName       String
+  phone          String?
+  altPhone       String?
+  email          String?
+  /** Preferred language for SMS/email; null = the organization default. */
+  language       String?
+  nationality    String?
+  emergencyContactName  String?
+  emergencyContactPhone String?
+  employer       String?
+  notes          String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  leases       Lease[]
+  coLeases     LeaseCoTenant[]
+  idDocuments  TenantIdDocument[]
+  payments     Payment[]
+  charges      Charge[]
+  workOrders   WorkOrder[]
+  documents    Document[]
+
+  @@index([organizationId, fullName])
+  @@index([organizationId, phone])
+}
+
+/// ID numbers are personal data: the number is stored encrypted and only the last
+/// four digits are ever sent to clients. Full access is permission-gated
+/// (`tenants.ids.read`) and audit-logged.
+model TenantIdDocument {
+  id            String    @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  tenantId      String    @db.Uuid
+  idTypeId      String?   @db.Uuid
+  typeCode      String
+  numberEncrypted String
+  numberLast4   String
+  issuedBy      String?
+  issuedAt      DateTime?
+  expiresAt     DateTime?
+  verifiedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  idType TenantIdType? @relation(fields: [idTypeId], references: [id])
+
+  @@index([organizationId, tenantId])
+}
+
+// ---------------------------------------------------------------------------
+// Leases
+// ---------------------------------------------------------------------------
+
+model Lease {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  unitId         String    @db.Uuid
+  tenantId       String    @db.Uuid
+  referenceNumber String?
+  // The calendar this lease is billed in. Periods and due dates are generated in
+  // this calendar (12x30 days + Pagume for `ethiopian`).
+  billingCalendar String   @default("ethiopian")
+  status          String   @default("draft") // LEASE_STATUSES
+  startDate       DateTime @db.Date
+  endDate         DateTime? @db.Date
+  rentAmountMinor BigInt
+  currency        String   @default("ETB")
+  billingFrequency String  @default("monthly")
+  dueDayOfMonth   Int      @default(5)
+  gracePeriodDays Int      @default(0)
+  lateFeePercent  Float?
+  lateFeeFixedMinor BigInt?
+  depositType     String   @default("months_of_rent")
+  depositMonths   Float?
+  depositAmountMinor BigInt?
+  depositHeldMinor BigInt  @default(0)
+  escalationPercent Float?
+  escalationEveryMonths Int?
+  nextEscalationDate DateTime? @db.Date
+  signedAt        DateTime? @db.Date
+  terminatedOn    DateTime? @db.Date
+  terminationReason String?
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  organization Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  unit         Unit           @relation(fields: [unitId], references: [id])
+  tenant       Tenant         @relation(fields: [tenantId], references: [id])
+  coTenants    LeaseCoTenant[]
+  charges      Charge[]
+  payments     Payment[]
+  ledger       LedgerEntry[]
+  documents    Document[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, billingCalendar, nextEscalationDate])
+  @@index([unitId, status])
+}
+
+model LeaseCoTenant {
+  id        String   @id @default(uuid()) @db.Uuid
+  leaseId   String   @db.Uuid
+  tenantId  String   @db.Uuid
+  role      String   @default("co_tenant")
+  createdAt DateTime @default(now())
+
+  lease  Lease  @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([leaseId, tenantId])
+}
+
+// ---------------------------------------------------------------------------
+// Money: charges, payments, append-only ledger
+// ---------------------------------------------------------------------------
+
+model Charge {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  leaseId        String?   @db.Uuid
+  tenantId       String?   @db.Uuid
+  unitId         String?   @db.Uuid
+  type           String    // CHARGE_TYPES
+  description    String?
+  // Billing period in the lease's own calendar: "2019-13" (Pagume 2019).
+  periodKey      String?
+  periodCalendar String?
+  periodStart    DateTime  @db.Date
+  periodEnd      DateTime  @db.Date
+  dueDate        DateTime  @db.Date
+  amountMinor    BigInt
+  currency       String    @default("ETB")
+  paidMinor      BigInt    @default(0)
+  status         String    @default("open") // CHARGE_STATUSES
+  // Set when a late fee was applied, so it is only applied once.
+  lateFeeAppliedAt DateTime?
+  waiverReason   String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  createdById    String?   @db.Uuid
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lease        Lease?       @relation(fields: [leaseId], references: [id])
+  tenant       Tenant?      @relation(fields: [tenantId], references: [id])
+  allocations  PaymentAllocation[]
+  ledger       LedgerEntry[]
+  documents    Document[]
+
+  // Idempotency: generating the same period twice for a lease cannot duplicate.
+  @@unique([leaseId, periodKey, type])
+  @@index([organizationId, status, dueDate])
+  @@index([organizationId, tenantId])
+}
+
+model Payment {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  leaseId        String?   @db.Uuid
+  tenantId       String?   @db.Uuid
+  amountMinor    BigInt
+  currency       String    @default("ETB")
+  method         String    // PAYMENT_METHODS
+  status         String    @default("succeeded") // PAYMENT_STATUSES
+  paidAt         DateTime
+  reference      String?
+  receiptNumber  String?
+  // Provider details for online payments; null for manual records.
+  provider       String?
+  providerRef    String?
+  providerPayload Json?
+  notes          String?
+  recordedById   String?   @db.Uuid
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lease        Lease?              @relation(fields: [leaseId], references: [id])
+  tenant       Tenant?             @relation(fields: [tenantId], references: [id])
+  allocations  PaymentAllocation[]
+  ledger       LedgerEntry[]
+
+  @@index([organizationId, paidAt])
+  @@index([organizationId, status])
+  @@unique([organizationId, receiptNumber])
+  @@unique([provider, providerRef])
+}
+
+model PaymentAllocation {
+  id         String   @id @default(uuid()) @db.Uuid
+  paymentId  String   @db.Uuid
+  chargeId   String   @db.Uuid
+  amountMinor BigInt
+  createdAt  DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  charge  Charge  @relation(fields: [chargeId], references: [id], onDelete: Cascade)
+
+  @@unique([paymentId, chargeId])
+  @@index([chargeId])
+}
+
+/// Append-only. A correction is a new entry with `reversesEntryId` set; rows are
+/// never updated or deleted (enforced by convention in the service layer and by
+/// the absence of update/delete endpoints).
+model LedgerEntry {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  leaseId        String?   @db.Uuid
+  chargeId       String?   @db.Uuid
+  paymentId      String?   @db.Uuid
+  kind           String    // LEDGER_ENTRY_KINDS
+  // Signed amounts: charges and waivers are positive, payments are negative.
+  amountMinor    BigInt
+  currency       String    @default("ETB")
+  occurredAt     DateTime
+  memo           String?
+  reversesEntryId String?  @db.Uuid
+  createdById    String?   @db.Uuid
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  lease        Lease?       @relation(fields: [leaseId], references: [id])
+  charge       Charge?      @relation(fields: [chargeId], references: [id])
+  payment      Payment?     @relation(fields: [paymentId], references: [id])
+  reverses     LedgerEntry? @relation("LedgerReversal", fields: [reversesEntryId], references: [id])
+  reversedBy   LedgerEntry[] @relation("LedgerReversal")
+
+  @@index([organizationId, occurredAt])
+  @@index([chargeId])
+  @@index([leaseId])
+}
+
+// ---------------------------------------------------------------------------
+// Operations: maintenance, vendors, documents
+// ---------------------------------------------------------------------------
+
+model Vendor {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  name           String
+  category       String?
+  phone          String?
+  email          String?
+  tinNumber      String?
+  notes          String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workOrders   WorkOrder[]
+
+  @@index([organizationId, name])
+}
+
+model WorkOrder {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  propertyId     String    @db.Uuid
+  unitId         String?   @db.Uuid
+  tenantId       String?   @db.Uuid
+  vendorId       String?   @db.Uuid
+  ticketNumber   String?
+  title          String
+  description    String?
+  category       String?
+  priority       String    @default("normal")
+  status         String    @default("open")
+  reportedAt     DateTime  @default(now())
+  scheduledFor   DateTime?
+  completedAt    DateTime?
+  estimatedCostMinor BigInt?
+  actualCostMinor    BigInt?
+  currency       String    @default("ETB")
+  createdById    String?   @db.Uuid
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property     Property     @relation(fields: [propertyId], references: [id])
+  unit         Unit?        @relation(fields: [unitId], references: [id])
+  tenant       Tenant?      @relation(fields: [tenantId], references: [id])
+  vendor       Vendor?      @relation(fields: [vendorId], references: [id])
+  documents    Document[]
+
+  @@index([organizationId, status, priority])
+  @@index([organizationId, propertyId])
+}
+
+model Document {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  category       String    // DOCUMENT_CATEGORIES
+  title          String?
+  // Storage abstraction: `local` writes under STORAGE_LOCAL_DIR, `s3` is planned.
+  storageDriver  String    @default("local")
+  storageKey     String
+  mimeType       String
+  sizeBytes      BigInt
+  checksumSha256 String?
+  propertyId     String?   @db.Uuid
+  unitId         String?   @db.Uuid
+  tenantId       String?   @db.Uuid
+  leaseId        String?   @db.Uuid
+  chargeId       String?   @db.Uuid
+  workOrderId    String?   @db.Uuid
+  uploadedById   String?   @db.Uuid
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property     Property?    @relation(fields: [propertyId], references: [id])
+  unit         Unit?        @relation(fields: [unitId], references: [id])
+  tenant       Tenant?      @relation(fields: [tenantId], references: [id])
+  lease        Lease?       @relation(fields: [leaseId], references: [id])
+  charge       Charge?      @relation(fields: [chargeId], references: [id])
+  workOrder    WorkOrder?   @relation(fields: [workOrderId], references: [id])
+
+  @@index([organizationId, category])
+  @@index([organizationId, tenantId])
+}
+
+// ---------------------------------------------------------------------------
+// Notifications, i18n and configuration
+// ---------------------------------------------------------------------------
+
+model Notification {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  templateKey    String
+  channel        String    @default("in_app") // in_app | sms | email
+  recipientUserId String?  @db.Uuid
+  recipientPhone String?
+  recipientEmail String?
+  language       String    @default("en")
+  payload        Json
+  status         String    @default("queued") // queued | sent | failed
+  providerRef    String?
+  error          String?
+  sentAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+}
+
+model TranslationOverride {
+  id             String   @id @default(uuid()) @db.Uuid
+  // null = platform-wide override available to every organization.
+  organizationId String?  @db.Uuid
+  key            String
+  language       String
+  text           String
+  status         String   @default("machine_draft") // machine_draft | unreviewed | reviewed
+  reviewedById   String?  @db.Uuid
+  reviewedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, key, language])
+  @@index([organizationId, language])
+  @@index([status])
+}
+
+/// Edit history for translations: every change keeps the previous text.
+model TranslationRevision {
+  id             String   @id @default(uuid()) @db.Uuid
+  overrideId     String   @db.Uuid
+  previousText   String?
+  newText        String
+  changeType     String // create | update | import | revert
+  changedById    String?  @db.Uuid
+  createdAt      DateTime @default(now())
+
+  @@index([overrideId, createdAt])
+}
+
+/// Tax/legal rules as data with effective dates. `verified` must stay false until
+/// an Ethiopian accountant confirms the numbers (see docs/DECISIONS.md).
+model TaxRule {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  code           String   // TAX_RULE_CODES
+  name           String
+  ratePercent    Float?
+  brackets       Json?
+  appliesToChargeTypes String[]
+  effectiveFrom  DateTime @db.Date
+  effectiveTo    DateTime? @db.Date
+  verified       Boolean  @default(false)
+  verifiedBy     String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, code, effectiveFrom])
+  @@index([organizationId, code])
+}
+
+// ---------------------------------------------------------------------------
+// Audit trail
+// ---------------------------------------------------------------------------
+
+/// Every create/update/delete of financial and lease data is recorded here:
+/// who, when, and before/after snapshots. Written inside the same transaction as
+/// the change it describes.
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String?  @db.Uuid
+  actorUserId    String?  @db.Uuid
+  action         String // create | update | delete | login | export | reversal
+  entityType     String
+  entityId       String?
+  before         Json?
+  after          Json?
+  ipAddress      String?
+  userAgent      String?
+  requestId      String?
+  createdAt      DateTime @default(now())
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  actor        User?         @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, entityType, createdAt])
+  @@index([actorUserId, createdAt])
+}
+
+/// pg-boss owns its own schema, but job runs that matter for the business
+/// (monthly charge generation, reminders) are mirrored here for support and
+/// idempotency checks.
+model JobRun {
+  id          String    @id @default(uuid()) @db.Uuid
+  jobName     String
+  organizationId String? @db.Uuid
+  idempotencyKey String?
+  status      String    @default("running") // running | succeeded | failed
+  startedAt   DateTime  @default(now())
+  finishedAt  DateTime?
+  result      Json?
+  error       String?
+
+  @@unique([jobName, idempotencyKey])
+  @@index([jobName, startedAt])
+}
