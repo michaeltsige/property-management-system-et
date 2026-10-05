@@ -22,9 +22,11 @@ coverage/
 *.log
 npm-debug.log*
 
-# local uploads / storage
-storage/
-uploads/
+# Runtime uploads/storage only. `storage/` would also swallow source folders
+# such as apps/api/src/storage, so these are anchored to where the drivers write.
+/storage/
+/apps/api/storage/
+/uploads/
 
 # editors / os
 .DS_Store
