@@ -68,7 +68,15 @@ async function main(): Promise<void> {
   }
 
   // --- clean slate for the demo organization -------------------------------
+  const force = process.argv.includes('--force') || process.env.SEED_FORCE === '1';
   const existing = await prisma.organization.findUnique({ where: { slug: DEMO_SLUG } });
+  if (existing && !force) {
+    console.warn(
+      `Demo organization "${DEMO_SLUG}" already exists — nothing to do.\n` +
+        'Sign in with owner@demo.test / DemoPass123, or recreate the demo data with: pnpm db:seed:force',
+    );
+    return;
+  }
   if (existing) {
     await prisma.organization.delete({ where: { id: existing.id } });
     console.warn('Removed the previous demo organization (cascades to its data).');
