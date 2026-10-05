@@ -116,7 +116,10 @@ The API suite is integration-first: it truncates the database between tests and 
 ## Architecture and decisions
 
 - `docs/LOCAL_DEV.md` — local and Google Cloud Shell setup, ports, VM-reset recovery.
-- `docs/ARCHITECTURE.md` — how the pieces fit and why.
+- `docs/ROADMAP.md` — the phase plan and what is done, with open questions.
+- `docs/ARCHITECTURE.md` — how the pieces fit and why, plus the domain ERD and MVP scope.
+- `docs/FEATURE_MATRIX.md` — feature-by-feature comparison with the reference projects.
+- `docs/SCREENS.md` — navigation tree and screen inventory.
 - `docs/DECISIONS.md` — ADRs, plus the list of rules that **need a local accountant
   or lawyer** to verify (VAT, rental income tax, stamp duty, lease law, ID-document
   retention) and the assumptions made so far.

@@ -43,6 +43,63 @@ carries `organizationId`; every query is scoped by it; a record from another
 organization returns 404, never 403 (404 leaks nothing). `apps/api/src/test/isolation.test.ts`
 proves it, including writes.
 
+## Domain model
+
+```mermaid
+erDiagram
+    Organization ||--o{ Membership : "has"
+    Organization ||--o{ OrganizationSetting : "settings"
+    Organization ||--o{ Property : owns
+    Organization ||--o{ Tenant : manages
+    Organization ||--o{ Vendor : "contracts"
+    Organization ||--o{ TaxRule : "configures"
+    Organization ||--o{ TranslationOverride : "overrides"
+    Organization ||--o{ AuditLog : "records"
+    User ||--o{ Membership : "belongs via"
+    User ||--o{ AuthSession : "signs in with"
+
+    Property ||--o{ Unit : contains
+    Property ||--o{ WorkOrder : "raised at"
+    Unit ||--o{ Lease : "let by"
+    Tenant ||--o{ Lease : "signs"
+    Tenant ||--o{ TenantIdDocument : "identified by"
+    TenantIdType ||--o{ TenantIdDocument : classifies
+    Lease ||--o{ LeaseCoTenant : "co-tenants"
+    Tenant ||--o{ LeaseCoTenant : "joins"
+
+    Lease ||--o{ Charge : "billed as"
+    Charge ||--o{ PaymentAllocation : "settled by"
+    Payment ||--o{ PaymentAllocation : "applied to"
+    Lease ||--o{ Payment : "received for"
+    Lease ||--o{ LedgerEntry : "posts"
+    Charge ||--o{ LedgerEntry : posts
+    Payment ||--o{ LedgerEntry : posts
+    LedgerEntry ||--o| LedgerEntry : "reversed by"
+
+    Vendor ||--o{ WorkOrder : "assigned to"
+    Property ||--o{ Document : "attaches"
+    Lease ||--o{ Document : "attaches"
+    WorkOrder ||--o{ Document : "attaches"
+    TranslationOverride ||--o{ TranslationRevision : "versioned by"
+```
+
+Notes that matter when reading it:
+
+- **`LedgerEntry` is the single source of truth for money.** `Charge` and `Payment`
+  are the documents a person recognises; both post to the ledger, and a correction is
+  a new row pointing at the one it reverses (`reversesEntryId`). A lease balance is
+  `sum(amountMinor)` over its entries.
+- **`Charge.leaseId` is nullable** by design: ad-hoc and deposit charges exist without
+  a lease period, and a charge always carries the organization for scoping.
+- **`Document` is polymorphic** (nullable `propertyId`/`unitId`/`tenantId`/`leaseId`/
+  `chargeId`/`workOrderId`) rather than one table per entity — one storage path, one
+  checksum, one soft-delete rule.
+- **`TranslationOverride.organizationId` is nullable**: a null row is a global
+  override, a set row is that organization's wording. That is the "override → catalog
+  → English" chain in the database.
+- **`TaxRule.verified`** is the flag that keeps unverified Ethiopian tax values from
+  ever looking authoritative in the UI.
+
 ## Request lifecycle (API)
 
 ```
@@ -149,7 +206,43 @@ update and delete of financial and lease records.
 The API suite truncates the test database between files and refuses to run against a
 database whose name does not end in `_test`.
 
-## Not in Phase 1
+## MVP scope
+
+The MVP is the smallest thing a landlord or managing agent can run their month on,
+in Ethiopia, without a spreadsheet. Defined by the Phase 0 plan and implemented in
+phase 1-2 of this build:
+
+**In scope**
+
+1. Sign up, staff accounts, role-based access, one organization per landlord (SaaS
+   from the first migration, so a second organization costs nothing).
+2. Properties and units with the Ethiopian address structure; unit status.
+3. Tenants with configurable local ID types and encrypted ID documents.
+4. Leases with rent, deposit, due day, grace period, billing calendar and a status
+   lifecycle ending in termination (which frees the unit).
+5. Charges generated per period, idempotently, in the lease's calendar, pro-rated for
+   a mid-period start.
+6. Manual payments (cash, bank transfer, cheque), allocated oldest-charge-first, with
+   partial payment, overpayment as credit, reversals, receipts and statements.
+7. Maintenance work orders with vendors and an enforced status flow.
+8. Documents attached to properties, leases or work orders.
+9. Notifications through a provider interface (mock in the MVP, real provider in v1).
+10. Reports: rent roll, aged arrears, occupancy, collections — with CSV export.
+11. English UI plus Amharic/Afaan Oromo/Tigrigna drafts, the Ethiopian calendar, and
+    a Translation Manager that edits wording without a redeploy.
+
+**Explicitly not in the MVP** (v1 or later, see `docs/FEATURE_MATRIX.md`): live
+Telebirr/Chapa payments and webhooks, late-fee application, PDF invoices and owner
+statements, applications/questionnaires, renewal workflows, tenant portal, PWA,
+mobile app, inspections/parking/IoT, multi-currency.
+
+**Definition of done for the MVP:** a demo organization can run
+property → unit → tenant → lease → generate charges → record a payment → see the
+correct balance and arrears, entirely through the API and the browser, with tests that
+prove the ledger arithmetic, the generation idempotency and cross-organization
+isolation.
+
+## Not in the MVP
 
 Explicitly deferred, with the data model already accommodating them: a tenant
 portal, Telebirr/Chapa live integrations, S3 storage driver, PDF receipts and
