@@ -60,7 +60,7 @@ password: DemoPass123
 
 ```bash
 pnpm dev:all        # Postgres + migrations + seed + api + worker + web (one command)
-pnpm dev            # just the two apps in watch mode (Turborepo)
+pnpm dev            # just the two apps in watch mode (builds @pms/* first)
 pnpm build          # build every workspace (packages first)
 pnpm lint           # ESLint, all workspaces
 pnpm typecheck      # tsc --noEmit, all workspaces
