@@ -253,6 +253,8 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'payment.reference_placeholder': 'ቁጽሪ ስሊፕ ባንክ ወይ ቸክ',
   'payment.recorded': 'ክፍሊት ተመዝጊቡ · ቅብሊት {receipt}',
   'payment.filter_method': 'ብመገዲ ክፍሊት ኣጽሪ',
+  'payment.paid_on': 'ዕለት ክፍሊት',
+  'payment.reference': 'መወከሲ',
   'offline.title': 'ካብ መስመር ወጻኢ ኣለኻ',
   'offline.body': 'ምትእስሳር ተበቲኹ። ቅድሚ ሕጂ ዝኸፈትካዮም ገጻት ኣለዉ፤ ሓድሽ ዳታ ንምርካብ እንደገና ተራኸብ።',
   'offline.retry': 'እንደገና ፈትን',

@@ -253,6 +253,8 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'payment.reference_placeholder': 'የባንክ ስሊፕ ወይም የቼክ ቁጥር',
   'payment.recorded': 'ክፍያ ተመዝግቧል · ደረሰኝ {receipt}',
   'payment.filter_method': 'በአከፋፈል መንገድ ማጣሪያ',
+  'payment.paid_on': 'የክፍያ ቀን',
+  'payment.reference': 'ማጣቀሻ',
   'offline.title': 'ከመስመር ውጭ ነዎት',
   'offline.body': 'ግንኙነቱ ተቋርጧል። ቀደም ብለው የከፈቷቸው ገጾች አሉ፤ አዲስ መረጃ ለማየት እንደገና ይገናኙ።',
   'offline.retry': 'እንደገና ሞክር',

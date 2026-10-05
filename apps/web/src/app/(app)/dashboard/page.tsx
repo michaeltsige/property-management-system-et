@@ -2,18 +2,30 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
+import { Building2, CalendarPlus, UserPlus, Wallet } from 'lucide-react';
 
-import { formatAmount, formatPeriodKey } from '@/lib/format';
+import { formatAmount, formatPeriodKey, todayFor } from '@/lib/format';
 import { useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { api } from '@/lib/api';
-import { todayFor } from '@/lib/format';
 
 import { PageHeader } from '@/components/app-shell';
 import { ArrearsChart, CollectionsChart, MoneyComparisonChart, OccupancyChart } from '@/components/charts';
 import { PeriodPicker } from '@/components/form-controls';
 import { StatCard } from '@/components/stat-card';
-import { Alert, Card, CardContent, CardHeader, CardTitle, EmptyState, Skeleton } from '@/components/ui';
+import { Alert, Button, Card, CardContent, CardHeader, CardTitle, EmptyState, Skeleton } from '@/components/ui';
+
+/**
+ * The four things a landlord does most often. Each link opens the screen with
+ * its create form already open (`?new=1`), so the dashboard is a place to start
+ * work, not just a place to read numbers.
+ */
+const QUICK_ACTIONS = [
+  { href: '/leases?new=1', labelKey: 'dashboard.quick.lease', icon: CalendarPlus },
+  { href: '/payments?new=1', labelKey: 'money.record_payment', icon: Wallet },
+  { href: '/tenants?new=1', labelKey: 'dashboard.quick.tenant', icon: UserPlus },
+  { href: '/properties?new=1', labelKey: 'dashboard.onboarding_cta', icon: Building2 },
+] as const;
 
 export default function DashboardPage() {
   const { t, language, calendar, session } = usePreferences();
@@ -46,6 +58,7 @@ export default function DashboardPage() {
   );
 
   const money = summary.data?.money;
+  const isEmptyPortfolio = !summary.loading && (summary.data?.portfolio.properties ?? 0) === 0;
 
   return (
     <div>
@@ -62,10 +75,45 @@ export default function DashboardPage() {
         }
       />
 
+      <section aria-labelledby="quick-actions" className="mb-4">
+        <h2 id="quick-actions" className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          {t('dashboard.quick_actions')}
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {QUICK_ACTIONS.map((action) => {
+            const Icon = action.icon;
+            return (
+              <Button key={action.href} variant="secondary" size="sm" asChild>
+                <Link href={action.href}>
+                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  {t(action.labelKey)}
+                </Link>
+              </Button>
+            );
+          })}
+        </div>
+      </section>
+
       {summary.error ? (
         <Alert tone="danger" className="mb-4">
           {summary.error}
         </Alert>
+      ) : null}
+
+      {isEmptyPortfolio ? (
+        <Card className="mb-4">
+          <CardContent className="p-0">
+            <EmptyState title={t('dashboard.onboarding_title')} description={t('dashboard.onboarding_body')} />
+            <div className="flex justify-center pb-6">
+              <Button asChild>
+                <Link href="/properties?new=1">
+                  <Building2 className="h-4 w-4" aria-hidden="true" />
+                  {t('dashboard.onboarding_cta')}
+                </Link>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       ) : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -142,6 +190,10 @@ export default function DashboardPage() {
                 expected={Number(money?.expectedMinor ?? 0) / 100}
                 collected={Number(money?.collectedMinor ?? 0) / 100}
                 currencyLabel={currency}
+                ariaLabel={t('dashboard.rent_this_period')}
+                expectedLabel={t('dashboard.expected_rent')}
+                collectedLabel={t('dashboard.collected')}
+                chartDataLabel={t('a11y.chart_data')}
               />
             )}
           </CardContent>
@@ -161,6 +213,9 @@ export default function DashboardPage() {
                 labels={collectionSeries.labels}
                 values={collectionSeries.values}
                 currencyLabel={currency}
+                ariaLabel={t('dashboard.collections_trend')}
+                periodLabel={t('reports.period')}
+                chartDataLabel={t('a11y.chart_data')}
               />
             )}
           </CardContent>
@@ -180,6 +235,10 @@ export default function DashboardPage() {
                   occupied: row.occupiedUnits,
                   vacant: row.vacantUnits,
                 }))}
+                ariaLabel={t('reports.occupancy')}
+                occupiedLabel={t('unit.status.occupied')}
+                vacantLabel={t('unit.status.vacant')}
+                chartDataLabel={t('a11y.chart_data')}
               />
             )}
           </CardContent>
@@ -193,7 +252,13 @@ export default function DashboardPage() {
             {arrears.loading ? (
               <Skeleton className="h-48 w-full" />
             ) : (
-              <ArrearsChart buckets={arrearsSeries} />
+              <ArrearsChart
+                buckets={arrearsSeries}
+                ariaLabel={t('reports.arrears')}
+                bucketLabel={t('reports.period')}
+                currencyLabel={currency}
+                chartDataLabel={t('a11y.chart_data')}
+              />
             )}
           </CardContent>
         </Card>

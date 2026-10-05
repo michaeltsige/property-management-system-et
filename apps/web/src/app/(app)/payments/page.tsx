@@ -7,7 +7,7 @@ import { MANUAL_PAYMENT_METHODS } from '@pms/shared';
 
 import { api } from '@/lib/api';
 import { formatAmount, formatDate } from '@/lib/format';
-import { useAction, useAsync } from '@/lib/hooks';
+import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 
 import { PageHeader } from '@/components/app-shell';
@@ -44,7 +44,7 @@ export default function PaymentsPage() {
   const leases = useAsync(() => api.leases(), []);
   const [open, setOpen] = useState(false);
   const [reverseTarget, setReverseTarget] = useState<string | null>(null);
-  const [reverseReason, setReverseReason] = useState('Bank reversal');
+  const [reverseReason, setReverseReason] = useState('');
   const [form, setForm] = useState({
     leaseId: '',
     method: 'cash' as (typeof MANUAL_PAYMENT_METHODS)[number],
@@ -53,6 +53,8 @@ export default function PaymentsPage() {
   });
   const [amount, setAmount] = useState<number | null>(null);
   const { pending, error, message, setMessage, run } = useAction();
+
+  useAutoOpenModal(() => setOpen(true));
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -67,7 +69,7 @@ export default function PaymentsPage() {
       setOpen(false);
       setAmount(null);
       setForm({ leaseId: '', method: 'cash', reference: '', paidAt: new Date().toISOString().slice(0, 10) });
-      setMessage(`${t('money.receipt_number')}: ${result.receiptNumber}`);
+      setMessage(t('payment.recorded', { receipt: result.receiptNumber }));
       payments.reload();
       leases.reload();
     }).catch(() => undefined);
@@ -78,7 +80,8 @@ export default function PaymentsPage() {
     await run(async () => {
       await api.reversePayment(reverseTarget, reverseReason);
       setReverseTarget(null);
-      setMessage(t('common.save'));
+      setReverseReason('');
+      setMessage(t('payment.reverse'));
       payments.reload();
     }).catch(() => undefined);
   }
@@ -91,7 +94,12 @@ export default function PaymentsPage() {
         titleKey="nav.payments"
         actions={
           <>
-            <Select value={method} onChange={(event) => setMethod(event.target.value)} className="h-9 w-40">
+            <Select
+              value={method}
+              onChange={(event) => setMethod(event.target.value)}
+              className="h-9 w-40"
+              aria-label={t('payment.filter_method')}
+            >
               <option value="">{t('common.filters')}</option>
               {MANUAL_PAYMENT_METHODS.concat(['telebirr', 'chapa'] as never).map((option) => (
                 <option key={option} value={option}>
@@ -134,7 +142,7 @@ export default function PaymentsPage() {
                   <Th>{t('money.method')}</Th>
                   <Th>{t('money.amount')}</Th>
                   <Th>{t('reports.period')}</Th>
-                  <Th>{t('charge.status.paid')}</Th>
+                  <Th>{t('unit.status')}</Th>
                   <Th />
                 </tr>
               </thead>
@@ -157,13 +165,13 @@ export default function PaymentsPage() {
                               : 'warning'
                         }
                       >
-                        {payment.status}
+                        {t(`payment.status.${payment.status}` as never)}
                       </Badge>
                     </Td>
                     <Td>
                       {payment.status === 'succeeded' ? (
                         <Button variant="ghost" size="sm" onClick={() => setReverseTarget(payment.id)}>
-                          {t('common.actions')}
+                          {t('payment.reverse')}
                         </Button>
                       ) : null}
                     </Td>
@@ -232,7 +240,7 @@ export default function PaymentsPage() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="paidAt">{t('reports.period')}</Label>
+            <Label htmlFor="paidAt">{t('payment.paid_on')}</Label>
             <Input
               id="paidAt"
               type="date"
@@ -242,12 +250,12 @@ export default function PaymentsPage() {
           </div>
 
           <div className="space-y-1 sm:col-span-2">
-            <Label htmlFor="reference">{t('money.receipt_number')}</Label>
+            <Label htmlFor="reference">{t('payment.reference')}</Label>
             <Input
               id="reference"
               value={form.reference}
               onChange={(event) => setForm((current) => ({ ...current, reference: event.target.value }))}
-              placeholder="Bank slip / cheque number"
+              placeholder={t('payment.reference_placeholder')}
             />
           </div>
 
@@ -262,29 +270,26 @@ export default function PaymentsPage() {
       <Modal
         open={reverseTarget !== null}
         onOpenChange={(value) => (value ? undefined : setReverseTarget(null))}
-        title={t('common.actions')}
+        title={t('payment.reverse')}
         footer={
           <>
             <Button variant="secondary" onClick={() => setReverseTarget(null)}>
               {t('common.cancel')}
             </Button>
             <Button variant="destructive" disabled={pending} onClick={() => void reverse()}>
-              {pending ? t('app.loading') : t('common.save')}
+              {pending ? t('app.loading') : t('payment.reverse')}
             </Button>
           </>
         }
       >
         <div className="space-y-2">
-          <Label htmlFor="reverse-reason">{t('common.actions')}</Label>
+          <Label htmlFor="reverse-reason">{t('payment.reverse_reason')}</Label>
           <Input
             id="reverse-reason"
             value={reverseReason}
             onChange={(event) => setReverseReason(event.target.value)}
           />
-          <p className="text-[11px] text-slate-500">
-            Reversing posts a mirror entry in the ledger and makes the charges payable again. The original
-            payment stays in the history.
-          </p>
+          <p className="text-[11px] text-slate-500">{t('payment.reverse_hint')}</p>
           {error ? <Alert tone="danger">{error}</Alert> : null}
         </div>
       </Modal>

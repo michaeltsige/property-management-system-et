@@ -17,6 +17,7 @@ import type {
   Ref,
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
+  ThHTMLAttributes,
 } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -34,7 +35,7 @@ export function Input({
     <input
       ref={ref}
       className={cn(
-        'flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-slate-400 focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-60',
+        'flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-slate-500 focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-60',
         className,
       )}
       {...props}
@@ -46,7 +47,7 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
   return (
     <textarea
       className={cn(
-        'flex min-h-20 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-slate-400 focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500',
+        'flex min-h-20 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-slate-500 focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500',
         className,
       )}
       {...props}
@@ -123,7 +124,7 @@ export function Separator({ className, ...props }: React.ComponentProps<typeof S
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-md bg-slate-200', className)} />;
+  return <div aria-hidden="true" className={cn('animate-pulse rounded-md bg-slate-200', className)} />;
 }
 
 const alertVariants = cva('rounded-md border px-3 py-2 text-sm', {
@@ -149,8 +150,10 @@ export function Alert({
   children?: ReactNode;
   className?: string;
 }) {
+  // A failure has to interrupt the screen reader; a confirmation can wait.
+  const role = tone === 'danger' ? 'alert' : 'status';
   return (
-    <div className={cn(alertVariants({ tone }), className)} role="status">
+    <div className={cn(alertVariants({ tone }), className)} role={role}>
       {title ? <p className="font-medium">{title}</p> : null}
       {children}
     </div>
@@ -167,9 +170,14 @@ export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>)
   );
 }
 
-export function Th({ className, ...props }: HTMLAttributes<HTMLTableCellElement>) {
+export function Th({
+  className,
+  scope = 'col',
+  ...props
+}: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
+      scope={scope}
       className={cn(
         'border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500',
         className,

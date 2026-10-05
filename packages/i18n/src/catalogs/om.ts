@@ -254,6 +254,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'payment.reference_placeholder': 'Lakkoofsa waraqaa baankii yookaan chekii',
   'payment.recorded': 'Kaffaltiin galmeeffame · nagahee {receipt}',
   'payment.filter_method': 'Mala kaffaltiitiin calali',
+  'payment.paid_on': 'Guyyaa kaffaltii',
+  'payment.reference': 'Wabii',
   'offline.title': 'Sarara ala jirta',
   'offline.body': 'Qunnamtii addaan cite. Fuulawwan duraa jiran ni argamu; daataa haaraa argachuuf irra deebiʼii wal qunnami.',
   'offline.retry': 'Irra deebiʼi yaali',

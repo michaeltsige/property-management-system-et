@@ -46,6 +46,28 @@ body {
   line-height: 1.75;
 }
 
+/*
+ * Keyboard focus is never optional (WCAG 2.4.7). Components style their own
+ * focus rings; this is the safety net for anything that does not.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}
+
+/* A user who asked the system for less motion gets less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+
 ::selection {
   background: var(--color-brand-200);
 }

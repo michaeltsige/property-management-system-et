@@ -3,6 +3,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 
+import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
 import { Button } from './ui';
@@ -25,6 +26,7 @@ export function Modal({
   footer?: React.ReactNode;
   width?: string;
 }) {
+  const { t } = usePreferences();
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
@@ -43,7 +45,7 @@ export function Modal({
               ) : null}
             </div>
             <Dialog.Close asChild>
-              <Button variant="ghost" size="icon" aria-label="Close">
+              <Button variant="ghost" size="icon" aria-label={t('common.close')}>
                 <X className="h-4 w-4" />
               </Button>
             </Dialog.Close>

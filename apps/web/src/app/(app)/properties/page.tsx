@@ -6,7 +6,7 @@ import { useState } from 'react';
 import { ETHIOPIAN_REGIONS, PROPERTY_TYPES } from '@pms/shared';
 
 import { api } from '@/lib/api';
-import { useAction, useAsync } from '@/lib/hooks';
+import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 
 import { PageHeader } from '@/components/app-shell';
@@ -44,6 +44,7 @@ export default function PropertiesPage() {
   const { t, language } = usePreferences();
   const properties = useAsync(() => api.properties(), []);
   const [open, setOpen] = useState(false);
+  useAutoOpenModal(() => setOpen(true));
   const [form, setForm] = useState(EMPTY_FORM);
   const { pending, error, run } = useAction();
 
