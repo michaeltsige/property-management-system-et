@@ -51,7 +51,8 @@ API_HEAP_MB=512 WEB_HEAP_MB=1024 pnpm dev:all   # if you have memory to spare
 ```
 
 Prefer separate terminals? `pnpm db:deploy && pnpm db:seed`, then `pnpm dev`
-(Turborepo, both apps), `pnpm worker`, `pnpm db:studio`.
+(Turborepo, both apps — it builds the `@pms/*` packages first), `pnpm worker`,
+`pnpm db:studio`.
 
 ---
 
