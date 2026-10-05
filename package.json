@@ -1,0 +1,46 @@
+{
+  "name": "property-management-system-et",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Commercial property management system for property owners and landlords in Ethiopia",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@9.15.4",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "db:generate": "pnpm --filter @pms/api db:generate",
+    "db:migrate": "pnpm --filter @pms/api db:migrate",
+    "db:deploy": "pnpm --filter @pms/api db:deploy",
+    "db:seed": "pnpm --filter @pms/api db:seed",
+    "worker": "pnpm --filter @pms/api worker",
+    "format": "prettier --write \"**/*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,mjs,cjs,json,md,yml,yaml}\"",
+    "audit": "pnpm audit --audit-level=high",
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.2.3",
+    "@commitlint/config-conventional": "^21.2.3",
+    "@eslint/eslintrc": "^3.3.1",
+    "@eslint/js": "^9.39.5",
+    "eslint": "^9.39.5",
+    "globals": "^16.4.0",
+    "husky": "^9.1.7",
+    "prettier": "^3.9.9",
+    "turbo": "^2.11.7",
+    "typescript": "5.9.3",
+    "typescript-eslint": "^8.46.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "postcss@<8.5.23": "^8.5.23",
+      "deepmerge-ts@<8.0.0": "^8.0.0"
+    }
+  }
+}

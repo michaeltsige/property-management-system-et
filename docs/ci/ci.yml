@@ -1,0 +1,93 @@
+# Continuous integration.
+#
+# Copy to `.github/workflows/ci.yml` if the file could not be created directly via
+# the API (a fine-grained token needs the `workflows` permission for that).
+#
+# Everything runs against a real PostgreSQL service: the API test suite is
+# integration-first (it truncates a `_test` database between tests), and RLS-style
+# guarantees cannot be proven against a mock.
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: pms
+          POSTGRES_PASSWORD: pms
+          POSTGRES_DB: pms_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pms"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://pms:pms@localhost:5432/pms_test?schema=public
+      TEST_DATABASE_URL: postgresql://pms:pms@localhost:5432/pms_test?schema=public
+      JWT_ACCESS_SECRET: ci-access-secret-at-least-32-characters-long
+      JWT_REFRESH_SECRET: ci-refresh-secret-at-least-32-characters-long
+      FIELD_ENCRYPTION_KEY: ci-field-encryption-key-at-least-32-chars
+      PAYMENT_PROVIDER: mock
+      SMS_PROVIDER: mock
+      STORAGE_DRIVER: local
+      STORAGE_LOCAL_DIR: ./.test-storage
+      NODE_ENV: test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate the Prisma client
+        run: pnpm --filter @pms/api db:generate
+
+      - name: Build workspaces (packages first, then apps)
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Apply migrations to the test database
+        run: pnpm --filter @pms/api db:deploy
+        env:
+          DATABASE_URL: postgresql://pms:pms@localhost:5432/pms_test?schema=public
+
+      - name: Test
+        run: pnpm test
+
+      # Any critical advisory fails the build. High and moderate findings are
+      # reviewed each phase and either fixed or explicitly accepted in
+      # docs/DECISIONS.md (ADR-0018) — a red build for a documented tooling-only
+      # advisory would train everyone to ignore it.
+      - name: Dependency audit
+        run: pnpm audit --audit-level=critical

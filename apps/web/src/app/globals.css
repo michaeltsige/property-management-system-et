@@ -1,0 +1,55 @@
+@import 'tailwindcss';
+
+/*
+ * Noto Sans Ethiopic is loaded from Google Fonts so the Ge'ez script renders
+ * everywhere (Amharic, Tigrinya). Production deployments should self-host the
+ * font file to avoid a third-party request — see docs/DECISIONS.md (ADR-0012).
+ * If the font never loads, the stack below falls back to system fonts and the
+ * script still renders, just less prettily.
+ */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;500;600;700&display=swap');
+
+@theme {
+  /* Palette: deep Ethiopian green with a gold accent, on neutral slate. */
+  --color-brand-50: #eef7f3;
+  --color-brand-100: #d3ebe1;
+  --color-brand-200: #a7d7c4;
+  --color-brand-300: #74bda3;
+  --color-brand-400: #479e82;
+  --color-brand-500: #2b8168;
+  --color-brand-600: #1d6753;
+  --color-brand-700: #175343;
+  --color-brand-800: #124036;
+  --color-brand-900: #0d2f28;
+  --color-gold-400: #e8b22b;
+  --color-gold-500: #d29a17;
+  --color-gold-600: #a97710;
+
+  --font-sans:
+    'Noto Sans Ethiopic', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/* Amharic/Tigrinya text is a little taller than Latin; give it room to breathe. */
+:lang(am),
+:lang(ti) {
+  line-height: 1.75;
+}
+
+::selection {
+  background: var(--color-brand-200);
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}

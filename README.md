@@ -1,0 +1,142 @@
+# Property Management System — Ethiopia
+
+Commercial property management for property owners and landlords in Ethiopia.
+Built for **ETB**, the **Ethiopian calendar alongside the Gregorian one**, and
+Ethiopian addresses, with English first and Amharic, Afaan Oromo and Tigrigna
+catalogs shipped as (clearly marked) machine drafts.
+
+SaaS from the first migration: one installation serves many organizations, each
+with its own properties, staff, roles, settings, language and calendar.
+
+|        |                                                                |
+| ------ | -------------------------------------------------------------- |
+| Web    | Next.js 15 (App Router), React 19, Tailwind v4, Apache ECharts |
+| API    | Node 20, Express 5, TypeScript, Zod, Prisma                    |
+| Data   | PostgreSQL 17 (only), migrations committed, append-only ledger |
+| Jobs   | pg-boss worker process (`apps/api/src/worker.ts`)              |
+| Shared | `@pms/calendar`, `@pms/shared`, `@pms/i18n`                    |
+| Tests  | Vitest — 8 API integration files plus the three libraries      |
+
+---
+
+## Quick start (clean clone)
+
+```bash
+# 1. Requirements: Node 20+, pnpm 9 (corepack enable), PostgreSQL 17 (or Docker)
+corepack enable && corepack prepare pnpm@9.15.4 --activate
+
+# 2. Start PostgreSQL. With Docker:
+docker compose up -d            # creates pms_dev and pms_test
+# ...or point DATABASE_URL/TEST_DATABASE_URL at any PostgreSQL 15+ server.
+
+# 3. Install
+git clone https://github.com/michaeltsige/property-management-system-et.git
+cd property-management-system-et
+pnpm install
+
+# 4. Configure: copy the example and fill in real values
+cp .env.example .env            # never commit .env
+
+# 5. Create the schema and demo data (fake data only)
+pnpm db:migrate
+pnpm db:seed
+
+# 6. Run
+pnpm dev                        # web on http://localhost:3000, api on :4000
+```
+
+The seed creates a demo organization with two properties, seven units, five
+tenants, three leases, charges for the current period and two payments:
+
+```
+email:    owner@demo.test
+password: DemoPass123
+```
+
+**Those credentials are demo-only.** Delete or change them before any deployment.
+
+## Everyday commands
+
+```bash
+pnpm dev            # both apps in watch mode
+pnpm build          # build every workspace (packages first)
+pnpm lint           # ESLint, all workspaces
+pnpm typecheck      # tsc --noEmit, all workspaces
+pnpm test           # Vitest, all workspaces
+
+pnpm db:generate    # regenerate the Prisma client
+pnpm db:migrate     # create/apply a migration (development)
+pnpm db:deploy      # apply migrations (CI / production)
+pnpm db:seed        # fake demo data
+pnpm worker         # background jobs (pg-boss); never run inside the API process
+pnpm worker -- --once=charges.generate   # one job run, for cron
+pnpm audit          # dependency audit (high and above)
+```
+
+Run a single workspace when you are iterating:
+
+```bash
+pnpm --filter @pms/calendar test
+pnpm --filter @pms/api test
+pnpm --filter @pms/web dev
+```
+
+### Tests need a `_test` database
+
+The API suite is integration-first: it truncates the database between tests and it
+**refuses to run** against a database whose name does not end in `_test`. Set
+`TEST_DATABASE_URL` in `.env` (the docker-compose file creates `pms_test` for you).
+
+## What is in the box
+
+- **Portfolio** — properties, units, tenants with Ethiopian addresses (region,
+  city/zone, sub-city, woreda, kebele, house number, landmark) and configurable
+  local ID types; ID numbers are encrypted at rest and redacted in audit logs.
+- **Leases** — billing calendar per lease, due day, grace period, deposit,
+  escalation, co-tenants, termination (which frees the unit and can refund the
+  deposit).
+- **Money** — monthly charges generated per period (idempotent, pro-rated for a
+  mid-period start), waivers, manual payments (cash, bank transfer, cheque),
+  oldest-first allocation, overpayment as credit, reversing entries, per-lease
+  statements, receipts.
+- **Operations** — vendors, work orders with an enforced status flow, documents
+  (checksummed, MIME- and size-restricted, downloaded through the API),
+  notifications rendered in the recipient's language.
+- **Reporting** — dashboard summary, rent roll, aged arrears, occupancy,
+  collections, each with CSV export, in either calendar.
+- **Administration** — organization settings, members and roles, ID types, and a
+  Translation Manager with review status, per-key history and CSV import/export.
+- **Ethiopian calendar everywhere** — 13-month (12 × 30 + Pagume) date picker,
+  Geʽez numerals, Ethiopian or Gregorian display per organization with a per-user
+  override. Conversion is tested against ICU as an oracle.
+
+## Architecture and decisions
+
+- `docs/ARCHITECTURE.md` — how the pieces fit and why.
+- `docs/DECISIONS.md` — ADRs, plus the list of rules that **need a local accountant
+  or lawyer** to verify (VAT, rental income tax, stamp duty, lease law, ID-document
+  retention) and the assumptions made so far.
+- `docs/API.md` — the REST reference and the background jobs.
+- `docs/REFERENCES.md` — every reference project, its license, and what was (and was
+  not) taken from it.
+- `docs/ci/ci.yml` — the CI workflow; copy it to `.github/workflows/` if the token
+  used to push could not create workflow files.
+
+## Rules of the road
+
+- Business logic lives in `apps/api`; the web app and the future mobile app are
+  clients of the same REST API.
+- Money is integer minor units (santim) plus a currency code. Never a float.
+- Timestamps are UTC in the database; calendars are a boundary concern handled by
+  `@pms/calendar`.
+- Financial and lease records are append-only; corrections are reversing entries.
+- Every query is organization-scoped, and a cross-organization read or write is a
+  404, never a 403.
+- Secrets only from the environment; `.env` is never committed and required variables
+  are validated at startup.
+- Conventional Commits, a branch and a pull request per change, tests with every
+  feature, and **never push to `main`**.
+
+## License
+
+MIT — see `LICENSE`. Third-party attributions: `THIRD_PARTY_NOTICES.md`.
