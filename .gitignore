@@ -1,0 +1,39 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+.next/
+out/
+build/
+*.tsbuildinfo
+
+# env & secrets  (never commit real secrets)
+.env
+.env.*
+!.env.example
+
+# test & tooling caches
+coverage/
+.vitest/
+.turbo/
+.eslintcache
+*.log
+npm-debug.log*
+
+# local uploads / storage
+storage/
+uploads/
+
+# editors / os
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# reference clones must never live inside this repo
+_refs/
+
+# Test uploads
+.test-storage/
