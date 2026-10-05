@@ -143,8 +143,12 @@ pnpm dev:all          # http://localhost:3000, owner@demo.test / DemoPass123
 2. **Phone width (≤ 1024 px):** the same flow through the ☰ drawer. The unit list is
    filtered to vacant units; create a property and a unit first if the demo has none.
 
-To re-run the browser audit (needs a browser; kept outside the repo):
-`node /home/user/_e2e/verify.mjs` with `AUDIT_PAGES=…` against `http://localhost:3000`.
+The browser audit script itself is **not** in this repo: it needs Playwright and a
+downloaded Chromium (~200 MB), which does not belong in a 2 GB development
+environment or in a repository. It lived in the sandbox that produced the evidence and
+is gone with it. What a reviewer can rely on is the committed report — the walkthrough
+steps, every screen's axe-core result and the PWA checks — and the component tests,
+which are in the repo and run in CI.
 
 ## 5. Proposed next steps
 
