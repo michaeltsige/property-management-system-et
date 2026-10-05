@@ -224,6 +224,30 @@ only. Details per project in `docs/REFERENCES.md`, attributions in
 
 ---
 
+## ADR-0018 — Dependency audit: fix what can be fixed, document what cannot
+
+**Accepted.**
+
+`pnpm audit --audit-level=high` runs locally and in CI. Two findings were fixed with
+pnpm overrides rather than by waiting for upstream:
+
+- `postcss` pinned in `next` at 8.4.31 → forced to `^8.5.23` (source-map path
+  traversal and the `</style>` stringify advisory). `next build` and the CSS
+  pipeline still pass.
+- `deepmerge-ts` 7.x inside Prisma's config loader → forced to `^8.0.0` (recursive
+  merge stack exhaustion). `prisma validate` and `prisma generate` verified after.
+
+Three advisories remain and are **accepted with reasons**, re-checked at the start of
+each phase:
+
+| Package                                                                | Severity | Why it is accepted                                                                                                                                                                      |
+| ---------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `braces` (via `@next/eslint-plugin-next` → `fast-glob` → `micromatch`) | high     | ESLint tooling only, never in a deployed artifact. It parses _our own_ glob patterns, not user input, and no patched version exists yet.                                                |
+| `vitest` / `@vitest/mocker`                                            | moderate | Test runner only, pinned at 3.x; the fix ships in vitest 4, which is a major upgrade to schedule deliberately rather than by surprise. Tests execute our own code, not untrusted input. |
+
+There are **no critical or high advisories in any runtime dependency**: the API
+server, the web bundle and the shared packages are unaffected.
+
 ## NEEDS HUMAN VERIFICATION (local accountant / lawyer)
 
 None of the following is a legal opinion, and none of it is enabled by default. Each
