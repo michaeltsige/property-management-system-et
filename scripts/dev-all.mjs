@@ -7,17 +7,22 @@
  *  1. starts PostgreSQL through Docker Compose (skipped, with a warning, when the
  *     Docker daemon is unavailable and a database is already reachable),
  *  2. waits until the database accepts connections,
- *  3. applies migrations (`migrate deploy` — safe to run every time),
- *  4. seeds fake demo data (idempotent: skipped when the demo organization exists),
- *  5. starts the API, the job worker and the web app, all bound to 0.0.0.0.
+ *  3. builds the shared workspace packages (`@pms/*`) — the apps import their
+ *     compiled output, so a clean clone has nothing to run without this step,
+ *  4. applies migrations (`migrate deploy` — safe to run every time),
+ *  5. seeds fake demo data (idempotent: skipped when the demo organization exists),
+ *  6. starts the API, the job worker and the web app, all bound to 0.0.0.0,
+ *  7. waits for the API to answer, and only then prints the summary — if a process
+ *     died, it says so instead of pretending everything is fine.
  *
  * Written for small machines (Google Cloud Shell included, ~2 GB of RAM): the heap
  * caps are sized from the machine's total memory, telemetry is off, each app is
- * started directly from its own `node_modules/.bin` (one Node process per app, no
- * pnpm wrapper in between), and the three processes share one terminal with
- * prefixed output. `Ctrl-C` stops all of them.
+ * started directly from its own node_modules/.bin (one Node process per app, no
+ * pnpm wrapper in between), and the processes share one terminal with prefixed
+ * output. `Ctrl-C` stops all of them.
  *
- * Flags: --port <n> | --skip-docker | --skip-seed | --skip-install | --help
+ * Flags: --port <n> | --skip-docker | --skip-seed | --skip-install | --skip-worker
+ *        --watch-packages | --help
  * Env:   WEB_PORT, API_HEAP_MB, WEB_HEAP_MB, WORKER_HEAP_MB, DATABASE_URL
  */
 
@@ -32,6 +37,7 @@ import { databaseUrlFromEnv, loadEnv } from './with-env.mjs';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const API_DIR = resolve(ROOT, 'apps/api');
 const WEB_DIR = resolve(ROOT, 'apps/web');
+const WORKSPACE_PACKAGES = ['calendar', 'shared', 'i18n'];
 const IN_CLOUD_SHELL = process.env.CLOUD_SHELL === 'true';
 
 /**
@@ -49,7 +55,15 @@ function bin(directory, name) {
 // ---------------------------------------------------------------------------
 
 function parseArgs(argv) {
-  const flags = { docker: true, seed: true, install: true, worker: true, port: undefined, help: false };
+  const flags = {
+    docker: true,
+    seed: true,
+    install: true,
+    worker: true,
+    watchPackages: false,
+    port: undefined,
+    help: false,
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--help' || arg === '-h') flags.help = true;
@@ -57,6 +71,7 @@ function parseArgs(argv) {
     else if (arg === '--skip-seed') flags.seed = false;
     else if (arg === '--skip-install') flags.install = false;
     else if (arg === '--skip-worker') flags.worker = false;
+    else if (arg === '--watch-packages') flags.watchPackages = true;
     else if (arg === '--port') flags.port = argv[++i];
     else if (arg.startsWith('--port=')) flags.port = arg.slice('--port='.length);
     else {
@@ -70,14 +85,15 @@ function parseArgs(argv) {
 const flags = parseArgs(process.argv.slice(2));
 
 if (flags.help) {
-  console.log(`pnpm dev:all — database, migrations, seed, API, worker and web in one command
+  console.log(`pnpm dev:all — packages, database, migrations, seed, API, worker and web
 
-  --port <n>        web port (default ${process.env.WEB_PORT ?? 3000})
-  --skip-docker     never touch Docker; use the DATABASE_URL that is already running
-  --skip-seed       do not run the demo seed
-  --skip-install    do not check that dependencies are installed
-  --skip-worker     do not run the background job worker (saves ~100 MB)
-  --help            this text
+  --port <n>         web port (default ${process.env.WEB_PORT ?? 3000})
+  --skip-docker      never touch Docker; use the DATABASE_URL that is already running
+  --skip-seed        do not run the demo seed
+  --skip-install     do not check that dependencies are installed
+  --skip-worker      do not run the background job worker (saves ~100 MB)
+  --watch-packages   keep rebuilding @pms/* while you edit them (one extra process)
+  --help             this text
 `);
   process.exit(0);
 }
@@ -185,6 +201,8 @@ process.on('SIGINT', () => {
 });
 process.on('SIGTERM', () => shutdown(0));
 
+const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+
 // ---------------------------------------------------------------------------
 // steps
 // ---------------------------------------------------------------------------
@@ -224,7 +242,7 @@ async function waitForDatabase(seconds) {
       log('dev', `waiting for PostgreSQL on ${target.host}:${target.port}…`);
       announced = true;
     }
-    await new Promise((done) => setTimeout(done, 1000));
+    await sleep(1000);
   }
   return false;
 }
@@ -244,7 +262,7 @@ async function startDatabase() {
     log('dev', 'Docker daemon is not running — starting it (Cloud Shell)…');
     await runOnce('dev', 'sudo', ['-n', 'service', 'docker', 'start'], { quiet: true });
     for (let attempt = 0; attempt < 15 && !dockerReady; attempt += 1) {
-      await new Promise((done) => setTimeout(done, 1000));
+      await sleep(1000);
       dockerReady = await dockerInfo();
     }
   }
@@ -259,13 +277,54 @@ async function startDatabase() {
 
 async function ensureDependencies() {
   if (!flags.install) return;
-  if (!existsSync(resolve(ROOT, 'node_modules')) || !existsSync(resolve(ROOT, 'apps/web/node_modules'))) {
+  if (!existsSync(resolve(ROOT, 'node_modules')) || !existsSync(resolve(WEB_DIR, 'node_modules'))) {
     log('dev', 'installing dependencies (first run)…');
     const code = await runOnce('dev', 'pnpm', ['install']);
     if (code !== 0) {
       log('dev', 'pnpm install failed — fix the error above and re-run pnpm dev:all');
       process.exit(code);
     }
+  }
+}
+
+/** The compiled output every app imports; a clean clone has none. */
+function packagesBuilt() {
+  return WORKSPACE_PACKAGES.every((name) => existsSync(resolve(ROOT, 'packages', name, 'dist', 'index.js')));
+}
+
+async function buildPackages() {
+  if (packagesBuilt()) {
+    log('dev', 'workspace packages already built');
+    return;
+  }
+  log('dev', 'building workspace packages (@pms/calendar, @pms/shared, @pms/i18n)');
+  const code = await runOnce('dev', 'pnpm', [
+    'exec',
+    'turbo',
+    'run',
+    'build',
+    '--filter=./packages/*',
+    '--output-logs=errors-only',
+  ]);
+  if (code !== 0 || !packagesBuilt()) {
+    log('dev', 'building the workspace packages failed — the apps cannot start without them');
+    process.exit(code === 0 ? 1 : code);
+  }
+}
+
+/**
+ * The Prisma client is generated by `pnpm install` (apps/api postinstall), but a
+ * schema change, a cleared node_modules or a different package manager can leave it
+ * missing — and then nothing in the API runs at all. Cheap to make certain of.
+ */
+async function generatePrismaClient() {
+  const code = await runOnce('dev', 'pnpm', ['--filter', '@pms/api', 'db:generate'], {
+    quiet: true,
+  });
+  if (code !== 0) {
+    log('dev', 'prisma generate failed — run it yourself to see why:');
+    log('dev', 'pnpm --filter @pms/api db:generate');
+    process.exit(code);
   }
 }
 
@@ -288,6 +347,20 @@ async function seed() {
   }
 }
 
+async function waitForApi(seconds) {
+  const deadline = Date.now() + seconds * 1000;
+  while (Date.now() < deadline && !shuttingDown) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${API_PORT}/api/v1/health`);
+      if (response.ok) return true;
+    } catch {
+      /* not up yet */
+    }
+    await sleep(1000);
+  }
+  return false;
+}
+
 function banner() {
   const preview = IN_CLOUD_SHELL && process.env.WEB_HOST ? `https://${PORT}-${process.env.WEB_HOST}` : null;
   const lines = [
@@ -299,7 +372,9 @@ function banner() {
       ? '    worker   running (charges.generate, charges.overdue-sweep, notifications.send)'
       : '    worker   not started (--skip-worker)',
     '',
-    `  memory: ${TOTAL_MB} MB detected — heaps capped at api ${API_HEAP_MB}, web ${WEB_HEAP_MB}${flags.worker ? `, worker ${WORKER_HEAP_MB}` : ''} MB`,
+    `  memory: ${TOTAL_MB} MB detected — heaps capped at api ${API_HEAP_MB}, web ${WEB_HEAP_MB}${
+      flags.worker ? `, worker ${WORKER_HEAP_MB}` : ''
+    } MB`,
     '          (override with API_HEAP_MB / WORKER_HEAP_MB / WEB_HEAP_MB)',
     '',
     '  demo login: owner@demo.test / DemoPass123   (fake data only)',
@@ -329,16 +404,20 @@ async function main() {
     process.exit(1);
   }
 
+  await buildPackages();
+  await generatePrismaClient();
   await migrate();
   await seed();
 
-  // Capped heaps keep the whole stack comfortable on a 2 GB machine; raise them
-  // with API_HEAP_MB / WEB_HEAP_MB if you have more memory to spare.
   const apiEnv = {
     NODE_OPTIONS: `--max-old-space-size=${API_HEAP_MB}`,
     NODE_ENV: 'development',
   };
-  const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
+
+  if (flags.watchPackages) {
+    log('dev', 'watching workspace packages (tsc --watch)');
+    start('dev', bin(ROOT, 'turbo'), ['run', 'dev', '--filter=./packages/*']);
+  }
 
   start('api', bin(API_DIR, 'tsx'), ['watch', 'src/server.ts'], { cwd: API_DIR, env: apiEnv });
   await sleep(1000); // stagger the starts: three Node processes booting at once spikes RSS
@@ -362,6 +441,13 @@ async function main() {
       API_PROXY_TARGET: process.env.API_PROXY_TARGET ?? `http://127.0.0.1:${API_PORT}`,
     },
   });
+
+  log('dev', 'waiting for the API to answer…');
+  if (!(await waitForApi(90))) {
+    log('dev', 'the API did not come up. The reason is in the [api] lines above.');
+    shutdown(1);
+    return;
+  }
 
   banner();
 }
