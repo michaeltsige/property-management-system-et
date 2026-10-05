@@ -22,28 +22,29 @@ with its own properties, staff, roles, settings, language and calendar.
 ## Quick start (clean clone)
 
 ```bash
-# 1. Requirements: Node 20+, pnpm 9 (corepack enable), PostgreSQL 17 (or Docker)
+# 1. Requirements: Node 20+, pnpm 9 (corepack enable), Docker (or any PostgreSQL 15+)
 corepack enable && corepack prepare pnpm@9.15.4 --activate
 
-# 2. Start PostgreSQL. With Docker:
-docker compose up -d            # creates pms_dev and pms_test
-# ...or point DATABASE_URL/TEST_DATABASE_URL at any PostgreSQL 15+ server.
-
-# 3. Install
+# 2. Clone and install
 git clone https://github.com/michaeltsige/property-management-system-et.git
 cd property-management-system-et
 pnpm install
 
-# 4. Configure: copy the example and fill in real values
+# 3. One env file, at the repository root
 cp .env.example .env            # never commit .env
 
-# 5. Create the schema and demo data (fake data only)
-pnpm db:migrate
-pnpm db:seed
-
-# 6. Run
-pnpm dev                        # web on http://localhost:3000, api on :4000
+# 4. Everything else: Postgres (Docker), migrations, fake demo data, API, worker, web
+pnpm dev:all                    # web http://localhost:3000 · api :4000
 ```
+
+`pnpm dev:all` is idempotent — run it every time you come back. It starts PostgreSQL
+in Docker, waits for it, applies migrations, seeds demo data **only when it is
+missing**, then runs the API, the job worker and the web app with capped heaps so the
+whole stack fits on a small VM.
+
+Running in **Google Cloud Shell**? See **[docs/LOCAL_DEV.md](docs/LOCAL_DEV.md)** for
+the exact steps, the Web Preview port to open, and how to recover after the VM resets
+(short version: `pnpm dev:all`, port 3000).
 
 The seed creates a demo organization with two properties, seven units, five
 tenants, three leases, charges for the current period and two payments:
@@ -58,7 +59,8 @@ password: DemoPass123
 ## Everyday commands
 
 ```bash
-pnpm dev            # both apps in watch mode
+pnpm dev:all        # Postgres + migrations + seed + api + worker + web (one command)
+pnpm dev            # just the two apps in watch mode (Turborepo)
 pnpm build          # build every workspace (packages first)
 pnpm lint           # ESLint, all workspaces
 pnpm typecheck      # tsc --noEmit, all workspaces
@@ -67,7 +69,8 @@ pnpm test           # Vitest, all workspaces
 pnpm db:generate    # regenerate the Prisma client
 pnpm db:migrate     # create/apply a migration (development)
 pnpm db:deploy      # apply migrations (CI / production)
-pnpm db:seed        # fake demo data
+pnpm db:seed        # fake demo data (idempotent: skips when the demo org exists)
+pnpm db:seed:force  # recreate the demo organization from scratch
 pnpm worker         # background jobs (pg-boss); never run inside the API process
 pnpm worker -- --once=charges.generate   # one job run, for cron
 pnpm audit          # dependency audit (high and above)
@@ -112,6 +115,7 @@ The API suite is integration-first: it truncates the database between tests and 
 
 ## Architecture and decisions
 
+- `docs/LOCAL_DEV.md` — local and Google Cloud Shell setup, ports, VM-reset recovery.
 - `docs/ARCHITECTURE.md` — how the pieces fit and why.
 - `docs/DECISIONS.md` — ADRs, plus the list of rules that **need a local accountant
   or lawyer** to verify (VAT, rental income tax, stamp duty, lease law, ID-document
