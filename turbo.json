@@ -22,6 +22,23 @@
     "dev": {
       "cache": false,
       "persistent": true
+    },
+    "db:deploy": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "db:migrate": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "db:seed": {
+      "dependsOn": ["^build"],
+      "cache": false
+    },
+    "worker": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
     }
   },
   "globalPassThroughEnv": [
