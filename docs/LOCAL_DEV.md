@@ -6,18 +6,34 @@ One command starts everything:
 pnpm dev:all
 ```
 
-It starts PostgreSQL in Docker, waits for it, applies migrations, seeds fake demo
-data, then runs the **API**, the **job worker** and the **web app** with prefixed
-output in one terminal. `Ctrl-C` stops all three.
+It builds the shared packages, starts PostgreSQL in Docker, waits for it, applies
+migrations, seeds fake demo data, then runs the **API**, the **job worker** and the
+**web app** with prefixed output in one terminal. `Ctrl-C` stops all three.
 
 ```
+[dev   ] building workspace packages (@pms/calendar, @pms/shared, @pms/i18n)
 [dev   ] docker compose up -d postgres
 [dev   ] pnpm --filter @pms/api db:deploy
 [dev   ] pnpm --filter @pms/api db:seed
 [api   ] pms-api listening {"port":4000}
 [worker] worker started {"queues":["charges.generate","charges.overdue-sweep","notifications.send"]}
 [web   ] ▲ Next.js 15.5.27 → http://0.0.0.0:3000
+[dev   ] ready: web :3000 · api :4000 · demo owner@demo.test / DemoPass123
 ```
+
+Two steps exist because a clean clone cannot run without them, and both used to be
+missing:
+
+- **`@pms/*` are built first.** The apps import their _compiled_ output
+  (`packages/*/dist`), which a fresh clone does not have. `pnpm dev:all` builds them
+  and fails loudly if that build fails.
+- **The Prisma client is generated on install.** `apps/api` has a `postinstall` that
+  runs `prisma generate`, and `pnpm dev:all` runs it again before migrating, because
+  not every package manager runs dependency build scripts.
+
+Editing a package while the stack runs? Pass `--watch-packages` and `tsc --watch`
+rebuilds `@pms/*` as you type (one extra process; skip it on a small VM and re-run
+`pnpm dev:all` instead).
 
 | URL                                   | What                                    |
 | ------------------------------------- | --------------------------------------- |
@@ -26,8 +42,8 @@ output in one terminal. `Ctrl-C` stops all three.
 | `owner@demo.test` / `DemoPass123`     | demo login — **fake data only**         |
 
 Useful flags: `--port <n>` (web port), `--skip-docker`, `--skip-seed`,
-`--skip-install`. Memory knobs: `API_HEAP_MB` (default 384) and `WEB_HEAP_MB`
-(default 768).
+`--skip-install`, `--skip-worker`, `--watch-packages`. Memory knobs: `API_HEAP_MB`,
+`WORKER_HEAP_MB` and `WEB_HEAP_MB` (sized automatically from the machine's RAM).
 
 ```bash
 WEB_PORT=8080 pnpm dev:all        # different port
