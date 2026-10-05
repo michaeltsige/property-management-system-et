@@ -263,16 +263,17 @@ export const EN_CATALOG = {
   'payment.status.reversed': 'Reversed',
   'payment.reverse': 'Reverse payment',
   'payment.reverse_reason': 'Reason for reversal',
-  'payment.reverse_hint': 'Reversing posts a mirror entry in the ledger and makes the charges payable again. The original payment stays in history.',
+  'payment.reverse_hint':
+    'Reversing posts a mirror entry in the ledger and makes the charges payable again. The original payment stays in history.',
   'payment.reference_placeholder': 'Bank slip or cheque number',
   'payment.recorded': 'Payment recorded · receipt {receipt}',
   'payment.filter_method': 'Filter by method',
   'payment.paid_on': 'Payment date',
   'payment.reference': 'Reference',
   'offline.title': 'You are offline',
-  'offline.body': 'The connection dropped. Pages you loaded earlier are still here; reconnect for fresh figures.',
+  'offline.body':
+    'The connection dropped. Pages you loaded earlier are still here; reconnect for fresh figures.',
   'offline.retry': 'Try again',
-
 } as const;
 
 export type TranslationKey = keyof typeof EN_CATALOG;

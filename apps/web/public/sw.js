@@ -14,20 +14,25 @@
  * Bump VERSION whenever the caching rules change; the activate step deletes
  * every cache from other versions.
  */
-const VERSION = 'pms-shell-v1';
+const VERSION = 'pms-shell-v2';
 const OFFLINE_URL = '/offline';
-const PRECACHE = [
-  OFFLINE_URL,
-  '/manifest.webmanifest',
-  '/icons/icon-192.png',
-  '/icons/icon-512.png',
-];
+const PRECACHE = [OFFLINE_URL, '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
     (async () => {
       const cache = await caches.open(VERSION);
       await cache.addAll(PRECACHE);
+
+      // The offline page is a Next.js route: its HTML points at hashed chunks.
+      // Caching the document alone would load markup whose script never runs, so
+      // read the document and cache every build asset it references.
+      const response = await fetch(OFFLINE_URL, { cache: 'reload' });
+      await cache.put(OFFLINE_URL, response.clone());
+      const html = await response.text();
+      const assets = [...html.matchAll(/(?:src|href)="(\/_next\/static\/[^"]+)"/g)].map((match) => match[1]);
+      if (assets.length > 0) await cache.addAll([...new Set(assets)]);
+
       await self.skipWaiting();
     })(),
   );

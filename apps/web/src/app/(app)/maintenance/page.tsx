@@ -95,7 +95,12 @@ export default function MaintenancePage() {
         }`}
         actions={
           <>
-            <Select value={status} onChange={(event) => setStatus(event.target.value)} className="h-9 w-40">
+            <Select
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+              className="h-9 w-40"
+              aria-label={t('unit.status')}
+            >
               <option value="">{t('common.filters')}</option>
               {WORK_ORDER_STATUSES.map((option) => (
                 <option key={option} value={option}>

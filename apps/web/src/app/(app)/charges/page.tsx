@@ -84,7 +84,12 @@ export default function ChargesPage() {
               calendar={calendar}
               label={t('reports.period')}
             />
-            <Select value={status} onChange={(event) => setStatus(event.target.value)} className="h-9 w-36">
+            <Select
+              value={status}
+              onChange={(event) => setStatus(event.target.value)}
+              className="h-9 w-36"
+              aria-label={t('unit.status')}
+            >
               <option value="">{t('common.filters')}</option>
               <option value="open">{t('charge.status.open')}</option>
               <option value="partial">{t('charge.status.partial')}</option>

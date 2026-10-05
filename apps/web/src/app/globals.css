@@ -23,11 +23,14 @@
   --color-brand-900: #0d2f28;
   --color-gold-400: #e8b22b;
   --color-gold-500: #d29a17;
-  --color-gold-600: #a97710;
+  /* gold-600 and up are the text-safe steps: #a97710 measured 3.5:1 on the gold
+     tint and white on #d29a17 only 2.5:1, both below WCAG AA. */
+  --color-gold-600: #8a5f0c;
+  --color-gold-700: #6f4c09;
 
   --font-sans:
-    'Noto Sans Ethiopic', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
+    'Noto Sans Ethiopic', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -66,7 +69,6 @@ body {
     scroll-behavior: auto !important;
   }
 }
-
 
 ::selection {
   background: var(--color-brand-200);

@@ -258,5 +258,4 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'offline.title': 'ካብ መስመር ወጻኢ ኣለኻ',
   'offline.body': 'ምትእስሳር ተበቲኹ። ቅድሚ ሕጂ ዝኸፈትካዮም ገጻት ኣለዉ፤ ሓድሽ ዳታ ንምርካብ እንደገና ተራኸብ።',
   'offline.retry': 'እንደገና ፈትን',
-
 };

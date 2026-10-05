@@ -170,11 +170,7 @@ export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>)
   );
 }
 
-export function Th({
-  className,
-  scope = 'col',
-  ...props
-}: ThHTMLAttributes<HTMLTableCellElement>) {
+export function Th({ className, scope = 'col', ...props }: ThHTMLAttributes<HTMLTableCellElement>) {
   return (
     <th
       scope={scope}

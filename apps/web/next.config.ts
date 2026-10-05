@@ -30,10 +30,21 @@ const nextConfig: NextConfig = {
    * Dev-only: Next blocks cross-origin requests to `/_next/*` assets and HMR
    * endpoints unless the origin is allowed. Cloud Shell's Web Preview serves the
    * app from `https://<port>-<vm>.cloudshell.dev`, and the sandbox preview uses a
-   * similar host, so both are allowed here. Production traffic never reaches
-   * `next dev`, so nothing is relaxed in a real deployment.
+   * similar host, so both are allowed here. `localhost` and `127.0.0.1` are the
+   * same machine but not the same origin to Next, and a developer who types the
+   * IP instead of the name would otherwise get a page that never hydrates (the
+   * HTML loads, the JavaScript chunks are refused, no error is shown to them).
+   * Production traffic never reaches `next dev`, so nothing is relaxed in a real
+   * deployment.
    */
-  allowedDevOrigins: ['*.cloudshell.dev', '**.cloudshell.dev', '*.e2b.app', '**.e2b.app'],
+  allowedDevOrigins: [
+    'localhost',
+    '127.0.0.1',
+    '*.cloudshell.dev',
+    '**.cloudshell.dev',
+    '*.e2b.app',
+    '**.e2b.app',
+  ],
 
   async rewrites() {
     return [

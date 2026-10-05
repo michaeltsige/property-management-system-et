@@ -283,11 +283,16 @@ export interface CollectionRow {
   byMethod: Record<string, string>;
 }
 
+/** A membership row, as `GET /api/v1/organizations/members` returns it. */
 export interface Member {
   id: string;
+  userId: string;
+  email: string;
+  fullName: string;
   role: string;
   status: string;
-  user: { id: string; email: string; fullName: string; language: string };
+  lastLoginAt: string | null;
+  createdAt: string;
 }
 
 export interface TenantIdType {

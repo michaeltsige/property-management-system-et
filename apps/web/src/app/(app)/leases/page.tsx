@@ -353,11 +353,7 @@ export default function LeasesPage() {
             <Button variant="secondary" onClick={() => setTerminateId(null)}>
               {t('common.cancel')}
             </Button>
-            <Button
-              variant="destructive"
-              disabled={pending}
-              onClick={() => void terminate(terminateReason)}
-            >
+            <Button variant="destructive" disabled={pending} onClick={() => void terminate(terminateReason)}>
               {pending ? t('app.loading') : t('lease.terminate')}
             </Button>
           </>

@@ -58,13 +58,7 @@ export function EChart({
 
   return (
     <div>
-      <div
-        ref={container}
-        role="img"
-        aria-label={ariaLabel}
-        style={{ height }}
-        className="w-full"
-      />
+      <div ref={container} role="img" aria-label={ariaLabel} style={{ height }} className="w-full" />
       {summary ? (
         <table className="sr-only">
           <caption>{summary.caption}</caption>
@@ -179,7 +173,13 @@ export function CollectionsChart({
           trigger: 'axis',
           valueFormatter: (value) => `${currencyLabel} ${Number(value).toLocaleString()}`,
         },
-        xAxis: { type: 'category', data: labels, axisLabel: { fontSize: 10 } },
+        xAxis: {
+          type: 'category',
+          data: labels,
+          // 13 Ethiopian months do not fit across a phone; drop labels rather
+          // than draw them on top of each other.
+          axisLabel: { fontSize: 10, hideOverlap: true },
+        },
         yAxis: { type: 'value', axisLabel: { formatter: (value: number) => value.toLocaleString() } },
         series: [
           {
@@ -279,7 +279,11 @@ export function ArrearsChart({
       option={{
         grid: { left: 8, right: 8, top: 24, bottom: 8, containLabel: true },
         tooltip: { trigger: 'axis', valueFormatter: (value) => Number(value).toLocaleString() },
-        xAxis: { type: 'category', data: buckets.map((bucket) => bucket.label), axisLabel: { fontSize: 10 } },
+        xAxis: {
+          type: 'category',
+          data: buckets.map((bucket) => bucket.label),
+          axisLabel: { fontSize: 10, hideOverlap: true },
+        },
         yAxis: { type: 'value', axisLabel: { formatter: (value: number) => value.toLocaleString() } },
         series: [
           {

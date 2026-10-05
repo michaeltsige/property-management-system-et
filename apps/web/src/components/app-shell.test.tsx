@@ -84,10 +84,7 @@ describe('AppShell', () => {
     // way to close it.
     const drawer = screen.getByRole('dialog');
     expect(within(drawer).getByRole('link', { name: 'Tenants' })).toBeInTheDocument();
-    expect(within(drawer).getByRole('link', { name: 'Dashboard' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    expect(within(drawer).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page');
     expect(within(drawer).getByRole('button', { name: 'Close' })).toBeInTheDocument();
     expect(within(drawer).getByLabelText('Language')).toBeInTheDocument();
 

@@ -44,6 +44,7 @@ import { api } from '@/lib/api';
 import { formatPeriodKey, todayFor } from '@/lib/format';
 import { useDocumentTitle } from '@/lib/hooks';
 import { CALENDARS, LANGUAGES, usePreferences } from '@/lib/preferences';
+import { ROLE_LABEL_FALLBACK } from '@/lib/roles';
 import { cn } from '@/lib/utils';
 
 import { Badge, Button } from './ui';
@@ -125,9 +126,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                     onClick={onNavigate}
                     className={cn(
                       'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
-                      active
-                        ? 'bg-brand-50 font-medium text-brand-800'
-                        : 'text-slate-600 hover:bg-slate-100',
+                      active ? 'bg-brand-50 font-medium text-brand-800' : 'text-slate-600 hover:bg-slate-100',
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -214,6 +213,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const today = todayFor(calendar);
+  // An empty role would show the raw key ("role.undefined") in the header.
+  const roleLabel = session.role ? t(`role.${session.role}` as never) : ROLE_LABEL_FALLBACK;
 
   async function handleSignOut() {
     try {
@@ -274,7 +275,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
                   <p className="truncate text-xs font-medium text-slate-800">{session.user.fullName}</p>
-                  <p className="truncate text-[11px] text-slate-500">{t(`role.${session.role}` as never)}</p>
+                  <p className="truncate text-[11px] text-slate-500">{roleLabel}</p>
                 </div>
                 <Button
                   variant="ghost"
@@ -318,7 +319,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="hidden items-center gap-2 border-l border-slate-200 pl-3 sm:flex">
               <div className="text-right">
                 <p className="text-xs font-medium text-slate-800">{session.user.fullName}</p>
-                <p className="text-[11px] text-slate-500">{t(`role.${session.role}` as never)}</p>
+                <p className="text-[11px] text-slate-500">{roleLabel}</p>
               </div>
               <Button
                 variant="ghost"

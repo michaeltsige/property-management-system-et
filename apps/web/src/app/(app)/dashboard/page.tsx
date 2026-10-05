@@ -13,7 +13,16 @@ import { PageHeader } from '@/components/app-shell';
 import { ArrearsChart, CollectionsChart, MoneyComparisonChart, OccupancyChart } from '@/components/charts';
 import { PeriodPicker } from '@/components/form-controls';
 import { StatCard } from '@/components/stat-card';
-import { Alert, Button, Card, CardContent, CardHeader, CardTitle, EmptyState, Skeleton } from '@/components/ui';
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Skeleton,
+} from '@/components/ui';
 
 /**
  * The four things a landlord does most often. Each link opens the screen with
@@ -58,6 +67,7 @@ export default function DashboardPage() {
   );
 
   const money = summary.data?.money;
+  const rentDueMinor = Number(money?.expectedMinor ?? 0) - Number(money?.collectedMinor ?? 0);
   const isEmptyPortfolio = !summary.loading && (summary.data?.portfolio.properties ?? 0) === 0;
 
   return (
@@ -103,7 +113,10 @@ export default function DashboardPage() {
       {isEmptyPortfolio ? (
         <Card className="mb-4">
           <CardContent className="p-0">
-            <EmptyState title={t('dashboard.onboarding_title')} description={t('dashboard.onboarding_body')} />
+            <EmptyState
+              title={t('dashboard.onboarding_title')}
+              description={t('dashboard.onboarding_body')}
+            />
             <div className="flex justify-center pb-6">
               <Button asChild>
                 <Link href="/properties?new=1">
@@ -165,11 +178,9 @@ export default function DashboardPage() {
         />
         <StatCard
           label={t('money.rent_due')}
-          value={formatAmount(
-            money?.expectedMinor ? String(Number(money.expectedMinor) - Number(money.collectedMinor)) : '0',
-            currency,
-            language,
-          )}
+          // Over-collected periods are real (a tenant pays ahead), but "rent due"
+          // can never be negative: the arrears card carries the balance picture.
+          value={formatAmount(String(Math.max(0, rentDueMinor)), currency, language)}
           loading={summary.loading}
         />
       </div>

@@ -238,6 +238,9 @@ export async function login(
 
   return {
     tokens,
+    // The role this session was issued for. `memberships` below lists every
+    // organization the user belongs to; this is the one they are now acting in.
+    role: membership.role,
     user: {
       id: user.id,
       email: user.email,

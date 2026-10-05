@@ -195,7 +195,10 @@ export const api = {
       tokens: { accessToken: string; refreshToken: string };
       user: StoredSession['user'];
       organization: StoredSession['organization'];
+      /** The role this session acts as. */
       role: string;
+      /** Every organization the user can switch to. */
+      memberships: { organizationId: string; name: string; slug: string; role: string }[];
     }>('/auth/login', { method: 'POST', body, anonymous: true }),
   logout: () =>
     apiFetch<void>('/auth/logout', { method: 'POST', body: { refreshToken: loadSession()?.refreshToken } }),

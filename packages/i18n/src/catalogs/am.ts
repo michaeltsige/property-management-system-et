@@ -258,5 +258,4 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'offline.title': 'ከመስመር ውጭ ነዎት',
   'offline.body': 'ግንኙነቱ ተቋርጧል። ቀደም ብለው የከፈቷቸው ገጾች አሉ፤ አዲስ መረጃ ለማየት እንደገና ይገናኙ።',
   'offline.retry': 'እንደገና ሞክር',
-
 };

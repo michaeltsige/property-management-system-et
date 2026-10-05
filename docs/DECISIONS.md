@@ -372,6 +372,100 @@ shows them as unverified.
     payloads must come from official sandbox documentation and credentials. Until
     then, `PROVIDER_NOT_CONFIGURED` is the correct behaviour.
 
+## ADR-0023 — A phone is a first-class way to use this product
+
+**Context.** The shell rendered a sidebar at `lg` and up and _nothing_ below it. A
+landlord on a phone could sign in and see the dashboard, and could not reach any
+other screen. Ethiopia is a mobile-first market; a product that only works on a
+laptop is not the product we were asked for. Phase 3 also asked for "PWA basics".
+
+**Decision.** Below `lg`, the navigation moves into a Radix-dialog drawer with the
+same links, the same active-page marking and the language/calendar controls, and
+every create screen can be opened from the dashboard with `?new=1`. The app ships a
+manifest, an icon set and a service worker with three deliberate rules: static build
+assets and icons are cached; page navigations are network-first with an offline
+fallback; **`/api/*` is never cached**. The worker never replays a failed write, so
+"record a payment" is always a live request.
+
+**Consequences.** A phone user can do the whole job — create a property, a unit, a
+lease, record rent — which is what the Phase 3 acceptance criterion asks. Offline is
+honest rather than clever: the previously loaded page or a plain "you are offline"
+screen, never stale money. A background-sync queue is deliberately not built; when
+it is, it belongs in a later phase with server-side idempotency keys to match.
+
+**Rejected.** Cache-first page shells (serve stale application code, hard to
+invalidate); caching GETs of financial data (a screen showing yesterday's arrears as
+if it were today's); making the sidebar a horizontal scroller (13 months × 12 rows of
+navigation does not scroll well, and it hides the labels that make it usable).
+
+## ADR-0024 — Accessibility is tested, not asserted
+
+**Context.** Phase 3 asks for "states, filters, pagination, forms" and an
+accessibility pass. Manual review of twelve screens does not scale, and this project
+is worked on by an agent that must be able to prove its claims.
+
+**Decision.** Accessibility is enforced by machine-checkable rules with a human
+reading of the results:
+
+1. Every screen carries an explicit focus ring (a global `:focus-visible` fallback),
+   a document title (`useDocumentTitle`), and a skip link to `#main`.
+2. Every icon-only control has an `aria-label`; every filter `<select>` has a name;
+   every form control either has a visible `<label>` or an `aria-label`.
+3. Charts — `canvas`, and therefore opaque to assistive technology — are exposed as
+   `role="img"` with a descriptive label **and** the same numbers as a visually
+   hidden table. This is also the graceful fallback when the canvas cannot draw.
+4. Text and UI colours meet WCAG AA. The gold accent was darkened from `#a97710`
+   (measured 3.5:1) to `#8a5f0c` (5.0:1 on the gold tint, 5.6:1 on white) and the
+   white-on-gold button moved to `#8a5f0c` (5.6:1). Every change here came from a
+   measured axe-core violation, not from taste.
+5. `apps/web` has a jsdom component-test layer (Testing Library + Vitest) that locks
+   the behaviours a refactor would quietly break: skip link, `aria-current`, the
+   drawer's focus trap and labelled controls, the chart text tables, and the
+   `?new=1` deep link.
+
+**Consequences.** `pnpm --filter @pms/web test` fails if someone removes the chart
+labels or the drawer's close control. The full-page audit (axe-core over all 12
+screens in a real browser, both phone and laptop widths) is run at the end of the
+phase and its report is committed — it is evidence for a reviewer, not a CI gate,
+because it needs a browser and a seeded database.
+
+**Honest limits.** Automated rules catch roughly a third of real accessibility
+problems. Colour contrast, focus order, labels and landmarks are covered; "is this
+sentence understandable, is this flow logical, does the screen reader announcement
+make sense" was not tested with a person who uses a screen reader. That review is
+listed as an open issue in the Phase 3 report.
+
+## ADR-0025 — The browser is the acceptance test
+
+**Context.** Phase 3's acceptance criterion is behavioural: _a non-technical user
+completes lease → payment on a laptop and at phone width_. Unit tests and curl
+against an API cannot demonstrate that, and the first real browser run proved the
+point by finding five defects that every existing test had passed over:
+
+1. `GET /organizations/members` returns a **flat** row (`{id, userId, email,
+fullName, role, status}`) while the web client's `Member` type declared a nested
+   `user` object — the Settings screen crashed on render for every user.
+2. `POST /auth/login` returned `memberships[]` but no top-level `role`, so the shell
+   rendered the literal `role.undefined` in the header and drawer of every page.
+3. Next's dev server blocks `/_next/*` for an origin it does not recognise. Reaching
+   the app as `http://127.0.0.1:3000` (rather than `localhost`) served HTML whose
+   JavaScript was refused: the login form fell back to a native submit and reloaded.
+4. `MoneyInput` rendered its label without `htmlFor`/`id`, so the amount fields had
+   no accessible name and the label was not a click target.
+5. The gold accent (`#a97710` text, white on `#d29a17`) failed WCAG AA contrast.
+
+**Decision.** Each phase's browser-driven acceptance test is part of the phase, and
+its artefacts are committed: screenshots at both widths plus a machine-readable
+report (`docs/screenshots/phase-3/verification-report.json`) containing the
+walkthrough steps, the axe-core result per screen, and the PWA checks. Two contract
+tests were added where the mismatch was invisible to TypeScript (`api` test asserting
+the flat member shape and the login session shape).
+
+**Consequences.** The walkthrough is reproducible by anyone with a seeded database
+(the script is kept out of the repo because it needs Playwright; the report and the
+screenshots are in it). Regenerating the evidence after a UI change is a deliberate
+act, and the report states plainly what it did not check.
+
 ## Deferred decisions (recorded, not yet made)
 
 - **Mobile app** (`apps/mobile`, Expo): the API already supports it; deliberately not

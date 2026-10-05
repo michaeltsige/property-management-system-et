@@ -28,7 +28,9 @@ export default function LoginPage() {
         refreshToken: result.tokens.refreshToken,
         user: result.user,
         organization: result.organization,
-        role: result.role,
+        // `memberships` is the server's full list; `role` is the one this
+        // session owns. The fallback keeps a label on screen if that ever drifts.
+        role: result.role ?? result.memberships[0]?.role ?? '',
       });
       router.replace('/dashboard');
     } catch (cause) {

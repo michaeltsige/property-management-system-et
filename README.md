@@ -124,6 +124,8 @@ The API suite is integration-first: it truncates the database between tests and 
   or lawyer** to verify (VAT, rental income tax, stamp duty, lease law, ID-document
   retention) and the assumptions made so far.
 - `docs/API.md` — the REST reference and the background jobs.
+- `docs/PHASE_3_REPORT.md` — what the web UI phase changed, what the browser found,
+  and what is still unverified. Evidence in `docs/screenshots/phase-3/`.
 - `docs/REFERENCES.md` — every reference project, its license, and what was (and was
   not) taken from it.
 - `docs/ci/ci.yml` — the CI workflow; copy it to `.github/workflows/` if the token

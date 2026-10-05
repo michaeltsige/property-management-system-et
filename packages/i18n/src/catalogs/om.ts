@@ -250,14 +250,15 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'payment.status.reversed': 'Deebiʼe',
   'payment.reverse': 'Kaffaltii deebisi',
   'payment.reverse_reason': 'Sababa deebisuu',
-  'payment.reverse_hint': 'Deebisuun galmee keessatti galmee fakkaatu uuma; kaffaltiin irra deebiʼee kaffalamuu dandaʼa. Kaffaltiin jalqabaa seenaa keessa tura.',
+  'payment.reverse_hint':
+    'Deebisuun galmee keessatti galmee fakkaatu uuma; kaffaltiin irra deebiʼee kaffalamuu dandaʼa. Kaffaltiin jalqabaa seenaa keessa tura.',
   'payment.reference_placeholder': 'Lakkoofsa waraqaa baankii yookaan chekii',
   'payment.recorded': 'Kaffaltiin galmeeffame · nagahee {receipt}',
   'payment.filter_method': 'Mala kaffaltiitiin calali',
   'payment.paid_on': 'Guyyaa kaffaltii',
   'payment.reference': 'Wabii',
   'offline.title': 'Sarara ala jirta',
-  'offline.body': 'Qunnamtii addaan cite. Fuulawwan duraa jiran ni argamu; daataa haaraa argachuuf irra deebiʼii wal qunnami.',
+  'offline.body':
+    'Qunnamtii addaan cite. Fuulawwan duraa jiran ni argamu; daataa haaraa argachuuf irra deebiʼii wal qunnami.',
   'offline.retry': 'Irra deebiʼi yaali',
-
 };
