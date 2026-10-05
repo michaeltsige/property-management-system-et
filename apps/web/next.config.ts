@@ -42,6 +42,26 @@ const nextConfig: NextConfig = {
       { source: '/api/:path*', destination: `${apiTarget}/api/:path*` },
     ];
   },
+
+  /**
+   * A stale service worker can pin users to an obsolete build forever, so the
+   * worker itself and its manifest are never cached by anything in between.
+   */
+  async headers() {
+    return [
+      {
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Service-Worker-Allowed', value: '/' },
+        ],
+      },
+      {
+        source: '/manifest.webmanifest',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=3600' }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
