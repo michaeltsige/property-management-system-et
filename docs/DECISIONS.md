@@ -284,6 +284,52 @@ it only ever applies to the throwaway dev container.
 
 ---
 
+## ADR-0020 — MVP scope is fixed and everything else is named
+
+**Accepted (Phase 0).**
+
+The MVP is the month a landlord actually runs: portfolio and tenants, leases with a
+billing calendar, idempotent charges, manual payments with allocation and reversals,
+maintenance work orders, documents, notifications through an interface, four reports,
+and the localization pipeline. Everything else is written down as v1 or later in
+`docs/FEATURE_MATRIX.md` and `docs/ARCHITECTURE.md` rather than left implicit.
+
+_Why:_ the references show the failure mode — OpenProperty has no reports, no
+documents and no auth; MicroCommunity has everything and is unusable as a starting
+point. A named "not yet" is what keeps the MVP finishable.
+
+## ADR-0021 — Reference projects inform the model, never the code
+
+**Accepted (Phase 0).**
+
+Licences were verified by reading each LICENSE file: OpenProperty (both) MIT,
+open-condo MIT, MicroCommunity and MicroCommunityWeb Apache-2.0, Pronto proprietary.
+**No file, asset, style or text was copied from any of them.** What was taken is
+recorded per project in `docs/REFERENCES.md`, and Apache-2.0's requirements (licence
+and NOTICE retention, change notices) apply only if code is ever copied — in which
+case the file, source path and change notice are added to `THIRD_PARTY_NOTICES.md`.
+
+_Why:_ the two OpenProperty forks are the closest domain match and the most tempting
+to lift from, but they contain **no authentication at all** (verified by grep) and use
+floats for money. Copying them would import those decisions.
+
+## ADR-0022 — Ethiopian requirements are the product, so they are tested like it
+
+**Accepted (Phase 0).**
+
+The feature matrix shows no reference supports an Ethiopian billing calendar, ETB
+integer money, Geʽez formatting or configurable unverified tax rules. Since that is
+the entire reason this product exists for Ethiopian landlords, those behaviours get
+the strictest treatment: conversion and period maths verified against ICU as an
+independent oracle, Pagume and leap-year cases enumerated, money as integer santim
+with property tests over allocation, and tax values that carry `verified: false`
+until a local professional confirms them.
+
+_Why:_ the parts nobody else has built are the parts with no reference implementation
+to compare against, so tests are the only specification we have.
+
+---
+
 ## NEEDS HUMAN VERIFICATION (local accountant / lawyer)
 
 None of the following is a legal opinion, and none of it is enabled by default. Each
