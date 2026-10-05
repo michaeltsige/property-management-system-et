@@ -7,13 +7,24 @@
  * documents every variable.
  */
 
+import { existsSync } from 'node:fs';
+
 import { config as loadEnv } from 'dotenv';
 import { z } from 'zod';
 
-// `.env` supplies local development values. Real environments set the variables
-// themselves, and dotenv never overrides a value that is already present, so the
-// same code path is safe in every environment.
-loadEnv({ path: new URL('../.env', import.meta.url).pathname });
+/**
+ * `.env` supplies local development values; real environments set the variables
+ * themselves. dotenv never overrides a value that is already present, so this is
+ * safe everywhere, and CI/production never depend on a file existing.
+ *
+ * Two locations are supported: `apps/api/.env` (when working inside the app) and
+ * the repository root `.env` (what `docs/LOCAL_DEV.md` tells developers to create).
+ * The app-level file is read first, so it can override a shared root value.
+ */
+for (const candidate of ['../.env', '../../../.env']) {
+  const path = new URL(candidate, import.meta.url).pathname;
+  if (existsSync(path)) loadEnv({ path });
+}
 
 const booleanish = z
   .union([z.boolean(), z.string()])

@@ -248,6 +248,42 @@ each phase:
 There are **no critical or high advisories in any runtime dependency**: the API
 server, the web bundle and the shared packages are unaffected.
 
+## ADR-0019 — One command for local development, one env file, browsers never call the API
+
+**Accepted.**
+
+`pnpm dev:all` (Postgres via Docker → wait → `migrate deploy` → seed → API + worker +
+web) is the supported way to run the stack, and it is written for small VMs such as
+Google Cloud Shell: capped Node heaps (384 MB API/worker, 768 MB web), telemetry off,
+a lightly tuned Postgres container (`shared_buffers=128MB`, `mem_limit: 512m`).
+
+Three rules behind it:
+
+- **The browser only ever talks to the web app.** `src/lib/api.ts` uses relative URLs
+  and `next.config.ts` rewrites `/api/*` to the API server-side (`API_PROXY_TARGET`,
+  default `127.0.0.1:4000`). One origin in every environment, one published port, no
+  `localhost` in a browser request, no CORS juggling for previews.
+- **Every process binds `0.0.0.0`**, because a port-forwarding proxy (Cloud Shell Web
+  Preview, any tunnel) reaches the VM from outside: `next dev --hostname 0.0.0.0` and
+  `API_HOST` defaulting to `0.0.0.0`. Cloud Shell hostnames are listed in
+  `allowedDevOrigins`, which only affects `next dev`.
+- **One `.env` at the repository root.** A small wrapper (`scripts/with-env.mjs`) loads
+  it for the repository's own scripts, and the API loads it as a fallback after
+  `apps/api/.env`, so `pnpm dev:all`, `pnpm db:deploy`, Prisma and `tsx` read the same
+  values. Real environment variables always win, so CI and production are unaffected.
+
+The seed is idempotent: it stops when the demo organization exists (`pnpm db:seed:force`
+recreates it), which keeps repeated `dev:all` runs fast and stops ids changing under a
+running app. Docker volumes live outside `$HOME`, so a Cloud Shell VM reset simply
+means the schema and demo data are rebuilt from migrations on the next run — documented
+in `docs/LOCAL_DEV.md`.
+
+_Cost:_ a Node bootstrap script (~250 lines) instead of a `concurrently` dependency, and
+a documented PostgreSQL tuning that is deliberately not production-safe (`fsync=off`) —
+it only ever applies to the throwaway dev container.
+
+---
+
 ## NEEDS HUMAN VERIFICATION (local accountant / lawyer)
 
 None of the following is a legal opinion, and none of it is enabled by default. Each

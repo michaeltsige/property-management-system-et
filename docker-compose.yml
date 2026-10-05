@@ -20,6 +20,22 @@ services:
       POSTGRES_PASSWORD: pms
       POSTGRES_DB: pms_dev
       # `POSTGRES_DB` creates one database; the init script adds the test one.
+    # Development tuning: small buffers and relaxed durability so the database is
+    # comfortable on a 2 GB machine (Cloud Shell included). The data in this volume
+    # is throwaway demo data; `pnpm dev:all` recreates and re-seeds it after a reset.
+    command:
+      - postgres
+      - -c
+      - shared_buffers=128MB
+      - -c
+      - max_connections=50
+      - -c
+      - fsync=off
+      - -c
+      - synchronous_commit=off
+      - -c
+      - full_page_writes=off
+    mem_limit: 384m
     ports:
       - '5432:5432'
     volumes:

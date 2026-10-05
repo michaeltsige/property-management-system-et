@@ -1,0 +1,194 @@
+# Local development (and Google Cloud Shell)
+
+One command starts everything:
+
+```bash
+pnpm dev:all
+```
+
+It starts PostgreSQL in Docker, waits for it, applies migrations, seeds fake demo
+data, then runs the **API**, the **job worker** and the **web app** with prefixed
+output in one terminal. `Ctrl-C` stops all three.
+
+```
+[dev   ] docker compose up -d postgres
+[dev   ] pnpm --filter @pms/api db:deploy
+[dev   ] pnpm --filter @pms/api db:seed
+[api   ] pms-api listening {"port":4000}
+[worker] worker started {"queues":["charges.generate","charges.overdue-sweep","notifications.send"]}
+[web   ] ▲ Next.js 15.5.27 → http://0.0.0.0:3000
+```
+
+| URL                                   | What                                    |
+| ------------------------------------- | --------------------------------------- |
+| `http://localhost:3000`               | web app (the only port a browser needs) |
+| `http://localhost:4000/api/v1/health` | API health check                        |
+| `owner@demo.test` / `DemoPass123`     | demo login — **fake data only**         |
+
+Useful flags: `--port <n>` (web port), `--skip-docker`, `--skip-seed`,
+`--skip-install`. Memory knobs: `API_HEAP_MB` (default 384) and `WEB_HEAP_MB`
+(default 768).
+
+```bash
+WEB_PORT=8080 pnpm dev:all        # different port
+API_HEAP_MB=512 WEB_HEAP_MB=1024 pnpm dev:all   # if you have memory to spare
+```
+
+Prefer separate terminals? `pnpm db:deploy && pnpm db:seed`, then `pnpm dev`
+(Turborepo, both apps), `pnpm worker`, `pnpm db:studio`.
+
+---
+
+## Google Cloud Shell
+
+Cloud Shell gives you a Debian VM with Node, Docker and `git` preinstalled, a 5 GB
+persistent home directory, and a Web Preview proxy that publishes a port over HTTPS
+to your Google account only. **No Cloud Shell setup, no firewall rules, no
+localhost tunnels.**
+
+### 1. One-time setup
+
+```bash
+# 1. Node 20+ via corepack (pnpm is pinned in package.json)
+node -v                # 20 or newer
+corepack enable && corepack prepare pnpm@9.15.4 --activate
+
+# 2. Clone. The repository is private: authenticate with YOUR GitHub account.
+git clone https://github.com/michaeltsige/property-management-system-et.git
+cd property-management-system-et
+#    (HTTPS asks for a username and a token/password the first time. Use a
+#     fine-grained token with read access to this repository. Never paste a token
+#     into a URL, a file, or a commit.)
+
+# 3. One env file, at the repository root
+cp .env.example .env
+#    Generate real secrets for anything you change:
+#      openssl rand -base64 48   -> JWT_ACCESS_SECRET, JWT_REFRESH_SECRET
+#      openssl rand -base64 32   -> FIELD_ENCRYPTION_KEY
+
+# 4. Install (a few minutes on the first run)
+pnpm install
+```
+
+### 2. Run it
+
+```bash
+tmux new -A -s pms      # optional but recommended: survives a dropped connection
+pnpm dev:all
+```
+
+The first run pulls the PostgreSQL image and seeds the demo organization. Then:
+
+1. Click **Web Preview** in the Cloud Shell toolbar → **Change port** → `3000`.
+   (Any port from **2000 to 65000** is allowed; 3000 is what `dev:all` uses.)
+2. The preview opens at `https://3000-<your-vm>.cloudshell.dev`.
+3. Sign in with `owner@demo.test` / `DemoPass123`.
+
+The URL is also derivable in the terminal:
+
+```bash
+echo "https://3000-$WEB_HOST"     # $WEB_HOST is set by Cloud Shell
+```
+
+**Only port 3000 is published.** The browser calls `/api/v1/...` on that origin and
+the Next.js server rewrites it to the Express API on `127.0.0.1:4000`
+(`apps/web/next.config.ts`, `API_PROXY_TARGET`). The API port is never exposed to
+the browser, so nothing in the front end hardcodes `localhost` — and this is also
+why you do **not** need to touch `CORS_ORIGINS` for Web Preview: the request the
+browser makes is same-origin, and the proxied call is server-to-server.
+
+Check the API from the Cloud Shell terminal (server-side is fine):
+
+```bash
+curl -s localhost:4000/api/v1/health
+curl -s -X POST localhost:3000/api/v1/auth/login \
+  -H 'content-type: application/json' \
+  -d '{"email":"owner@demo.test","password":"DemoPass123"}' | head -c 200
+```
+
+### 3. When the VM resets (it will)
+
+Cloud Shell **terminates the VM after ~40 minutes of inactivity** (12 h maximum
+session, 50 h per week). Everything outside `$HOME` is gone; the 5 GB home
+directory — your clone, `node_modules`, `.env` — persists.
+
+| After a reset                                              | What to do                                                                                                                                         |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Docker daemon not running                                  | `pnpm dev:all` starts it itself (`sudo service docker start` under the hood). Manually: `sudo service docker start`.                               |
+| Postgres container gone                                    | Recreated by `pnpm dev:all`; migrations and the seed run again automatically.                                                                      |
+| Database volume lost (Docker volumes live outside `$HOME`) | Nothing to do — the schema is rebuilt from the migrations and the demo data is re-seeded. **Never keep data you care about in the dev container.** |
+| Port 3000 already in use                                   | `pkill -f "next dev"` (or `WEB_PORT=3001 pnpm dev:all` and preview that port).                                                                     |
+| `pnpm: command not found`                                  | `corepack enable && corepack prepare pnpm@9.15.4 --activate`.                                                                                      |
+| Reconnecting after hours                                   | `cd ~/property-management-system-et && tmux new -A -s pms` then `pnpm dev:all`.                                                                    |
+
+Recovery is always the same two lines:
+
+```bash
+cd ~/property-management-system-et && pnpm dev:all
+```
+
+### 4. Keeping Cloud Shell comfortable
+
+The VM is small. The defaults here are chosen for it: capped Node heaps (384 MB for
+the API and worker, 768 MB for the web dev server), Next.js telemetry disabled, and
+a Postgres container tuned with small buffers (`shared_buffers=128MB`,
+`mem_limit: 384m`) and relaxed durability — that data is throwaway by design.
+
+Realistic footprint with all three processes running: **web ~600 MB** (that is the
+webpack dev server; it is the largest item by far), **api ~150 MB**, **worker
+~100 MB**, Postgres ~150 MB. On a machine where that does not fit, run
+`pnpm dev:all --skip-worker` (cron-style jobs can wait) and raise
+`WEB_HEAP_MB` only if you actually hit a JavaScript heap error.
+
+```bash
+free -h                       # watch memory
+df -h ~                       # 5 GB home disk
+docker system prune -af       # reclaim space if images pile up
+pnpm store prune              # reclaim the pnpm store
+```
+
+**`pnpm build` is a different story.** A production Next.js build needs ~1 GB peak and
+may be OOM-killed on the smallest VMs. Stop the dev stack first (`Ctrl-C`) and give it
+a heap bound, which forces earlier GC and a smaller peak:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=768 pnpm build
+```
+
+Cloud Shell is a preview environment: `pnpm dev:all` is the intended workflow there,
+and CI is where production builds are verified.
+
+### 5. Before you push
+
+```bash
+pnpm format          # Prettier
+pnpm lint            # ESLint, all workspaces
+pnpm typecheck       # tsc --noEmit, all workspaces
+pnpm test            # Vitest; the API suite needs the *_test database (docker compose creates it)
+```
+
+`pnpm test` refuses to run against a database whose name does not end in `_test` —
+that guard is deliberate. `docker compose up -d` creates both `pms_dev` and
+`pms_test`.
+
+---
+
+## Troubleshooting
+
+| Symptom                                               | Cause and fix                                                                                                                                                                              |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Cannot connect to the Docker daemon`                 | `sudo service docker start`, then re-run `pnpm dev:all`. If Docker is genuinely unavailable, start any PostgreSQL 15+ and run `pnpm dev:all --skip-docker`.                                |
+| `PostgreSQL never became reachable on localhost:5432` | Something else holds the port, or the container is unhealthy: `docker compose ps`, `docker compose logs postgres`.                                                                         |
+| Web preview shows a blank page or an asset error      | The dev server must be reachable from outside the VM: `pnpm dev:all` binds `0.0.0.0` (never `127.0.0.1`). Cloud Shell hostnames are pre-allowed in `next.config.ts` (`allowedDevOrigins`). |
+| `EADDRINUSE`                                          | Another process holds 3000/4000: `pkill -f "next dev"`, `pkill -f "tsx watch"`.                                                                                                            |
+| Login returns 401 with the seeded credentials         | The database has no demo data (or was recreated): `pnpm db:seed:force`.                                                                                                                    |
+| Changes to the demo data keep coming back             | `pnpm db:seed` is idempotent and stops when the demo organization exists; run it only with `--force` when you want a clean slate.                                                          |
+| The API cannot find a variable you set in `.env`      | The API reads the root `.env` and `apps/api/.env`; real environment variables always win over both. Restart the API after editing.                                                         |
+
+## Why the browser never calls the API directly
+
+`apps/web/src/lib/api.ts` uses relative URLs (`/api/v1/...`) only.
+`apps/web/next.config.ts` rewrites `/api/:path*` server-side to
+`API_PROXY_TARGET` (default `http://127.0.0.1:4000`). One origin in every
+environment; no hostname in the bundle; no `localhost` in a browser request; and a
+single port to publish behind Cloud Shell, a tunnel, or a load balancer.

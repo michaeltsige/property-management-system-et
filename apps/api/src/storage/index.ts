@@ -44,7 +44,11 @@ export interface StorageDriver {
 
 export const ALLOWED_MIME_TYPES = new Set<string>(ALLOWED_UPLOAD_MIME_TYPES);
 
-export function assertUploadAllowed(mimeType: string, sizeBytes?: number, maxBytes = DEFAULT_MAX_UPLOAD_BYTES): void {
+export function assertUploadAllowed(
+  mimeType: string,
+  sizeBytes?: number,
+  maxBytes = DEFAULT_MAX_UPLOAD_BYTES,
+): void {
   if (!ALLOWED_MIME_TYPES.has(mimeType)) {
     throw badRequest(`Unsupported file type: ${mimeType}`);
   }
@@ -159,7 +163,8 @@ async function streamToBuffer(stream: Readable, maxBytes: number): Promise<Buffe
   for await (const chunk of stream) {
     const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as Uint8Array);
     total += buffer.byteLength;
-    if (total > maxBytes) throw badRequest(`File is larger than the ${Math.round(maxBytes / 1024 / 1024)} MB limit`);
+    if (total > maxBytes)
+      throw badRequest(`File is larger than the ${Math.round(maxBytes / 1024 / 1024)} MB limit`);
     chunks.push(buffer);
   }
   return Buffer.concat(chunks);
