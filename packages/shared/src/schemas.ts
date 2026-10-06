@@ -159,7 +159,27 @@ export type AddressInput = z.infer<typeof addressSchema>;
 
 export const portfolioModeSchema = z.enum(['self_owned', 'managed']);
 
+export const signupBillingSchema = z
+  .object({
+    billingCalendar: calendarKindSchema.default('ethiopian'),
+    dueDay: z.number().int().min(1).max(28).default(5),
+    graceDays: z.number().int().min(0).max(60).default(0),
+    lateFeeRule: z.enum(['none', 'percent', 'fixed']).default('none'),
+    lateFeeBps: z.number().int().min(0).max(10000).default(0),
+    lateFeeMinor: z.number().int().nonnegative().safe().default(0),
+    acceptedPaymentMethods: z
+      .array(z.enum(['cash', 'bank_transfer', 'telebirr', 'chapa']))
+      .min(1)
+      .max(4)
+      .refine((v) => new Set(v).size === v.length, 'Duplicate payment methods')
+      .default(['cash', 'bank_transfer']),
+  })
+  .strict();
+
 export const registerSchema = z.object({
+  accountType: z.enum(['individual_landlord', 'management_company']).default('individual_landlord'),
+  currency: z.literal('ETB').default('ETB'),
+  billing: signupBillingSchema.optional(),
   portfolioMode: portfolioModeSchema.default('self_owned'),
   organizationName: z.string().trim().min(2).max(120),
   organizationSlug: slugSchema.optional(),
