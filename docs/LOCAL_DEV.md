@@ -310,3 +310,13 @@ check source/configuration hashes before starting apps (sequential package build
 existing dist files alone do not mean the build is current. Worker/web start only
 after API health succeeds. Node 20 in `.nvmrc` is the tested baseline (`nvm use`).
 See DEV_CALENDAR_FIX_REPORT.md for calendar-switch regression and manual checks.
+
+### Amharic and calendar-switch check
+
+PR #16 fixes retained Ethiopian collection rows being rendered as Gregorian on
+Dashboard/Reports. The follow-up also applies calendar-owned selection to Charges
+and removes the top bar's forced English month label. Amharic month labels use
+Ethiopic script (መስከረም, ጳጉሜን; Gregorian ጃንዩወሪ, etc.). After pulling,
+stop/restart dev:all and hard-refresh the browser. Check `git log -1 --oneline` and
+`git merge-base --is-ancestor 8a64917 HEAD` (exit 0 means PR #16 is included).
+Never reset the database for a rendering error. See AMHARIC_CALENDAR_REPORT.md.

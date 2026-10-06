@@ -3,7 +3,7 @@
 import { PlayCircle } from 'lucide-react';
 import { useState } from 'react';
 
-import { todayIn } from '@pms/calendar';
+import { useCalendarPeriod } from '@/lib/use-calendar-period';
 
 import { api } from '@/lib/api';
 import { formatAmount, formatDate, formatPeriodKey, statusTone } from '@/lib/format';
@@ -36,8 +36,7 @@ import {
  */
 export default function ChargesPage() {
   const { t, language, calendar } = usePreferences();
-  const today = todayIn(calendar);
-  const [periodKey, setPeriodKey] = useState(`${today.year}-${String(today.month).padStart(2, '0')}`);
+  const [periodKey, setPeriodKey] = useCalendarPeriod(calendar);
   const [status, setStatus] = useState('');
   const [waiveTarget, setWaiveTarget] = useState<{ id: string; description: string } | null>(null);
   const [reason, setReason] = useState('');
