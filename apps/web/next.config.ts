@@ -1,15 +1,18 @@
 import type { NextConfig } from 'next';
 
 /**
- * The browser talks to the API through this app, never directly.
+ * The browser talks to this app, and this app talks to the API.
  *
- * `/api/*` is rewritten **server-side** to the Express API (default
- * `http://127.0.0.1:4000`, override with `API_PROXY_TARGET`), so the client only
- * ever uses relative URLs. That keeps one origin in every environment — local,
- * Cloud Shell / any port-forwarding proxy, and production behind a load balancer
- * — and means the API port never has to be exposed to a browser.
+ * `/api/v1/*` and `/api/session/*` are **route handlers**, not rewrites: the
+ * browser's request is rebuilt server-side with an `Authorization` header taken
+ * from an `HttpOnly` cookie, and the browser's own `Origin`/`Cookie` headers are
+ * dropped before it reaches the API. See `src/lib/server/api-proxy.ts` and
+ * ADR-0026, including why a rewrite was not enough.
+ *
+ * The API's own address is never exposed to the browser: `API_PROXY_TARGET`
+ * defaults to `http://127.0.0.1:4000` and is read by the route handlers, not by
+ * anything that ships to the client.
  */
-const apiTarget = (process.env.API_PROXY_TARGET ?? 'http://127.0.0.1:4000').replace(/\/+$/, '');
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -45,14 +48,6 @@ const nextConfig: NextConfig = {
     '*.e2b.app',
     '**.e2b.app',
   ],
-
-  async rewrites() {
-    return [
-      // Everything under /api reaches the Express API, which serves the versioned
-      // REST surface at /api/v1/* (health checks included).
-      { source: '/api/:path*', destination: `${apiTarget}/api/:path*` },
-    ];
-  },
 
   /**
    * A stale service worker can pin users to an obsolete build forever, so the
