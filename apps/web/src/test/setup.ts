@@ -16,7 +16,9 @@ class ResizeObserverStub {
 
 globalThis.ResizeObserver = globalThis.ResizeObserver ?? (ResizeObserverStub as never);
 
-if (!window.matchMedia) {
+// Server-side modules (the API proxy, cookies) are tested in the node
+// environment, where there is no window to patch.
+if (typeof window !== 'undefined' && !window.matchMedia) {
   window.matchMedia = ((query: string) => ({
     matches: false,
     media: query,
@@ -29,12 +31,14 @@ if (!window.matchMedia) {
   })) as never;
 }
 
-window.HTMLElement.prototype.scrollIntoView = () => undefined;
+if (typeof window !== 'undefined') {
+  window.HTMLElement.prototype.scrollIntoView = () => undefined;
+}
 
 // The app fetches translation overrides and data on mount; tests that do not
 // care about the network get a rejected fetch, which the code paths already
 // treat as "offline, use the shipped catalogs".
 afterEach(() => {
-  cleanup();
+  if (typeof document !== 'undefined') cleanup();
   vi.restoreAllMocks();
 });
