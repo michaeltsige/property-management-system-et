@@ -28,6 +28,7 @@ datasource db {
 
 model Organization {
   imports ImportBatch[]
+  otps          TenantOtp[]
   id            String    @id @default(uuid()) @db.Uuid
   name          String
   slug          String    @unique
@@ -87,6 +88,7 @@ model User {
 
   memberships Membership[]
   sessions    AuthSession[]
+  tenantPortal Tenant?
   auditLogs   AuditLog[]
   createdOrgs Organization[] @relation("OrganizationCreatedBy")
 }
@@ -306,11 +308,15 @@ model Tenant {
   emergencyContactPhone String?
   employer       String?
   notes          String?
+  /// Linked portal account, created by an admin enrollment; OTP-only login.
+  userId         String?   @unique @db.Uuid
+  portalEnabledAt DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
 
   organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
   leases       Lease[]
   coLeases     LeaseCoTenant[]
   idDocuments  TenantIdDocument[]
@@ -318,6 +324,7 @@ model Tenant {
   charges      Charge[]
   workOrders   WorkOrder[]
   documents    Document[]
+  otps         TenantOtp[]
 
   @@index([organizationId, fullName])
   @@index([organizationId, phone])
@@ -761,4 +768,22 @@ model ImportBatch {
   createdAt DateTime @default(now())
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   @@unique([organizationId, fingerprint])
+}
+
+/// One-time portal codes. Only SHA-256 hashes are stored; a code is single-use,
+/// expires quickly, and each wrong guess counts against a small attempt budget.
+model TenantOtp {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  tenantId       String   @db.Uuid
+  codeHash       String
+  expiresAt      DateTime
+  attempts       Int      @default(0)
+  consumedAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, consumedAt])
 }

@@ -12,6 +12,9 @@
  */
 
 export const EN_CATALOG = {
+  // Tenant portal OTP; non-English text is an unreviewed machine draft.
+  'notification.portal_otp': 'Your property portal code is {code}. It expires in 10 minutes. Never share it.',
+
   // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
   'unit.detail': 'Unit details',
   'unit.not_found': 'This unit was not found in your portfolio.',

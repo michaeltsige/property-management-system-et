@@ -9,6 +9,9 @@
 import type { TranslationKey } from '../keys.js';
 
 export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Tenant portal OTP; non-English text is an unreviewed machine draft.
+  'notification.portal_otp': 'የቤት ክራይ ፖርታል ኮድዎ {code} ነው። በ10 ደቂቃ ውስጥ ያበቃል። ለማንም አያካፍሉ።',
+
   // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
   'unit.detail': 'የክፍል ዝርዝር',
   'unit.not_found': 'ይህ ክፍል በንብረትዎ ውስጥ አልተገኘም።',
