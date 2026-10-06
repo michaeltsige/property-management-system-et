@@ -346,6 +346,66 @@ async function waitForApi(seconds) {
   return false;
 }
 
+/**
+ * Next dev mode compiles each route the first time it is visited — on a small
+ * Cloud Shell VM the dashboard page alone can take well over ten seconds, which
+ * a first click (or the web preview's own timeout) experiences as a hang.
+ * Visit every route once, in the background, right after startup, so the first
+ * real click pays nothing.
+ */
+const WARMUP_ROUTES = [
+  '/',
+  '/login',
+  '/register',
+  '/dashboard',
+  '/portal/login',
+  '/portal',
+  '/offline',
+  '/units',
+  '/tenants',
+  '/properties',
+  '/leases',
+  '/payments',
+  '/charges',
+  '/maintenance',
+  '/documents',
+  '/reports',
+  '/settings',
+  '/api/session/me',
+];
+
+async function warmupWeb() {
+  const deadline = Date.now() + 120_000;
+  while (Date.now() < deadline && !shuttingDown) {
+    try {
+      const response = await fetch(`http://127.0.0.1:${PORT}/`);
+      if (response.status < 500) break;
+    } catch {
+      /* not accepting connections yet */
+    }
+    await sleep(1000);
+  }
+  if (shuttingDown) return;
+
+  log('dev', 'pre-compiling web routes in the background (first clicks will be fast)…');
+  const startedAt = Date.now();
+  for (const path of WARMUP_ROUTES) {
+    if (shuttingDown) return;
+    const routeStart = Date.now();
+    try {
+      // The status does not matter — triggering the compile is the point.
+      await fetch(`http://127.0.0.1:${PORT}${path}`, { signal: AbortSignal.timeout(180_000) });
+    } catch {
+      /* a timeout here just means that route compiles slowly; keep going */
+    }
+    log('dev', `  warm ${path} (${((Date.now() - routeStart) / 1000).toFixed(1)}s)`);
+  }
+  log(
+    'dev',
+    `routes pre-compiled in ${((Date.now() - startedAt) / 1000).toFixed(0)}s — the app is fully warm`,
+  );
+}
+
 function banner() {
   const preview = IN_CLOUD_SHELL && process.env.WEB_HOST ? `https://${PORT}-${process.env.WEB_HOST}` : null;
   const lines = [
@@ -440,6 +500,7 @@ async function main() {
   }
 
   banner();
+  void warmupWeb();
 }
 
 main().catch((error) => {
