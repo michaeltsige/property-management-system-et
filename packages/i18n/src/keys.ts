@@ -12,6 +12,18 @@
  */
 
 export const EN_CATALOG = {
+  // Bulk unit labels; non-English entries are unreviewed machine drafts.
+  'bulk.create': 'Bulk-create units',
+  'bulk.hint':
+    "Creates 1–200 vacant units, all or none. Use one '{n}' placeholder in the naming pattern. Existing labels cannot be reused.",
+  'bulk.pattern': 'Naming pattern',
+  'bulk.start': 'Start number',
+  'bulk.count': 'Unit count',
+  'bulk.padding': 'Number width',
+  'bulk.preview': 'Preview',
+  'bulk.invalid': 'Invalid pattern or range',
+  'bulk.created': 'Created {count} units',
+
   'portfolio.mode': 'How will you use the account?',
   'portfolio.self_owned': 'I own these properties',
   'portfolio.managed': 'I manage properties for other owners',

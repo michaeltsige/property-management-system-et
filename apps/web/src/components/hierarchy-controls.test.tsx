@@ -28,6 +28,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
   return {
     ...original,
     api: {
+      bulkUnits: vi.fn(),
       owners: vi.fn(),
       properties: vi.fn(),
       units: vi.fn(),
@@ -170,4 +171,22 @@ describe('hierarchy controls', () => {
       expect(api.register).toHaveBeenCalledWith(expect.objectContaining({ portfolioMode: 'managed' })),
     );
   });
+});
+
+it('previews and submits bounded bulk labels', async () => {
+  const { BulkUnitForm } = await import('./bulk-unit-form');
+  const bulk = vi.spyOn(api, 'bulkUnits').mockResolvedValue({ units: [], count: 10 });
+  const saved = vi.fn();
+  const user = userEvent.setup();
+  render(<BulkUnitForm properties={[property] as never} onSaved={saved} />);
+  expect(screen.getByText(/A-001, A-002/)).toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText('Properties'), 'p1');
+  await user.click(screen.getByRole('button', { name: 'Bulk-create units' }));
+  await waitFor(() => expect(saved).toHaveBeenCalledWith(10));
+  expect(bulk).toHaveBeenCalledWith(
+    expect.objectContaining({
+      propertyId: 'p1',
+      naming: { pattern: 'A-{n}', start: 1, count: 10, padding: 3 },
+    }),
+  );
 });

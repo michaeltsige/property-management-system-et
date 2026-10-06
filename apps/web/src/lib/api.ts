@@ -246,6 +246,8 @@ export const api = {
   createProperty: (body: unknown) =>
     apiFetch<{ property: Property }>('/properties', { method: 'POST', body }),
   units: () => apiFetch<{ units: Unit[] }>('/units'),
+  bulkUnits: (body: unknown) =>
+    apiFetch<{ units: Unit[]; count: number }>('/units/bulk', { method: 'POST', body }),
   createUnit: (body: unknown) => apiFetch<{ unit: Unit }>('/units', { method: 'POST', body }),
   tenants: (search?: string) =>
     apiFetch<{ tenants: Tenant[] }>(`/tenants${search ? `?search=${encodeURIComponent(search)}` : ''}`),

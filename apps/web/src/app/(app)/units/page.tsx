@@ -11,6 +11,7 @@ import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
+import { BulkUnitForm } from '@/components/bulk-unit-form';
 import { PageHeader } from '@/components/app-shell';
 import { MoneyInput } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
@@ -35,6 +36,8 @@ export default function UnitsPage() {
   const canWrite = roleHasPermission(session?.role as Role, 'units.write');
   const units = useAsync(() => api.units(), []);
   const properties = useAsync(() => api.properties(), []);
+  const [bulkOpen, setBulkOpen] = useState(false);
+  const [bulkCount, setBulkCount] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
@@ -95,6 +98,15 @@ export default function UnitsPage() {
         titleKey="nav.units"
         actions={
           <>
+            {canWrite && (
+              <Button
+                variant="secondary"
+                onClick={() => setBulkOpen(true)}
+                disabled={!properties.data?.properties.length}
+              >
+                {t('bulk.create')}
+              </Button>
+            )}
             <Input
               placeholder={t('common.search')}
               value={search}
@@ -112,6 +124,19 @@ export default function UnitsPage() {
         }
       />
 
+      {bulkCount !== null && <Alert>{t('bulk.created', { count: bulkCount })}</Alert>}
+      {canWrite && (
+        <Modal open={bulkOpen} onOpenChange={setBulkOpen} title={t('bulk.create')}>
+          <BulkUnitForm
+            properties={properties.data?.properties ?? []}
+            onSaved={(count) => {
+              setBulkOpen(false);
+              setBulkCount(count);
+              units.reload();
+            }}
+          />
+        </Modal>
+      )}
       <Card>
         <CardContent className="p-0">
           {units.loading ? (

@@ -624,3 +624,11 @@ Changing portfolio mode after signup, property-owner reassignment UI, and moving
 existing units between blocks are deferred; the corresponding backend hierarchy
 links can already be updated by authorized API clients. This slice does not claim
 the full item-2 wizard or item-3 redesign.
+
+## ADR-0030 — Bounded, atomic bulk unit creation
+
+Accepted 2026-10-06. Share naming validation/preview in the dependency-free shared
+package. Exactly one literal `{n}`, no evaluated code, max 200 units per request.
+Unique property labels and a transaction enforce all-or-none under concurrent
+requests. Retry conflicts are explicit rather than silently skipping duplicates.
+New units are vacant; leases remain the path to occupancy. No jobs or storage changes.

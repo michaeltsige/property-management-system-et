@@ -9,6 +9,17 @@
 import type { TranslationKey } from '../keys.js';
 
 export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Bulk unit labels; non-English entries are unreviewed machine drafts.
+  'bulk.create': 'ብዙ ክፍሎችን ፍጠር',
+  'bulk.hint': "ከ1–200 ባዶ ክፍሎችን ሁሉንም ወይም ምንም ይፈጥራል። በስም ንድፉ አንድ '{n}' ይጠቀሙ። ነባር ስሞች ዳግም አይጠቀሙም።",
+  'bulk.pattern': 'የስም ንድፍ',
+  'bulk.start': 'መነሻ ቁጥር',
+  'bulk.count': 'የክፍል ብዛት',
+  'bulk.padding': 'የቁጥር ስፋት',
+  'bulk.preview': 'ቅድመ እይታ',
+  'bulk.invalid': 'ልክ ያልሆነ ንድፍ ወይም ወሰን',
+  'bulk.created': '{count} ክፍሎች ተፈጥረዋል',
+
   // Hierarchy labels: unreviewed machine drafts; require native-speaker review.
   'portfolio.mode': 'መለያውን እንዴት ይጠቀሙበታል?',
   'portfolio.self_owned': 'እነዚህ ንብረቶች የእኔ ናቸው',
