@@ -320,3 +320,13 @@ Ethiopic script (መስከረም, ጳጉሜን; Gregorian ጃንዩወሪ, etc.)
 stop/restart dev:all and hard-refresh the browser. Check `git log -1 --oneline` and
 `git merge-base --is-ancestor 8a64917 HEAD` (exit 0 means PR #16 is included).
 Never reset the database for a rendering error. See AMHARIC_CALENDAR_REPORT.md.
+
+### Browser hangs while the terminal looks fine
+
+In dev mode no service worker should be registered; PwaRegister skips it and
+unregisters stale ones. If a page still never finishes loading after a restart
+with new code, open DevTools → Application → Service Workers for the preview URL,
+unregister anything listed, then hard-refresh (Ctrl+Shift+R). First visits in dev
+compile each route on demand (Dashboard can take 10–20 s on small machines); that
+is expected, not a crash. Offline/PWA belongs to the production build. See
+SLOW_LOAD_REPORT.md.
