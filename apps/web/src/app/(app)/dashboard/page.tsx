@@ -194,6 +194,13 @@ export default function DashboardPage() {
           loading={summary.loading}
         />
         <StatCard
+          label={t('dashboard.vacant_units')}
+          value={String(occupancy.data?.totals?.vacantUnits ?? 0)}
+          tone={Number(occupancy.data?.totals?.vacantUnits ?? 0) > 0 ? 'warning' : 'default'}
+          hint={t('dashboard.view_units')}
+          loading={occupancy.loading}
+        />
+        <StatCard
           label={t('money.rent_due')}
           // Over-collected periods are real (a tenant pays ahead), but "rent due"
           // can never be negative: the arrears card carries the balance picture.

@@ -83,7 +83,9 @@ describe('AppShell', () => {
     renderShell();
     await screen.findByText('page content');
 
-    expect(screen.getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page');
+    // Dashboard appears twice now (sidebar + workspace tab); both mark the page.
+    const dashboards = screen.getAllByRole('link', { name: 'Dashboard' });
+    expect(dashboards.some((link) => link.getAttribute('aria-current') === 'page')).toBe(true);
     expect(screen.getByRole('link', { name: 'Properties' })).not.toHaveAttribute('aria-current');
   });
 

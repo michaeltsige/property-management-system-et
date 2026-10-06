@@ -9,6 +9,17 @@
 import type { TranslationKey } from '../keys.js';
 
 export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
+  'unit.detail': 'ዝርዝር ክፍሊ',
+  'unit.not_found': 'እዚ ክፍሊ ኣብ ንብረትኩም ኣይተረኽበን።',
+  'unit.back_to_units': 'ናብ ክፍልታት ተመለሱ',
+  'unit.no_leases': 'ኣብዚ ክፍሊ እዚ ገና ውዕላት የለን።',
+  'unit.no_work_orders': 'ኣብዚ ክፍሊ እዚ ገና ጽገና የለን።',
+  'tabs.label': 'ክፉታት ቦታታት ስራሕ',
+  'tabs.close': 'ታብ ዕጾ',
+  'dashboard.vacant_units': 'ባዶ ክፍልታት',
+  'dashboard.view_units': 'ክፍልታት ርኣዩ',
+
   // Task navigation; non-English entries are unreviewed machine drafts.
   'tasks.title': 'ኣቓልቦ ዝደሊ',
   'tasks.overdue_charges': 'ዝሓለፈ ክፍሊታት ገምግም',

@@ -9,6 +9,17 @@
 import type { TranslationKey } from '../keys.js';
 
 export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
+  'unit.detail': 'Ibsa kutaa',
+  'unit.not_found': 'Kutaan kun qabeenya keessan keessatti hin argamne.',
+  'unit.back_to_units': "Gara kutaaleetti deebi'i",
+  'unit.no_leases': 'Waliigalteen kanaan dura kuttaa kana irratti hin jiru.',
+  'unit.no_work_orders': 'Suphaan kanaan dura kuttaa kana irratti hin jiru.',
+  'tabs.label': 'Iddoo hojii banaa',
+  'tabs.close': 'Tab cufii',
+  'dashboard.vacant_units': 'Kutaalee duwwaa',
+  'dashboard.view_units': 'Kutaalee ilaali',
+
   // Task navigation; non-English entries are unreviewed machine drafts.
   'tasks.title': 'Xiyyeeffannoo barbaada',
   'tasks.overdue_charges': 'Kaffaltii darbe ilaali',

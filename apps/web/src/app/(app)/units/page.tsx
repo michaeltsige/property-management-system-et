@@ -1,6 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import { UNIT_STATUSES, roleHasPermission, type Role } from '@pms/shared';
@@ -177,7 +178,11 @@ export default function UnitsPage() {
               <tbody>
                 {visible.map((unit) => (
                   <tr key={unit.id}>
-                    <Td className="font-medium text-slate-900">{unit.label}</Td>
+                    <Td className="font-medium text-slate-900">
+                      <Link href={`/units/${unit.id}`} className="text-brand-700 hover:underline">
+                        {unit.label}
+                      </Link>
+                    </Td>
                     <Td>{unit.property?.name ?? propertyName(unit.propertyId)}</Td>
                     <Td>{unit.building?.name ?? t('portfolio.no_block')}</Td>
                     <Td>

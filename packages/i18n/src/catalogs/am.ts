@@ -9,6 +9,17 @@
 import type { TranslationKey } from '../keys.js';
 
 export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
+  'unit.detail': 'የክፍል ዝርዝር',
+  'unit.not_found': 'ይህ ክፍል በንብረትዎ ውስጥ አልተገኘም።',
+  'unit.back_to_units': 'ወደ ክፍሎች ተመለስ',
+  'unit.no_leases': 'እስካሁን በዚህ ክፍል ላይ ውሎች የሉም።',
+  'unit.no_work_orders': 'እስካሁን በዚህ ክፍል ላይ ጥገና የለም።',
+  'tabs.label': 'ክፍት የስህተት ገጾች',
+  'tabs.close': 'ትሩን ዝጋ',
+  'dashboard.vacant_units': 'ባዶ ክፍሎች',
+  'dashboard.view_units': 'ክፍሎችን ይመልከቱ',
+
   // Task navigation; non-English entries are unreviewed machine drafts.
   'tasks.title': 'ትኩረት የሚፈልግ',
   'tasks.overdue_charges': 'ያለፈባቸውን ክፍያዎች ይገምግሙ',

@@ -12,6 +12,17 @@
  */
 
 export const EN_CATALOG = {
+  // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
+  'unit.detail': 'Unit details',
+  'unit.not_found': 'This unit was not found in your portfolio.',
+  'unit.back_to_units': 'Back to units',
+  'unit.no_leases': 'No leases on this unit yet.',
+  'unit.no_work_orders': 'No maintenance on this unit yet.',
+  'tabs.label': 'Open workspaces',
+  'tabs.close': 'Close tab',
+  'dashboard.vacant_units': 'Vacant units',
+  'dashboard.view_units': 'View units',
+
   // Task navigation; non-English entries are unreviewed machine drafts.
   'tasks.title': 'Needs attention',
   'tasks.overdue_charges': 'Review overdue charges',

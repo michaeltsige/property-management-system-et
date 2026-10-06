@@ -339,3 +339,10 @@ properties/units/tenants locally; selecting a tenant opens `/tenants?search=…`
 The property scope switcher persists in localStorage and filters Units and
 Leases; clearing it or deleting the property restores the full list. No new
 service or job is involved.
+
+### Workspace tabs and unit detail
+
+Tabs remember the screens you have open (up to 8) and survive reloads; clearing
+localStorage resets them. Unit labels in Units link to a detail screen with
+leases and maintenance for that unit. The dashboard's Vacant card links to
+Units. None of this changes API behavior or background jobs.
