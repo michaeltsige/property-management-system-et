@@ -1,6 +1,7 @@
 # Phase 3 — Web UI: phase report
 
-**Status:** complete, awaiting your acceptance. Branch `feat/phase-3-web-ui`, PR #6.
+**Status:** complete and merged to `main`. Built on `feat/phase-3-web-ui` (PR #6), which
+was merged together with the Cloud Shell session fix in **PR #7** (`c9bf81d`, 2026-10-06).
 **Date:** 2026-10-05. **Approved to start:** yes ("I approve and I'm giving you the go ahead").
 
 Phase 3 asked for: a shell and dashboard with ECharts, a screen for every entity,
@@ -120,7 +121,7 @@ links now work on properties, units, tenants, leases and payments equally.
 ## 4. How to run and test
 
 ```bash
-git fetch origin && git checkout feat/phase-3-web-ui && git pull
+git fetch origin && git checkout main && git pull
 pnpm install
 
 # full local stack (Postgres via docker-compose, migrations, demo seed, api + web)
