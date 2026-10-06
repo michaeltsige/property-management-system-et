@@ -561,3 +561,25 @@ next step is not more guessing but a report of exactly what the browser saw.
   would need exchange-rate history and a decision on which rate a payment uses.
 - **Event streaming / analytics**: none. Reports are SQL over the operational tables;
   when that stops being fast enough, a read model will be added, not a second database.
+
+## ADR-0027 — Landlords are not users; optional property blocks
+
+Accepted for the hierarchy foundation requested on 2026-10-06. Owner is an
+organization-scoped landlord record, not an auth identity or the owner_admin role.
+Organization.portfolioMode is self_owned (default, hidden landlord) or managed
+(explicit landlord selection). Registration accepts the mode; UI controls follow
+in the next item-1 PR, before the full item-2 wizard.
+
+Every property has an owner. Existing organizations receive one default owner named
+after the organization; existing property links are backfilled without changing
+leases, users or balances. Administrators must review these inferred assignments.
+New registration creates a default owner from the signup profile in the same
+transaction. Management fee is nullable integer basis points, 0–10000, stored only;
+no charges, deductions, payouts or tax assumptions are introduced.
+
+Building (also called Block) is optional. Units keep their property link and may
+reference a building within that property. Composite foreign keys enforce owner
+organization and building/property/organization consistency in addition to API
+checks. Unit labels remain unique per property: use A-101/B-101 across blocks.
+No destructive owner/block endpoints or runtime dependencies are added. Existing
+local storage, bearer API and HttpOnly web sessions are unchanged.

@@ -149,3 +149,24 @@ pnpm --filter @pms/api worker -- --once=charges.generate
 pnpm --filter @pms/api worker -- --once=charges.overdue-sweep
 pnpm --filter @pms/api worker -- --once=notifications.send
 ```
+
+## Owner hierarchy foundation (item 1a)
+
+- Registration accepts `portfolioMode: "self_owned" | "managed"`, default self_owned.
+- `GET /api/v1/owners` returns `{owners, portfolioMode}`; requires owners.read.
+- `POST /api/v1/owners` accepts `{name, phone?, email?, managementFeeBps?}`;
+  requires owners.write and managed mode. Rate is nullable integer basis points.
+- `PATCH /api/v1/owners/:ownerId` updates these fields (null clears contact/rate).
+- Owner read: owner_admin, manager, accountant. Write: owner_admin, manager.
+- Property create/update accepts ownerId. Managed creation requires it;
+  self_owned creation resolves the singleton default landlord automatically.
+- `GET /api/v1/buildings?propertyId=UUID` lists blocks for one property.
+- `POST /api/v1/buildings` accepts `{propertyId, name}`.
+- `PATCH /api/v1/buildings/:buildingId` accepts `{name}`.
+- Buildings use properties.read/write permissions. Names are unique per property.
+- Unit create/update accepts nullable buildingId; null means no block. Unit labels
+  remain unique across the property, including all blocks.
+- Cross-org owner or block references and wrong-property blocks return 404.
+  Invalid input returns 400, duplicates 409, missing managed owner 422.
+- Properties include owner name/id and buildings; units include building name/id.
+- Changes are audited transactionally. No owner/block delete endpoint is provided.

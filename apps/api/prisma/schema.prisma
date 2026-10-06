@@ -27,39 +27,42 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model Organization {
-  id          String    @id @default(uuid()) @db.Uuid
-  name        String
-  slug        String    @unique
-  status      String    @default("active") // ORG_STATUSES
-  currency    String    @default("ETB")
+  id            String    @id @default(uuid()) @db.Uuid
+  name          String
+  slug          String    @unique
+  status        String    @default("active") // ORG_STATUSES
+  currency      String    @default("ETB")
   // Organization-wide default; each user may override it (User.calendar).
-  calendar    String    @default("ethiopian")
-  language    String    @default("en")
-  timezone    String    @default("Africa/Addis_Ababa")
-  logoUrl     String?
-  createdById String?   @db.Uuid
-  createdBy   User?     @relation("OrganizationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  calendar      String    @default("ethiopian")
+  language      String    @default("en")
+  timezone      String    @default("Africa/Addis_Ababa")
+  portfolioMode String    @default("self_owned") // self_owned | managed
+  logoUrl       String?
+  createdById   String?   @db.Uuid
+  createdBy     User?     @relation("OrganizationCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime?
 
-  memberships  Membership[]
-  settings     OrganizationSetting[]
-  properties   Property[]
-  units        Unit[]
-  tenants      Tenant[]
-  leases       Lease[]
-  charges      Charge[]
-  payments     Payment[]
-  ledger       LedgerEntry[]
-  workOrders   WorkOrder[]
-  vendors      Vendor[]
-  documents    Document[]
-  taxRules     TaxRule[]
-  overrides    TranslationOverride[]
+  memberships   Membership[]
+  settings      OrganizationSetting[]
+  owners        Owner[]
+  buildings     Building[]
+  properties    Property[]
+  units         Unit[]
+  tenants       Tenant[]
+  leases        Lease[]
+  charges       Charge[]
+  payments      Payment[]
+  ledger        LedgerEntry[]
+  workOrders    WorkOrder[]
+  vendors       Vendor[]
+  documents     Document[]
+  taxRules      TaxRule[]
+  overrides     TranslationOverride[]
   notifications Notification[]
-  auditLogs    AuditLog[]
-  idTypes      TenantIdType[]
+  auditLogs     AuditLog[]
+  idTypes       TenantIdType[]
 
   @@index([status])
 }
@@ -186,13 +189,50 @@ model TenantIdType {
 // Portfolio
 // ---------------------------------------------------------------------------
 
+/// Landlord record, not a login or an RBAC role. Rate is stored, not charged.
+model Owner {
+  id               String       @id @default(uuid()) @db.Uuid
+  organizationId   String       @db.Uuid
+  name             String
+  phone            String?
+  email            String?
+  managementFeeBps Int?
+  // Internal singleton slot for the hidden owner; NULL for named owners.
+  defaultKey       String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  organization     Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  properties       Property[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, defaultKey])
+}
+
+model Building {
+  id             String       @id @default(uuid()) @db.Uuid
+  organizationId String       @db.Uuid
+  propertyId     String       @db.Uuid
+  name           String
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property       Property     @relation(fields: [organizationId, propertyId], references: [organizationId, id], onDelete: Cascade)
+  units          Unit[]
+
+  @@unique([organizationId, propertyId, id])
+  @@unique([propertyId, name])
+}
+
 model Property {
-  id             String    @id @default(uuid()) @db.Uuid
-  organizationId String    @db.Uuid
+  ownerId        String     @db.Uuid
+  owner          Owner      @relation(fields: [organizationId, ownerId], references: [organizationId, id], onDelete: Restrict)
+  buildings      Building[]
+  id             String     @id @default(uuid()) @db.Uuid
+  organizationId String     @db.Uuid
   name           String
   code           String?
-  type           String    // PROPERTY_TYPES
-  status         String    @default("active")
+  type           String // PROPERTY_TYPES
+  status         String     @default("active")
   // Ethiopian administrative hierarchy + free-text landmark (see addressSchema).
   regionCode     String?
   region         String?
@@ -208,8 +248,8 @@ model Property {
   yearBuilt      Int?
   totalFloors    Int?
   notes          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
   deletedAt      DateTime?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
@@ -217,26 +257,29 @@ model Property {
   workOrders   WorkOrder[]
   documents    Document[]
 
+  @@unique([organizationId, id])
   @@index([organizationId, status])
   @@index([organizationId, name])
 }
 
 model Unit {
-  id             String    @id @default(uuid()) @db.Uuid
-  organizationId String    @db.Uuid
-  propertyId     String    @db.Uuid
-  label          String
-  floor          Int?
-  bedrooms       Int?
-  bathrooms      Int?
-  areaSqm        Float?
+  buildingId      String?   @db.Uuid
+  building        Building? @relation(fields: [organizationId, propertyId, buildingId], references: [organizationId, propertyId, id], onDelete: Restrict)
+  id              String    @id @default(uuid()) @db.Uuid
+  organizationId  String    @db.Uuid
+  propertyId      String    @db.Uuid
+  label           String
+  floor           Int?
+  bedrooms        Int?
+  bathrooms       Int?
+  areaSqm         Float?
   marketRentMinor BigInt?
-  currency       String    @default("ETB")
-  status         String    @default("vacant") // UNIT_STATUSES
-  notes          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
-  deletedAt      DateTime?
+  currency        String    @default("ETB")
+  status          String    @default("vacant") // UNIT_STATUSES
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
 
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   property     Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)

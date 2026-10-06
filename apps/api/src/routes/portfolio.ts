@@ -33,6 +33,7 @@ import { encryptField, lastFour } from '../lib/crypto.js';
 import { pstr, str } from '../lib/query.js';
 import { getPrisma } from '../lib/prisma.js';
 import { balanceMinor, postLedgerEntry } from '../services/ledger.js';
+import { resolveOwner, checkBuilding } from '../services/hierarchy.js';
 import { recordAudit } from '../services/audit.js';
 
 export const portfolioRouter = Router();
@@ -52,9 +53,11 @@ portfolioRouter.post(
       const { address, ...rest } = req.body;
 
       const property = await getPrisma().$transaction(async (tx) => {
+        const ownerId = await resolveOwner(tx, organizationId, rest.ownerId);
         const created = await tx.property.create({
           data: {
             organizationId,
+            ownerId,
             name: rest.name,
             code: rest.code ?? null,
             type: rest.type,
@@ -80,7 +83,7 @@ portfolioRouter.post(
           action: 'create',
           entityType: 'Property',
           entityId: created.id,
-          after: { name: created.name, type: created.type },
+          after: { name: created.name, type: created.type, ownerId: created.ownerId },
           requestId: req.requestId,
         });
         return created;
@@ -99,7 +102,11 @@ portfolioRouter.get('/properties', requirePermission('properties.read'), async (
     const organizationId = organizationIdOf(req);
     const properties = await prisma.property.findMany({
       where: { organizationId, deletedAt: null },
-      include: { units: { where: { deletedAt: null }, select: { id: true, label: true, status: true } } },
+      include: {
+        owner: { select: { id: true, name: true } },
+        buildings: true,
+        units: { where: { deletedAt: null }, select: { id: true, label: true, status: true } },
+      },
       orderBy: { name: 'asc' },
     });
     res.json({ properties });
@@ -123,9 +130,12 @@ portfolioRouter.patch(
 
       const { address, ...rest } = req.body;
       const updated = await prisma.$transaction(async (tx) => {
+        const ownerId =
+          rest.ownerId === undefined ? undefined : await resolveOwner(tx, organizationId, rest.ownerId);
         const property = await tx.property.update({
           where: { id: existing.id },
           data: {
+            ...(ownerId !== undefined ? { ownerId } : {}),
             ...(rest.name !== undefined ? { name: rest.name } : {}),
             ...(rest.type !== undefined ? { type: rest.type } : {}),
             ...(rest.status !== undefined ? { status: rest.status } : {}),
@@ -148,8 +158,8 @@ portfolioRouter.patch(
           action: 'update',
           entityType: 'Property',
           entityId: property.id,
-          before: { name: existing.name, status: existing.status },
-          after: { name: property.name, status: property.status },
+          before: { name: existing.name, status: existing.status, ownerId: existing.ownerId },
+          after: { name: property.name, status: property.status, ownerId: property.ownerId },
           requestId: req.requestId,
         });
         return property;
@@ -182,10 +192,12 @@ portfolioRouter.post(
       if (!property) throw notFound('Property not found in this organization');
 
       const unit = await prisma.$transaction(async (tx) => {
+        await checkBuilding(tx, organizationId, property.id, req.body.buildingId);
         const created = await tx.unit.create({
           data: {
             organizationId,
             propertyId: property.id,
+            buildingId: req.body.buildingId ?? null,
             label: req.body.label,
             floor: req.body.floor ?? null,
             bedrooms: req.body.bedrooms ?? null,
@@ -204,7 +216,12 @@ portfolioRouter.post(
           action: 'create',
           entityType: 'Unit',
           entityId: created.id,
-          after: { label: created.label, status: created.status, propertyId: created.propertyId },
+          after: {
+            label: created.label,
+            status: created.status,
+            propertyId: created.propertyId,
+            buildingId: created.buildingId,
+          },
           requestId: req.requestId,
         });
 
@@ -222,7 +239,10 @@ portfolioRouter.get('/units', requirePermission('units.read'), async (req, res, 
   try {
     const units = await getPrisma().unit.findMany({
       where: { organizationId: organizationIdOf(req), deletedAt: null },
-      include: { property: { select: { id: true, name: true } } },
+      include: {
+        property: { select: { id: true, name: true } },
+        building: { select: { id: true, name: true } },
+      },
       orderBy: [{ propertyId: 'asc' }, { label: 'asc' }],
     });
     res.json({ units });
@@ -245,9 +265,11 @@ portfolioRouter.patch(
       if (!existing) throw notFound('Unit not found in this organization');
 
       const unit = await prisma.$transaction(async (tx) => {
+        await checkBuilding(tx, organizationId, existing.propertyId, req.body.buildingId);
         const updated = await tx.unit.update({
           where: { id: existing.id },
           data: {
+            ...(req.body.buildingId !== undefined ? { buildingId: req.body.buildingId } : {}),
             ...(req.body.label !== undefined ? { label: req.body.label } : {}),
             ...(req.body.status !== undefined ? { status: req.body.status } : {}),
             ...(req.body.marketRent !== undefined
@@ -262,8 +284,8 @@ portfolioRouter.patch(
           action: 'update',
           entityType: 'Unit',
           entityId: updated.id,
-          before: { label: existing.label, status: existing.status },
-          after: { label: updated.label, status: updated.status },
+          before: { label: existing.label, status: existing.status, buildingId: existing.buildingId },
+          after: { label: updated.label, status: updated.status, buildingId: updated.buildingId },
           requestId: req.requestId,
         });
 

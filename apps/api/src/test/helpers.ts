@@ -89,9 +89,15 @@ export async function createPortfolio(
     tenantPhone?: string;
   },
 ): Promise<PortfolioFixture> {
+  const owner = await prisma.owner.upsert({
+    where: { organizationId_defaultKey: { organizationId: params.organizationId, defaultKey: 'self' } },
+    create: { organizationId: params.organizationId, name: 'Fixture landlord', defaultKey: 'self' },
+    update: {},
+  });
   const property = await prisma.property.create({
     data: {
       organizationId: params.organizationId,
+      ownerId: owner.id,
       name: `Property ${randomUUID().slice(0, 6)}`,
       type: 'apartment_block',
     },
