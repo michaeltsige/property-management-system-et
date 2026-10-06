@@ -262,7 +262,9 @@ Three rules behind it:
 - **The browser only ever talks to the web app.** `src/lib/api.ts` uses relative URLs
   and `next.config.ts` rewrites `/api/*` to the API server-side (`API_PROXY_TARGET`,
   default `127.0.0.1:4000`). One origin in every environment, one published port, no
-  `localhost` in a browser request, no CORS juggling for previews.
+  `localhost` in a browser request, no CORS juggling for previews. _(The rewrite was
+  replaced by route handlers that also own the session cookie; see ADR-0026 — the
+  claim held, the mechanism did not.)_
 - **Every process binds `0.0.0.0`**, because a port-forwarding proxy (Cloud Shell Web
   Preview, any tunnel) reaches the VM from outside: `next dev --hostname 0.0.0.0` and
   `API_HOST` defaulting to `0.0.0.0`. Cloud Shell hostnames are listed in
@@ -465,6 +467,88 @@ the flat member shape and the login session shape).
 (the script is kept out of the repo because it needs Playwright; the report and the
 screenshots are in it). Regenerating the evidence after a UI change is a deliberate
 act, and the report states plainly what it did not check.
+
+## ADR-0026 — The browser gets a cookie; the API token never leaves the server
+
+**Accepted. Supersedes the "no CORS juggling" claim in ADR-0019** — the _goal_ of that
+ADR still holds (one origin, one published port), but the mechanism it described did
+not survive contact with a real proxy.
+
+**Context.** A bug report from Google Cloud Shell Web Preview: sign-in succeeded, and
+then every other request failed in the browser with `TypeError: Failed to fetch`,
+never reaching the API (its logs showed no data requests at all). The front end sent
+`Authorization: Bearer …` on each call, keeping the tokens in `localStorage`, and
+`next.config.ts` forwarded `/api/*` to the API with a rewrite.
+
+The rewrite itself was not the problem: reproduced locally, the rewrite forwards
+`Authorization` and `GET /api/v1/auth/me` returns 200 both directly and through port 3000. What could not be reproduced here is Cloud Shell's edge. Authorization stripping
+by Google's front ends is a documented class of failure elsewhere (the GCS XML API
+warns about proxies that strip it; IAP strips it; GCP load balancers strip
+`Proxy-Authorization`), and a proxy in the path that mangles a request is a far more
+likely explanation than the API, which never saw the request. The honest conclusion
+was that the header was the fragile part of the design, whether or not it was the
+specific cause, and that a design which does not depend on a header surviving a
+proxy is better regardless.
+
+**Decision.** The browser never holds, sends or receives a token.
+
+- `apps/web/src/app/api/session/[...action]/route.ts` — `login`, `register`, `refresh`,
+  `logout`, `me`. It calls the API and sets `pms_at` / `pms_rt` as **HttpOnly**
+  cookies (`SameSite=Lax`, `Path=/`, `Secure` decided from `x-forwarded-proto`, with
+  `COOKIE_SECURE` as an override because Next sees plain http behind Cloud Shell's
+  TLS-terminating edge). The JSON it returns is `{ user, organization }` — the
+  response shape is asserted token-free in tests.
+- `apps/web/src/app/api/v1/[...path]/route.ts` — everything else. Header **allowlists**
+  in both directions: browser `Authorization`, `Cookie`, `Origin`, `Referer`, `Host`
+  and `x-forwarded-for` are dropped and never reach the API, and only
+  `content-type`/`accept`/`accept-language`/`if-none-match`/`if-modified-since`/`range`/
+  `x-request-id` go out. The bearer header is added server-side from the cookie. On
+  `401` the server refreshes once and replays the request (body buffered).
+- The three token-minting API paths (`/auth/login`, `/auth/register`, `/auth/refresh`)
+  return `404 NOT_PROXIED` through the browser proxy, so a token cannot be coaxed out
+  of the API from the front end even by hand-crafting a request.
+- `apps/web/src/lib/api.ts` keeps only the identity in storage; a stored session from
+  an older build is rebuilt field-by-field, so legacy tokens are dropped on first load.
+- **CSRF** — a state-changing request must carry `X-Requested-With: XMLHttpRequest`
+  (a cross-site form cannot set it; a cross-site `fetch` needs a preflight this server
+  never approves) and, when the browser sends `Origin`, it must be this deployment.
+  Origins are matched by **host, not host:port**, because the edge is free to terminate
+  TLS on one port and forward to another; `APP_ORIGIN` adds a host the app could not
+  guess. In development only, `*.cloudshell.dev` and `*.e2b.app` are accepted.
+- The Express API is untouched: `Bearer` still works for `curl`, scripts and the future
+  mobile app (ADR-0014), and `CORS_ORIGINS` remains for direct API clients. The web app
+  no longer reads it, and browsers no longer need it.
+
+**Consequences.** The web app's attack surface stops at its own origin: no token in
+`localStorage`, nothing token-shaped in a response body, nothing for an intermediary to
+strip, and refresh logic that cannot be reached or replayed from the client. Costs: the
+web server is now on the authentication path (it already was on every data path), cookie
+auth brings CSRF into scope, and a rotated refresh token has to be handled carefully
+because **the API revokes every session for a user when a rotated refresh token is
+presented again**. That last one was found by the browser acceptance run, not by unit
+tests: a page load fires several requests at once, all carrying the same cookie value,
+and the second rotation attempt logged the user straight out. Refreshes are therefore
+deduped by token value — concurrent callers share one upstream call, and a token rotated
+in the last 10 s is replayed from that result instead of being presented again
+(`apps/web/src/lib/server/api-proxy.ts`). The behaviour is covered by tests.
+
+**What was verified, and how.** Covered by unit tests with `fetch` mocked: token
+injection, header dropping, allowlists, CSRF rejection, 401 → refresh → replay,
+refresh refused → cookies cleared, token-minting paths blocked, single-flight refresh.
+Covered in a real browser: a Playwright run against the app **behind a stand-in edge
+that terminates TLS and deliberately strips `Authorization`** — sign in, dashboard data,
+reload, transparent refresh of a deliberately corrupted access cookie, sign out, cookies
+HttpOnly/`Secure`, no `Authorization` header from the browser on any of 120 requests, no
+token in `localStorage`/`sessionStorage`, no token in any response body — 14/14 checks,
+plus 7/7 over plain http (which is what proves a local `next dev` login still works).
+**Not verified: Cloud Shell Web Preview itself.** The bug report came from an
+environment this project has no access to; the stand-in reproduces the property it is
+suspected of (header stripping) and nothing else, so the fix is "plausible and
+well-tested", not "confirmed". `docs/LOCAL_DEV.md` carries the five-minute manual
+checklist to close that gap. If cookies also turn out to be blocked by that edge, the
+next step is not more guessing but a report of exactly what the browser saw.
+
+---
 
 ## Deferred decisions (recorded, not yet made)
 

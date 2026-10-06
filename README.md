@@ -113,9 +113,26 @@ The API suite is integration-first: it truncates the database between tests and 
   Geʽez numerals, Ethiopian or Gregorian display per organization with a per-user
   override. Conversion is tested against ICU as an oracle.
 
+## How sign-in works
+
+The browser talks to the web app only. `POST /api/session/login` forwards the
+credentials to the API, keeps the access and refresh tokens in **HttpOnly** cookies
+the JavaScript cannot read, and answers with `{ user, organization }` and nothing
+else. Every other request goes to `/api/v1/...` on the same origin, and the Next.js
+server adds `Authorization: Bearer …` from that cookie before calling the API — so
+the browser never sends or stores a token, and an `Origin`-rewriting proxy in front
+of the app cannot break authentication. Expired access tokens are refreshed on the
+server and the request is replayed. CSRF is refused by requiring
+`X-Requested-With: XMLHttpRequest` plus an `Origin` check (ADR-0026).
+
+The Express API is unchanged for everything else: it still authenticates plain
+`Bearer` tokens, so `curl`, scripts and the future mobile app work as before. The
+API port is never published, and the web app does not need `CORS_ORIGINS`.
+
 ## Architecture and decisions
 
-- `docs/LOCAL_DEV.md` — local and Google Cloud Shell setup, ports, VM-reset recovery.
+- `docs/LOCAL_DEV.md` — local and Google Cloud Shell setup, ports, VM-reset recovery,
+  and the Web Preview sign-in checklist.
 - `docs/ROADMAP.md` — the phase plan and what is done, with open questions.
 - `docs/ARCHITECTURE.md` — how the pieces fit and why, plus the domain ERD and MVP scope.
 - `docs/FEATURE_MATRIX.md` — feature-by-feature comparison with the reference projects.
