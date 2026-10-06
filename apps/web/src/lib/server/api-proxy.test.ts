@@ -434,6 +434,93 @@ describe('token-minting endpoints', () => {
     expect((await response.json()).error.code).toBe('NOT_PROXIED');
     expect(fetchImpl).not.toHaveBeenCalled();
   });
+
+  it('also blocks the tenant OTP verification endpoint', async () => {
+    const fetchImpl = vi.fn(async () => json({}));
+    const response = await handleApiProxy(
+      request('/api/v1/portal/verify', {
+        method: 'POST',
+        body: '{}',
+        headers: { 'x-requested-with': 'XMLHttpRequest' },
+      }),
+      makeDeps(fetchImpl as unknown as typeof fetch),
+    );
+
+    expect(response.status).toBe(404);
+    expect((await response.json()).error.code).toBe('NOT_PROXIED');
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe('tenant portal session endpoints', () => {
+  it('request-code passes the uniform answer through without cookies', async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      expect(url).toBe(`${BASE}/api/v1/portal/request-code`);
+      return json({ ok: true });
+    });
+    const response = await handleSession(
+      request('/api/session/portal-request', {
+        method: 'POST',
+        body: JSON.stringify({ phone: '0911234567' }),
+        headers: { 'content-type': 'application/json', 'x-requested-with': 'XMLHttpRequest' },
+      }),
+      makeDeps(fetchImpl as unknown as typeof fetch),
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ ok: true });
+    expect(response.headers.getSetCookie()).toEqual([]);
+  });
+
+  it('verify sets HttpOnly cookies and returns identity only', async () => {
+    const fetchImpl = vi.fn(async (url: string) => {
+      expect(url).toBe(`${BASE}/api/v1/portal/verify`);
+      return json({
+        tokens: { accessToken: 'access-2', refreshToken: 'refresh-2' },
+        role: 'tenant',
+        user: { id: 'user-2', email: 'portal-t1@tenants.invalid', fullName: 'Tenant One' },
+        organization: { id: 'org-1', name: 'Bole Demo', slug: 'bole-demo' },
+        memberships: [],
+        tenant: { id: 'tenant-1', fullName: 'Tenant One', organizationId: 'org-1' },
+      });
+    });
+
+    const response = await handleSession(
+      request('/api/session/portal-verify', {
+        method: 'POST',
+        body: JSON.stringify({ phone: '0911234567', code: '123456' }),
+        headers: { 'content-type': 'application/json', 'x-requested-with': 'XMLHttpRequest' },
+      }),
+      makeDeps(fetchImpl as unknown as typeof fetch),
+    );
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.role).toBe('tenant');
+    expect(body.tenant.id).toBe('tenant-1');
+    expect(JSON.stringify(body)).not.toContain('access-2');
+    expect(JSON.stringify(body)).not.toContain('refresh-2');
+    expect(cookieValue(response, ACCESS_COOKIE)).toBe('access-2');
+    expect(cookieValue(response, REFRESH_COOKIE)).toBe('refresh-2');
+  });
+
+  it('verify passes a wrong-code error through without setting cookies', async () => {
+    const fetchImpl = vi.fn(async () =>
+      json({ error: { code: 'UNAUTHENTICATED', message: 'Email or code is incorrect' } }, 401),
+    );
+    const response = await handleSession(
+      request('/api/session/portal-verify', {
+        method: 'POST',
+        body: JSON.stringify({ phone: '0911234567', code: '000000' }),
+        headers: { 'content-type': 'application/json', 'x-requested-with': 'XMLHttpRequest' },
+      }),
+      makeDeps(fetchImpl as unknown as typeof fetch),
+    );
+
+    expect(response.status).toBe(401);
+    expect((await response.json()).error.message).toBe('Email or code is incorrect');
+    expect(response.headers.getSetCookie()).toEqual([]);
+  });
 });
 
 describe('session endpoints', () => {

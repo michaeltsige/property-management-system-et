@@ -62,7 +62,13 @@ const FORWARD_REQUEST_HEADERS = [
 const FORWARD_RESPONSE_HEADERS = ['content-type', 'retry-after', 'x-request-id'];
 
 /** Endpoints that mint tokens are not reachable from the browser (see ADR-0026). */
-const TOKEN_MINTING_PATHS = new Set(['/auth/login', '/auth/register', '/auth/refresh']);
+const TOKEN_MINTING_PATHS = new Set([
+  '/auth/login',
+  '/auth/register',
+  '/auth/refresh',
+  // OTP verification mints the tenant session; the browser must not see the tokens.
+  '/portal/verify',
+]);
 
 const UPSTREAM_TIMEOUT_MS = 30_000;
 
@@ -421,7 +427,7 @@ export async function handleApiProxy(request: Request, deps: ProxyDeps = proxyDe
   );
 }
 
-type SessionAction = 'login' | 'register' | 'refresh' | 'logout' | 'me';
+type SessionAction = 'login' | 'register' | 'refresh' | 'logout' | 'me' | 'portal-request' | 'portal-verify';
 
 async function readJsonBody(request: Request): Promise<Record<string, unknown> | null> {
   try {
@@ -481,6 +487,62 @@ async function sessionStart(
 
   const secure = isSecureRequest(request, deps.env);
   return jsonResponse(publicSession(payload), 200, sessionCookies(payload.tokens, secure, deps.env));
+}
+
+/**
+ * Ask for an OTP. The upstream answer is passed through verbatim — including
+ * its uniform `{ ok: true }`, which must not differ between known and unknown
+ * numbers (see the API's `requestPortalCode`).
+ */
+async function sessionPortalRequest(request: Request, deps: ProxyDeps): Promise<Response> {
+  const body = await readJsonBody(request);
+  if (!body) return jsonProblem(400, 'INVALID_BODY', 'Expected a JSON request body.');
+
+  const upstream = await callUpstream(
+    `${deps.apiTarget}/api/v1/portal/request-code`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+    },
+    deps,
+  );
+  return toClientResponse(upstream, []);
+}
+
+/**
+ * Consume an OTP and start the tenant session. Identical treatment to login:
+ * the tokens become HttpOnly cookies and only identity crosses to the browser.
+ */
+async function sessionPortalVerify(request: Request, deps: ProxyDeps): Promise<Response> {
+  const body = await readJsonBody(request);
+  if (!body) return jsonProblem(400, 'INVALID_BODY', 'Expected a JSON request body.');
+
+  const upstream = await callUpstream(
+    `${deps.apiTarget}/api/v1/portal/verify`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+    },
+    deps,
+  );
+
+  if (!upstream.ok) return toClientResponse(upstream, []);
+
+  const payload = (await upstream.json()) as LoginPayload & { tenant?: unknown };
+  if (!payload.tokens?.accessToken) {
+    return jsonProblem(502, 'UPSTREAM_INVALID', 'The API did not return a session.');
+  }
+
+  const secure = isSecureRequest(request, deps.env);
+  return jsonResponse(
+    { ...publicSession(payload), tenant: payload.tenant ?? null },
+    200,
+    sessionCookies(payload.tokens, secure, deps.env),
+  );
 }
 
 async function sessionRefresh(request: Request, deps: ProxyDeps): Promise<Response> {
@@ -559,6 +621,10 @@ export async function handleSession(request: Request, deps: ProxyDeps = proxyDep
     case 'login':
     case 'register':
       return sessionStart(request, deps, action);
+    case 'portal-request':
+      return sessionPortalRequest(request, deps);
+    case 'portal-verify':
+      return sessionPortalVerify(request, deps);
     case 'refresh':
       return sessionRefresh(request, deps);
     case 'logout':

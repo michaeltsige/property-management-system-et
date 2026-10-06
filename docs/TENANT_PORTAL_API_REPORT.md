@@ -9,13 +9,13 @@ their leases and due balance — nothing else.
 
 ### Endpoints
 
-| Endpoint                                    | Auth                              | Purpose                                                                 |
-| ------------------------------------------- | --------------------------------- | ----------------------------------------------------------------------- |
-| `POST /api/v1/tenants/:tenantId/portal`     | `tenants.write`                   | Enroll a tenant; idempotent (re-running replays the welcome, no dupes). |
-| `DELETE /api/v1/tenants/:tenantId/portal`   | `tenants.write`                   | Revoke the portal account (membership inactive, user deactivated).      |
-| `POST /api/v1/portal/request-code`          | none (rate limited)               | Send an OTP to an enrolled tenant's phone.                              |
-| `POST /api/v1/portal/verify`                | none (rate limited)               | Consume the OTP and issue the standard token pair (`role: tenant`).     |
-| `GET /api/v1/portal/me`                     | `portal.use`                      | Tenant's leases (unit/property names, rent, dates) plus due balance.    |
+| Endpoint                                  | Auth                | Purpose                                                                 |
+| ----------------------------------------- | ------------------- | ----------------------------------------------------------------------- |
+| `POST /api/v1/tenants/:tenantId/portal`   | `tenants.write`     | Enroll a tenant; idempotent (re-running replays the welcome, no dupes). |
+| `DELETE /api/v1/tenants/:tenantId/portal` | `tenants.write`     | Revoke the portal account (membership inactive, user deactivated).      |
+| `POST /api/v1/portal/request-code`        | none (rate limited) | Send an OTP to an enrolled tenant's phone.                              |
+| `POST /api/v1/portal/verify`              | none (rate limited) | Consume the OTP and issue the standard token pair (`role: tenant`).     |
+| `GET /api/v1/portal/me`                   | `portal.use`        | Tenant's leases (unit/property names, rent, dates) plus due balance.    |
 
 ### OTP rules
 

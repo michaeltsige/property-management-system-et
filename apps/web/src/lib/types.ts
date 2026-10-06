@@ -82,6 +82,8 @@ export interface Tenant {
   language: string;
   notes: string | null;
   createdAt: string;
+  /** Present when staff enabled the OTP portal for this tenant. */
+  portalEnabledAt: string | null;
 }
 
 export interface LeaseSummary {
@@ -329,4 +331,25 @@ export interface TranslationRow {
   status: 'machine_draft' | 'unreviewed' | 'reviewed' | 'missing';
   source: string;
   overridden: boolean;
+}
+
+/** What a signed-in tenant sees on their portal page. */
+export interface PortalMe {
+  tenant: {
+    id: string;
+    fullName: string;
+    phone: string | null;
+    language: string;
+  };
+  leases: {
+    id: string;
+    status: string;
+    unit: string;
+    property: string;
+    rentAmountMinor: string;
+    currency: string;
+    startDate: string;
+  }[];
+  /** Sum of pending + overdue charges, minor units as a decimal string. */
+  dueMinor: string;
 }

@@ -1,0 +1,131 @@
+'use client';
+
+/**
+ * Tenant portal sign-in: phone number -> one-time code.
+ *
+ * There is no password anywhere in this flow. The server answers identically
+ * for known and unknown numbers, so the form can never hint whether a phone
+ * number rents in a managed building.
+ */
+
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+
+import { api } from '@/lib/api';
+import { usePreferences } from '@/lib/preferences';
+
+import { Alert, Button, Card, CardContent, Input, Label } from '@/components/ui';
+
+export default function PortalLoginPage() {
+  const router = useRouter();
+  const { signIn, t } = usePreferences();
+  const [phone, setPhone] = useState('');
+  const [code, setCode] = useState('');
+  const [step, setStep] = useState<'phone' | 'code'>('phone');
+  const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+
+  async function requestCode(event: React.FormEvent) {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    try {
+      await api.portalRequestCode({ phone });
+      setStep('code');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function verify(event: React.FormEvent) {
+    event.preventDefault();
+    setPending(true);
+    setError(null);
+    try {
+      const result = await api.portalVerify({ phone, code });
+      // Identity only; the tokens stayed server-side in HttpOnly cookies.
+      signIn({ user: result.user, organization: result.organization, role: result.role });
+      router.replace('/portal');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : String(cause));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="w-full max-w-sm">
+        <div className="mb-6 text-center">
+          <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-lg bg-brand-600 text-lg font-bold text-white">
+            ቤ
+          </div>
+          <h1 className="text-lg font-semibold text-slate-900">{t('portal.title')}</h1>
+          <p className="mt-1 text-xs text-slate-500">{t('portal.login_hint')}</p>
+        </div>
+
+        <Card>
+          <CardContent>
+            {step === 'phone' ? (
+              <form className="space-y-4" onSubmit={requestCode}>
+                <div className="space-y-1">
+                  <Label htmlFor="portal-phone">{t('portal.phone')}</Label>
+                  <Input
+                    id="portal-phone"
+                    type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
+                    placeholder="0911234567"
+                    required
+                    value={phone}
+                    onChange={(event) => setPhone(event.target.value)}
+                  />
+                </div>
+                {error ? <Alert tone="danger">{error}</Alert> : null}
+                <Button type="submit" className="w-full" disabled={pending}>
+                  {pending ? t('app.loading') : t('portal.send_code')}
+                </Button>
+              </form>
+            ) : (
+              <form className="space-y-4" onSubmit={verify}>
+                <Alert tone="info">{t('portal.code_sent')}</Alert>
+                <div className="space-y-1">
+                  <Label htmlFor="portal-code">{t('portal.code')}</Label>
+                  <Input
+                    id="portal-code"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]*"
+                    maxLength={6}
+                    required
+                    value={code}
+                    onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+                  />
+                </div>
+                {error ? <Alert tone="danger">{error}</Alert> : null}
+                <Button type="submit" className="w-full" disabled={pending || code.length !== 6}>
+                  {pending ? t('app.loading') : t('portal.verify')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full"
+                  disabled={pending}
+                  onClick={() => {
+                    setStep('phone');
+                    setCode('');
+                    setError(null);
+                  }}
+                >
+                  {t('portal.resend')}
+                </Button>
+              </form>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
