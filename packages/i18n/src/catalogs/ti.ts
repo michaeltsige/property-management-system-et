@@ -9,6 +9,39 @@
 import type { TranslationKey } from '../keys.js';
 
 export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Onboarding; non-English entries are unreviewed machine drafts.
+  'onboarding.profile': 'መግለጺ',
+  'onboarding.billing': 'ክፍሊት',
+  'onboarding.review': 'ግምገማ',
+  'onboarding.progress': 'መስርሕ ምዝገባ',
+  'onboarding.next': 'ቀጻሊ',
+  'onboarding.back': 'ተመለስ',
+  'onboarding.account_type': 'ዓይነት ሕሳብ',
+  'onboarding.individual': 'ውልቀ ኣካራዪ',
+  'onboarding.company': 'ትካል ምምሕዳር',
+  'onboarding.due_day': 'መዓልቲ ክፍሊት (1–28)',
+  'onboarding.grace_days': 'መዓልታት ዕረፍቲ',
+  'onboarding.fee_rule': 'ሕጊ ዝደንጎየ ክፍሊት',
+  'onboarding.none': 'መቕጻዕቲ የለን',
+  'onboarding.percent': 'ሚእታዊት',
+  'onboarding.fixed': 'ቀዋሚ መጠን',
+  'onboarding.fee_percent': 'መቕጻዕቲ ድንጓይ (%)',
+  'onboarding.fee_amount': 'መቕጻዕቲ ድንጓይ (ETB)',
+  'onboarding.payment_methods': 'ዝቕበሉ ኣገባባት ክፍሊት',
+  'onboarding.currency': 'ባጤራ',
+  'onboarding.billing_hint':
+    'ናይ ክፍሊት ዓውደ ኣዋርሕ ካብ ማሳያ ዝተፈለየ እዩ። ሕግታት መቕጻዕቲ ናይ ከባቢ ክኢላ ግምገማ የድልዮም። ኣቕራቢ ምምራጽ ቀጥታ ክፍሊት ኣይጅምርን።',
+  'onboarding.invalid_billing': 'እሴታት ክፍሊት ኣረጋግጹን ሓደ ኣገባብ ምረጹን።',
+  'onboarding.review_hint': 'ሕሳብ ፍጠሩ፣ ድሕሪኡ እንተደሊኹም ቀዳማይ ንብረትን ክፍልታትን ወስኹ።',
+  'onboarding.registered_hint': 'ሕሳብኩም ተፈጢሩ። ዳግም እተዉ ወይ መእተዊ ሊንክ ተጠቐሙ።',
+  'onboarding.first_property': 'ቀዳማይ ንብረትኩም',
+  'onboarding.property_hint': 'ኣማራጺ፦ ኣፓርትመንትን ክሳብ 200 ባዶ ክፍልታትን ፍጠሩ። ድሒሩ ንምውሳኽ 0 ተጠቐሙ። ዓይነትን ኣድራሻን ድሒሩ ይእረሙ።',
+  'onboarding.finish': 'ምድላው ዛዝም',
+  'onboarding.skip': 'ንሕጂ ሕለፍ',
+  'onboarding.finished': 'ቀዳማይ ምድላው ተዛዚሙ። ተወሳኺ ንብረት ወስኹ።',
+  'onboarding.admin_only': 'ወናኒ/ኣመሓዳሪ ጥራይ ምድላው ትካል ይዛዝም።',
+  'onboarding.resume': 'ምድላው ትካልኩም ዛዝሙ',
+
   // CSV UI; non-English text is an unreviewed machine draft.
   'csv.title': 'CSV ኣእቱ',
   'csv.hint':

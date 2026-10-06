@@ -9,6 +9,40 @@
 import type { TranslationKey } from '../keys.js';
 
 export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Onboarding; non-English entries are unreviewed machine drafts.
+  'onboarding.profile': 'መገለጫ',
+  'onboarding.billing': 'ክፍያ',
+  'onboarding.review': 'ግምገማ',
+  'onboarding.progress': 'የምዝገባ ሂደት',
+  'onboarding.next': 'ቀጣይ',
+  'onboarding.back': 'ተመለስ',
+  'onboarding.account_type': 'የመለያ አይነት',
+  'onboarding.individual': 'ግለሰብ አከራይ',
+  'onboarding.company': 'የአስተዳደር ድርጅት',
+  'onboarding.due_day': 'የክፍያ ቀን (1–28)',
+  'onboarding.grace_days': 'የእፎይታ ቀናት',
+  'onboarding.fee_rule': 'የዘገየ ክፍያ ደንብ',
+  'onboarding.none': 'የመዘግየት ቅጣት የለም',
+  'onboarding.percent': 'መቶኛ',
+  'onboarding.fixed': 'ቋሚ መጠን',
+  'onboarding.fee_percent': 'የመዘግየት ቅጣት (%)',
+  'onboarding.fee_amount': 'የመዘግየት ቅጣት (ብር)',
+  'onboarding.payment_methods': 'የሚቀበሉት የክፍያ ዘዴዎች',
+  'onboarding.currency': 'ምንዛሬ',
+  'onboarding.billing_hint':
+    'የክፍያ ቀን መቁጠሪያ ከማሳያው የተለየ ነው። የቅጣት ደንቦች የአካባቢ ሕግ/ሂሳብ ግምገማ ያስፈልጋቸዋል። የክፍያ አቅራቢ መምረጥ ቀጥታ ክፍያን አያስጀምርም።',
+  'onboarding.invalid_billing': 'የክፍያ እሴቶችን ያረጋግጡና ቢያንስ አንድ ዘዴ ይምረጡ።',
+  'onboarding.review_hint': 'መለያዎን ይፍጠሩ፣ ከዚያ ከፈለጉ የመጀመሪያ ንብረትና ክፍሎች ያክሉ።',
+  'onboarding.registered_hint': 'መለያዎ ተፈጥሯል። ዳግም ለመግባት ይሞክሩ ወይም የመግቢያ አገናኝ ይጠቀሙ።',
+  'onboarding.first_property': 'የመጀመሪያ ንብረትዎ',
+  'onboarding.property_hint':
+    'አማራጭ፦ አፓርትመንትና እስከ 200 ባዶ ክፍሎች ይፍጠሩ። በኋላ ለመጨመር 0 ይጠቀሙ። አይነትና አድራሻ በኋላ ሊሻሻሉ ይችላሉ።',
+  'onboarding.finish': 'ዝግጅቱን ጨርስ',
+  'onboarding.skip': 'ለአሁን ዝለል',
+  'onboarding.finished': 'የመጀመሪያ ዝግጅት ተጠናቋል። ተጨማሪ ንብረቶችን ከንብረቶች ያክሉ።',
+  'onboarding.admin_only': 'የድርጅት ዝግጅት ማጠናቀቅ የሚችሉት ባለቤት/አስተዳዳሪ ብቻ ናቸው።',
+  'onboarding.resume': 'የድርጅትዎን ዝግጅት ያጠናቅቁ',
+
   // CSV UI; non-English text is an unreviewed machine draft.
   'csv.title': 'CSV አስገባ',
   'csv.hint':

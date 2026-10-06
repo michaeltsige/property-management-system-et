@@ -42,6 +42,8 @@ vi.mock('@/lib/api', async (importOriginal) => {
       createUnit: vi.fn(),
       register: vi.fn(),
       login: vi.fn(),
+      finishOnboarding: vi.fn(),
+      settings: vi.fn(),
     },
   };
 });
@@ -168,6 +170,9 @@ describe('hierarchy controls', () => {
     await user.type(screen.getByLabelText('Full name'), 'Demo Admin');
     await user.type(screen.getByLabelText('Email'), 'demo@example.test');
     await user.type(screen.getByLabelText('Password'), 'DemoPass123');
+    await user.type(screen.getByLabelText('Phone'), '0911234567');
+    await user.click(screen.getByRole('button', { name: 'Next' }));
+    await user.click(screen.getByRole('button', { name: 'Next' }));
     await user.click(screen.getByRole('button', { name: 'Create' }));
     await waitFor(() =>
       expect(api.register).toHaveBeenCalledWith(expect.objectContaining({ portfolioMode: 'managed' })),
@@ -225,4 +230,33 @@ it('shows row-level CSV errors and leaves import disabled', async () => {
   expect(await screen.findByText('Invalid or missing value')).toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Import validated rows' })).toBeDisabled();
   expect(screen.getByRole('button', { name: 'Download error report' })).toBeEnabled();
+});
+
+it('keeps profile values across signup steps and prevents submission with no payment methods', async () => {
+  const user = userEvent.setup();
+  render(<RegisterPage />);
+  await user.type(screen.getByLabelText(EN_CATALOG['org.name']), 'Demo Org');
+  await user.type(screen.getByLabelText('Full name'), 'Demo Admin');
+  await user.type(screen.getByLabelText('Email'), 'demo@example.test');
+  await user.type(screen.getByLabelText('Phone'), '0911234567');
+  await user.type(screen.getByLabelText('Password'), 'DemoPass123');
+  await user.click(screen.getByRole('button', { name: 'Next' }));
+  for (const checkbox of screen.getAllByRole('checkbox')) {
+    if ((checkbox as HTMLInputElement).checked) await user.click(checkbox);
+  }
+  await user.click(screen.getByRole('button', { name: 'Next' }));
+  expect(await screen.findByText(EN_CATALOG['onboarding.invalid_billing'])).toBeInTheDocument();
+  expect(api.register).not.toHaveBeenCalled();
+  await user.click(screen.getByRole('button', { name: 'Back' }));
+  expect(screen.getByLabelText('Full name')).toHaveValue('Demo Admin');
+});
+
+it('offers optional first-property setup and a durable skip action', async () => {
+  const { default: OnboardingPage } = await import('@/app/(app)/onboarding/page');
+  vi.mocked(api.settings).mockResolvedValue({ settings: { onboardingStatus: 'portfolio_pending' } });
+  const user = userEvent.setup();
+  render(<OnboardingPage />);
+  await screen.findByLabelText('Property name');
+  await user.click(screen.getByRole('button', { name: 'Skip for now' }));
+  await waitFor(() => expect(api.finishOnboarding).toHaveBeenCalledWith({ action: 'skip' }));
 });

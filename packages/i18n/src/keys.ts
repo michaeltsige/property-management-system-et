@@ -12,6 +12,40 @@
  */
 
 export const EN_CATALOG = {
+  // Onboarding; non-English entries are unreviewed machine drafts.
+  'onboarding.profile': 'Profile',
+  'onboarding.billing': 'Billing',
+  'onboarding.review': 'Review',
+  'onboarding.progress': 'Signup progress',
+  'onboarding.next': 'Next',
+  'onboarding.back': 'Back',
+  'onboarding.account_type': 'Account type',
+  'onboarding.individual': 'Individual landlord',
+  'onboarding.company': 'Management company',
+  'onboarding.due_day': 'Due day (1–28)',
+  'onboarding.grace_days': 'Grace days',
+  'onboarding.fee_rule': 'Late-fee rule',
+  'onboarding.none': 'No late fee',
+  'onboarding.percent': 'Percentage',
+  'onboarding.fixed': 'Fixed amount',
+  'onboarding.fee_percent': 'Late fee (%)',
+  'onboarding.fee_amount': 'Late fee (ETB)',
+  'onboarding.payment_methods': 'Accepted payment methods',
+  'onboarding.currency': 'Currency',
+  'onboarding.billing_hint':
+    'Billing is separate from your display calendar. Late-fee rules need local legal/accounting review. Selecting a gateway does not enable live payments.',
+  'onboarding.invalid_billing': 'Check billing values and select at least one payment method.',
+  'onboarding.review_hint': 'Create your account, then optionally add your first property and units.',
+  'onboarding.registered_hint': 'Your account was created. Retry signing in, or use the Sign in link.',
+  'onboarding.first_property': 'Your first property',
+  'onboarding.property_hint':
+    'Optional: create an apartment property and up to 200 vacant units. Use 0 to add units later. More detailed property setup is available through the Properties screen and API.',
+  'onboarding.finish': 'Finish setup',
+  'onboarding.skip': 'Skip for now',
+  'onboarding.finished': 'Initial setup is finished. Add more properties from Portfolio.',
+  'onboarding.admin_only': 'Only an owner/admin can complete organization setup.',
+  'onboarding.resume': 'Finish your organization setup',
+
   // CSV UI; non-English text is an unreviewed machine draft.
   'csv.title': 'Import CSV',
   'csv.hint':

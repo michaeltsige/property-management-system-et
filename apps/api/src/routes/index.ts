@@ -5,6 +5,7 @@
  * same API and must not be broken by web-only changes.
  */
 
+import { onboardingRouter } from './onboarding.js';
 import { Router } from 'express';
 
 import { hierarchyRouter } from './hierarchy.js';
@@ -23,6 +24,7 @@ export const apiRouter = Router();
 
 apiRouter.use('/health', healthRouter);
 apiRouter.use('/auth', authRouter);
+apiRouter.use('/', onboardingRouter);
 apiRouter.use('/organizations', organizationsRouter);
 apiRouter.use('/translations', translationsRouter);
 apiRouter.use('/', hierarchyRouter);

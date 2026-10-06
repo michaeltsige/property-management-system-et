@@ -9,6 +9,40 @@
 import type { TranslationKey } from '../keys.js';
 
 export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Onboarding; non-English entries are unreviewed machine drafts.
+  'onboarding.profile': 'Seenaa',
+  'onboarding.billing': 'Kaffaltii',
+  'onboarding.review': 'Gamaaggama',
+  'onboarding.progress': 'Adeemsa galmee',
+  'onboarding.next': 'Itti aani',
+  'onboarding.back': "Deebi'i",
+  'onboarding.account_type': 'Gosa herregaa',
+  'onboarding.individual': 'Abbaa kiraa dhuunfaa',
+  'onboarding.company': 'Dhaabbata bulchiinsaa',
+  'onboarding.due_day': 'Guyyaa kaffaltii (1–28)',
+  'onboarding.grace_days': 'Guyyoota obsaa',
+  'onboarding.fee_rule': 'Seera kaffaltii turtii',
+  'onboarding.none': 'Adabbii turtii hin qabu',
+  'onboarding.percent': 'Dhibbeentaa',
+  'onboarding.fixed': "Hanga murtaa'e",
+  'onboarding.fee_percent': 'Adabbii turtii (%)',
+  'onboarding.fee_amount': 'Adabbii turtii (ETB)',
+  'onboarding.payment_methods': 'Mala kaffaltii fudhatamu',
+  'onboarding.currency': 'Maallaqa',
+  'onboarding.billing_hint':
+    'Kaalaandariin kaffaltii kan agarsiisaa irraa adda. Seerri adabbii ogeessa seeraa/herregaa naannoo barbaada. Filannoon geetweeyii kaffaltii dhugaa hin jalqabu.',
+  'onboarding.invalid_billing': 'Gatiiwwan ilaali, mala kaffaltii tokko filadhu.',
+  'onboarding.review_hint': 'Herrega uumi; itti aansuun yoo barbaadde qabeenya fi kutaalee jalqabaa dabali.',
+  'onboarding.registered_hint': "Herregni uumameera. Deebi'ii seeni ykn hidhaa seensaa fayyadami.",
+  'onboarding.first_property': 'Qabeenya kee jalqabaa',
+  'onboarding.property_hint':
+    'Filannoo: apaartimentii fi kutaalee duwwaa hanga 200 uumi. Booda dabaluuf 0 fayyadami. Gosa fi teessoo booda gulaali.',
+  'onboarding.finish': 'Qophii xumuri',
+  'onboarding.skip': 'Ammaaf darbi',
+  'onboarding.finished': 'Qophiin jalqabaa xumurameera. Qabeenya dabalataa galchi.',
+  'onboarding.admin_only': 'Abbaa/admin qofatu qophii dhaabbataa xumura.',
+  'onboarding.resume': 'Qophii dhaabbata kee xumuri',
+
   // CSV UI; non-English text is an unreviewed machine draft.
   'csv.title': 'CSV galchi',
   'csv.hint':
