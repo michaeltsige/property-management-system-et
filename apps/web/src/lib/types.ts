@@ -18,7 +18,23 @@ export interface EthiopianAddress {
   landmark: string | null;
 }
 
+export interface Owner {
+  id: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  managementFeeBps: number | null;
+}
+export interface Building {
+  id: string;
+  propertyId: string;
+  name: string;
+}
+
 export interface Property {
+  ownerId: string;
+  owner?: { id: string; name: string };
+  buildings?: Building[];
   id: string;
   name: string;
   code: string | null;
@@ -38,6 +54,8 @@ export interface Property {
 }
 
 export interface Unit {
+  buildingId?: string | null;
+  building?: Building | null;
   id: string;
   propertyId: string;
   label: string;

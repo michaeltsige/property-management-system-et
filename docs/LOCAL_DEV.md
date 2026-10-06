@@ -274,3 +274,13 @@ cannot leak through the front end, because there is none in it.
 
 Direct API access is unaffected: the Express API still authenticates `Bearer` tokens
 for scripts, `curl` and the future mobile app.
+
+### Owner hierarchy UI (item 1b)
+
+At signup select self-owned or managed. In managed mode, Properties includes
+landlord create/edit controls and requires an owner for a new property. The
+self-owned path hides this level. Expand a landlord to edit their contact details
+or optional percentage (stored only; no fee is charged). Use the Buildings / blocks
+button beside a property to create or rename its optional blocks. The unit creation
+form lists only blocks for its selected property. See `docs/OWNER_UI_REPORT.md` for
+manual checks and current scope limits. No additional services or dependencies.

@@ -602,3 +602,25 @@ browser. The existing integration/component tests verify compatibility.
 Three moderate findings and one high tooling finding remain; the local `pnpm audit`
 script still uses the stricter high threshold and can fail. This is not a clean
 zero-advisory audit, and no findings are ignored or suppressed.
+
+## ADR-0029 — Small hierarchy UI before the full onboarding wizard
+
+Accepted 2026-10-06. Signup exposes the two portfolio modes using the existing
+registration API. Properties contains the landlord section only for managed
+portfolios with owners.read permission. Landlord create/edit controls require
+owners.write; property/block writes and unit creation follow the shared RBAC matrix.
+These visibility checks are usability only: API authorization remains authoritative.
+
+Blocks are managed in a property-specific dialog. Unit creation resets its block
+selection whenever the property changes, preventing stale cross-property selections.
+Fee percentages are parsed as decimal text into integer basis points (no floating
+point multiplication); clearing a fee sends null, not zero. No automatic fee billing.
+
+Reuse the existing components and same-origin cookie API. No storage changes, new
+dependencies, browser tests, or live preview stack. English keys are accompanied by
+unreviewed am/om/ti machine drafts; native-speaker review is still required.
+
+Changing portfolio mode after signup, property-owner reassignment UI, and moving
+existing units between blocks are deferred; the corresponding backend hierarchy
+links can already be updated by authorized API clients. This slice does not claim
+the full item-2 wizard or item-3 redesign.

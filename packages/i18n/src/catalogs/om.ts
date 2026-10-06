@@ -9,6 +9,26 @@
 import type { TranslationKey } from '../keys.js';
 
 export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Hierarchy labels: unreviewed machine drafts; require native-speaker review.
+  'portfolio.mode': 'Herrega kana akkamitti fayyadamtu?',
+  'portfolio.self_owned': 'Qabeenyi kun kan koo ti',
+  'portfolio.managed': 'Qabeenya abbootii qabeenyaa biroof nan bulcha',
+  'portfolio.owners': 'Abbootii kiraa',
+  'portfolio.owner': 'Abbaa kiraa',
+  'portfolio.owner_name': 'Maqaa abbaa kiraa',
+  'portfolio.fee': 'Kaffaltii bulchiinsaa (%)',
+  'portfolio.fee_hint': 'Filannoo dha; kuusuuf qofa. Kaffaltiin ofumaan hin muramu.',
+  'portfolio.fee_invalid': 'Dhibbeentaa 0 hanga 100, bakka deesimaalii hanga lamaa galchi.',
+  'portfolio.blocks': 'Gamoo / Blookiiwwan',
+  'portfolio.block': 'Gamoo / Blookii',
+  'portfolio.block_name': 'Maqaa blookii',
+  'portfolio.no_block': 'Blookiin hin jiru',
+  'portfolio.no_owners': 'Qabeenya uumuun dura abbaa kiraa dabali.',
+  'portfolio.no_blocks': "Blookiin filannoo dha. Kutaaleen kallattiin qabeenya kana jalatti ta'uu danda'u.",
+  'portfolio.add_owner': 'Abbaa kiraa dabali',
+  'portfolio.add_block': 'Blookii dabali',
+  'portfolio.choose_owner': 'Abbaa kiraa filadhu',
+
   'app.name': 'Bulchiinsa Qabeenyaa',
   'app.tagline': 'Qabeenya, kireeffamaa fi kiree kee iddoo tokkotti bulchi',
   'app.loading': "Fe'aa jira…",

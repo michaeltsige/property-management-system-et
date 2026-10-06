@@ -18,6 +18,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const { signIn, t } = usePreferences();
   const [form, setForm] = useState({
+    portfolioMode: 'self_owned' as 'self_owned' | 'managed',
     organizationName: '',
     fullName: '',
     email: '',
@@ -39,6 +40,7 @@ export default function RegisterPage() {
     setError(null);
     try {
       await api.register({
+        portfolioMode: form.portfolioMode,
         organizationName: form.organizationName,
         fullName: form.fullName,
         email: form.email,
@@ -75,6 +77,17 @@ export default function RegisterPage() {
         <Card>
           <CardContent>
             <form className="space-y-4" onSubmit={onSubmit}>
+              <div className="space-y-1">
+                <Label htmlFor="portfolioMode">{t('portfolio.mode')}</Label>
+                <Select
+                  id="portfolioMode"
+                  value={form.portfolioMode}
+                  onChange={(e) => update('portfolioMode', e.target.value as typeof form.portfolioMode)}
+                >
+                  <option value="self_owned">{t('portfolio.self_owned')}</option>
+                  <option value="managed">{t('portfolio.managed')}</option>
+                </Select>
+              </div>
               <div className="space-y-1">
                 <Label htmlFor="organizationName">{t('org.name')}</Label>
                 <Input

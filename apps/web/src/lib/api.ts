@@ -20,6 +20,8 @@
 import type { LanguageCode } from '@pms/calendar';
 
 import type {
+  Owner,
+  Building,
   Arrears,
   Charge,
   CollectionRow,
@@ -229,6 +231,17 @@ export const api = {
   me: () => apiFetch<{ user: StoredSession['user'] & { role?: string } }>('/api/session/me'),
 
   // --- portfolio ------------------------------------------------------------
+  owners: () => apiFetch<{ owners: Owner[]; portfolioMode: 'self_owned' | 'managed' }>('/owners'),
+  createOwner: (body: unknown) => apiFetch<{ owner: Owner }>('/owners', { method: 'POST', body }),
+  updateOwner: (id: string, body: unknown) =>
+    apiFetch<{ owner: Owner }>(`/owners/${id}`, { method: 'PATCH', body }),
+  createBuilding: (body: unknown) => apiFetch<{ building: Building }>('/buildings', { method: 'POST', body }),
+  updateBuilding: (id: string, body: unknown) =>
+    apiFetch<{ building: Building }>(`/buildings/${id}`, { method: 'PATCH', body }),
+  updateProperty: (id: string, body: unknown) =>
+    apiFetch<{ property: Property }>(`/properties/${id}`, { method: 'PATCH', body }),
+  updateUnit: (id: string, body: unknown) =>
+    apiFetch<{ unit: Unit }>(`/units/${id}`, { method: 'PATCH', body }),
   properties: () => apiFetch<{ properties: Property[] }>('/properties'),
   createProperty: (body: unknown) =>
     apiFetch<{ property: Property }>('/properties', { method: 'POST', body }),

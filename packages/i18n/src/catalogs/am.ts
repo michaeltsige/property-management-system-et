@@ -9,6 +9,26 @@
 import type { TranslationKey } from '../keys.js';
 
 export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Hierarchy labels: unreviewed machine drafts; require native-speaker review.
+  'portfolio.mode': 'መለያውን እንዴት ይጠቀሙበታል?',
+  'portfolio.self_owned': 'እነዚህ ንብረቶች የእኔ ናቸው',
+  'portfolio.managed': 'ለሌሎች ባለቤቶች ንብረቶችን አስተዳድራለሁ',
+  'portfolio.owners': 'አከራዮች',
+  'portfolio.owner': 'አከራይ',
+  'portfolio.owner_name': 'የአከራይ ስም',
+  'portfolio.fee': 'የአስተዳደር ክፍያ (%)',
+  'portfolio.fee_hint': 'አማራጭ፣ ለመመዝገብ ብቻ። ክፍያ በራስ-ሰር አይቆረጥም።',
+  'portfolio.fee_invalid': 'ከ0 እስከ 100 ያለ መቶኛ እስከ ሁለት የአስርዮሽ ቦታዎች ያስገቡ።',
+  'portfolio.blocks': 'ሕንፃዎች / ብሎኮች',
+  'portfolio.block': 'ሕንፃ / ብሎክ',
+  'portfolio.block_name': 'የብሎክ ስም',
+  'portfolio.no_block': 'ብሎክ የለም',
+  'portfolio.no_owners': 'ንብረቱን ከመፍጠርዎ በፊት አከራይ ያክሉ።',
+  'portfolio.no_blocks': 'ብሎኮች አማራጭ ናቸው። ክፍሎች በቀጥታ የዚህ ንብረት ሊሆኑ ይችላሉ።',
+  'portfolio.add_owner': 'አከራይ ያክሉ',
+  'portfolio.add_block': 'ብሎክ ያክሉ',
+  'portfolio.choose_owner': 'አከራይ ይምረጡ',
+
   'app.name': 'የንብረት አስተዳደር',
   'app.tagline': 'ንብረቶችዎን፣ ተከራዮችዎን እና ኪራይዎን በአንድ ቦታ ያስተዳድሩ',
   'app.loading': 'በመጫን ላይ…',
