@@ -651,3 +651,16 @@ in import reports/batch metadata. No automatic record updates, leases or logins.
 Validation results return HTTP 200 with valid=false and structured row errors;
 auth/scope/input-envelope failures retain 4xx. Database races with other unit
 writers can return 409 and roll back the entire batch. No silent partial success.
+
+## ADR-0032 — Separate signup display and billing defaults
+
+Accepted 2026-10-06. Store account type, default billing calendar, due day, grace,
+late-fee configuration and accepted methods in existing OrganizationSetting rows
+within registration. No schema migration or new dependency. The top-level calendar
+continues to mean display preference, never silently changes lease billing.
+
+Percentage input uses integer basis points; fixed fee input uses santim. Preserve
+legacy lateFeePercent as a compatibility configuration value, not a ledger amount.
+ETB only. Billing due day follows the existing lease 1–28 restriction. Live payment
+credentials are separate from accepted-method preferences. Automatic billing,
+legal enforceability and tenant fund custody are not introduced by signup settings.

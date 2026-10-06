@@ -12,9 +12,10 @@
  *   owner_admin membership in one transaction, plus the default settings.
  */
 
+import type { z } from 'zod';
 import type { PrismaClient } from '@prisma/client';
 
-import { DEFAULT_ORG_SETTINGS, type Role } from '@pms/shared';
+import { DEFAULT_ORG_SETTINGS, signupBillingSchema, type Role } from '@pms/shared';
 import type { CalendarKind, LanguageCode } from '@pms/calendar';
 
 import { getConfig } from '../config.js';
@@ -34,6 +35,8 @@ export interface AuthTokens {
 }
 
 export interface RegisterInput {
+  accountType?: 'individual_landlord' | 'management_company';
+  billing?: z.infer<typeof signupBillingSchema>;
   organizationName: string;
   portfolioMode?: 'self_owned' | 'managed';
   organizationSlug?: string;
@@ -124,8 +127,25 @@ export async function registerOrganization(input: RegisterInput, meta: { request
 
     // Materialise the default configuration as rows, so that later changes are
     // ordinary data edits with an audit trail.
+    const billing = signupBillingSchema.parse(input.billing ?? {});
+    const settings = {
+      ...DEFAULT_ORG_SETTINGS,
+      accountType: input.accountType ?? 'individual_landlord',
+      defaultCalendar: input.calendar,
+      defaultLanguage: input.language,
+      defaultBillingCalendar: billing.billingCalendar,
+      rentDueDay: billing.dueDay,
+      gracePeriodDays: billing.graceDays,
+      lateFeeEnabled: billing.lateFeeRule !== 'none',
+      lateFeeType: billing.lateFeeRule === 'fixed' ? 'fixed' : 'percent',
+      lateFeePercent: billing.lateFeeBps / 100,
+      lateFeeBps: billing.lateFeeBps,
+      lateFeeFixedMinor: billing.lateFeeMinor,
+      acceptedPaymentMethods: billing.acceptedPaymentMethods,
+      onboardingStatus: 'portfolio_pending',
+    };
     await tx.organizationSetting.createMany({
-      data: Object.entries(DEFAULT_ORG_SETTINGS).map(([key, value]) => ({
+      data: Object.entries(settings).map(([key, value]) => ({
         organizationId: organization.id,
         key,
         value: value as never,

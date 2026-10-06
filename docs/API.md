@@ -196,3 +196,15 @@ ETB decimal. Source files must be UTF-8 comma-delimited CSV. No ID data permitte
 Validate first then commit with dryRun=false; commit revalidates transactionally.
 All rows or none. Exact file/kind/hierarchy fingerprints replay without new rows
 within the organization. Report errors omit source values. See CSV_IMPORT_REPORT.md.
+
+### Signup defaults (item 2 foundation)
+
+`POST /auth/register` additionally accepts `accountType` (`individual_landlord` or
+`management_company`), `currency` (ETB only), and optional `billing`:
+`{billingCalendar, dueDay, graceDays, lateFeeRule, lateFeeBps, lateFeeMinor, acceptedPaymentMethods}`.
+Calendar: ethiopian/gregorian, independent of top-level display calendar. Due day
+1–28; grace 0–60; late fee rule none/percent/fixed, basis points 0–10000, fixed
+amount nonnegative safe integer santim. Payment methods are a nonempty unique list
+of cash/bank_transfer/telebirr/chapa. Omitted billing uses Ethiopian billing, due
+5, zero grace/fees, cash+bank transfer. No fees are automatically posted at signup.
+These defaults are organization settings saved with the new account transaction.
