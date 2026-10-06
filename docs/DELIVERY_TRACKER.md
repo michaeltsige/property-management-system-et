@@ -10,7 +10,7 @@ credentials/access, licence uncertainty, destructive actions or stack changes.
 | 1. Owner hierarchy, UI, bulk units, CSV                                          | Merged, PRs #9–13                                |
 | 2. Owner/admin onboarding wizard                                                 | Merged (#14, #15)                                |
 | 3. Task sidebar, property switcher/search, dashboard, unit detail, closable tabs | Merged (#19, #20)                                |
-| 4. Tenant OTP portal, enrollment/review, private IDs, PWA                        | API + web merged (#21, #22); ID review in review |
+| 4. Tenant OTP portal, enrollment/review, private IDs, PWA                        | Merged (#21, #22, #23)                                         |
 | 5. Mock payment completion, proof approval, PDFs, org gateway secrets            | Not started                                      |
 | 6. Contextual documents, checklists, expiry reminders                            | Not started                                      |
 | 7. Consent, self-hosted font, realistic seed                                     | Not started                                      |
