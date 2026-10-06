@@ -9,6 +9,25 @@
 import type { TranslationKey } from '../keys.js';
 
 export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // CSV UI; non-English text is an unreviewed machine draft.
+  'csv.title': 'CSV አስገባ',
+  'csv.hint':
+    'UTF-8፣ እስከ 200 ረድፎች / 256 KiB። ሁሉም ረድፎች አብረው ወይም ምንም አይገቡም። መታወቂያዎች/ምስሎች አይቀበሉም። የረድፍ ቁጥር ራስጌውን ይጨምራል።',
+  'csv.template': 'አብነት አውርድ',
+  'csv.file': 'CSV ፋይል',
+  'csv.text': 'CSV ጽሑፍ',
+  'csv.limit': 'ፋይሉ ከ256 KiB በላይ ነው',
+  'csv.validate': 'አረጋግጥ',
+  'csv.confirm': 'የተረጋገጡ ረድፎችን አስገባ',
+  'csv.replayed': 'ይህ ፋይል አስቀድሞ ገብቷል። አዲስ መዝገብ አልተፈጠረም።',
+  'csv.done': '{count} መዝገቦች ገብተዋል',
+  'csv.ready': '{count} ረድፎች ተረጋግጠዋል፣ ለማስገባት ዝግጁ',
+  'csv.invalid': 'ስህተቶቹን አስተካክለው ዳግም ያረጋግጡ።',
+  'csv.errors': 'የስህተት ሪፖርት አውርድ',
+  'csv.row': 'ረድፍ',
+  'csv.field': 'መስክ',
+  'csv.issue': 'ችግር',
+
   // Bulk unit labels; non-English entries are unreviewed machine drafts.
   'bulk.create': 'ብዙ ክፍሎችን ፍጠር',
   'bulk.hint': "ከ1–200 ባዶ ክፍሎችን ሁሉንም ወይም ምንም ይፈጥራል። በስም ንድፉ አንድ '{n}' ይጠቀሙ። ነባር ስሞች ዳግም አይጠቀሙም።",

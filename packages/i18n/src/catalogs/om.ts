@@ -9,6 +9,25 @@
 import type { TranslationKey } from '../keys.js';
 
 export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // CSV UI; non-English text is an unreviewed machine draft.
+  'csv.title': 'CSV galchi',
+  'csv.hint':
+    'UTF-8, hanga tarree 200 / 256 KiB. Tarreewwan hundi waliin ykn homaa hin galan. Eenyummaa/suuraaleen hin fudhataman. Lakkoofsi tarree mataduree dabalata.',
+  'csv.template': 'Unka buufadhu',
+  'csv.file': 'Faayilii CSV',
+  'csv.text': 'Barruu CSV',
+  'csv.limit': 'Faayiliin 256 KiB caala',
+  'csv.validate': 'Mirkaneessi',
+  'csv.confirm': "Tarree mirkanaa'e galchi",
+  'csv.replayed': 'Faayiliin kun duraan galfameera; galmeen haaraan hin uumamne.',
+  'csv.done': 'Galmeewwan {count} galaniiru',
+  'csv.ready': "Tarreewwan {count} mirkanaa'aniiru; galchuuf qophaa'aniiru",
+  'csv.invalid': "Dogoggora sirreessi, irra deebi'ii mirkaneessi.",
+  'csv.errors': 'Gabaasa dogoggoraa buufadhu',
+  'csv.row': 'Tarree',
+  'csv.field': 'Dirree',
+  'csv.issue': 'Rakkoo',
+
   // Bulk unit labels; non-English entries are unreviewed machine drafts.
   'bulk.create': 'Kutaalee hedduu uumi',
   'bulk.hint':

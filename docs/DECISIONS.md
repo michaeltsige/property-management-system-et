@@ -632,3 +632,22 @@ package. Exactly one literal `{n}`, no evaluated code, max 200 units per request
 Unique property labels and a transaction enforce all-or-none under concurrent
 requests. Retry conflicts are explicit rather than silently skipping duplicates.
 New units are vacant; leases remain the path to occupancy. No jobs or storage changes.
+
+## ADR-0031 — Bounded CSV validation and atomic portfolio import
+
+Accepted 2026-10-06. No CSV dependency: a strict, bounded state-machine parser in
+shared supports BOM/CRLF, escaped quotes and embedded newlines; malformed input
+is rejected. Templates define exact headers. Imports are capped at 200 rows and
+256 KiB UTF-8. Unit labels reserve soft-deleted rows; tenant duplicate checks use
+case-normalized names and normalized phone/email combinations, not inferred identity.
+
+Separate validate/commit calls both validate server-side; writes and per-record
+audit entries share one transaction. A per-org PostgreSQL advisory lock serializes
+imports. An ImportBatch unique organization/content fingerprint prevents exact
+replays including concurrent calls and server restarts. Ordinary tenant creation
+remains unchanged. No source CSV, ID data or raw cell values are logged or retained
+in import reports/batch metadata. No automatic record updates, leases or logins.
+
+Validation results return HTTP 200 with valid=false and structured row errors;
+auth/scope/input-envelope failures retain 4xx. Database races with other unit
+writers can return 409 and roll back the entire batch. No silent partial success.

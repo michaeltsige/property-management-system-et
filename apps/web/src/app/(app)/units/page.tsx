@@ -11,6 +11,7 @@ import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
+import { CsvImport } from '@/components/csv-import';
 import { BulkUnitForm } from '@/components/bulk-unit-form';
 import { PageHeader } from '@/components/app-shell';
 import { MoneyInput } from '@/components/form-controls';
@@ -98,6 +99,13 @@ export default function UnitsPage() {
         titleKey="nav.units"
         actions={
           <>
+            {canWrite && (
+              <CsvImport
+                kind="units"
+                properties={properties.data?.properties ?? []}
+                onImported={units.reload}
+              />
+            )}
             {canWrite && (
               <Button
                 variant="secondary"

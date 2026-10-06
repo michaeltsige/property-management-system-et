@@ -179,3 +179,20 @@ Optional common fields match createUnit except label/status. Creates vacant unit
 returns `{units,count}` with 201. 400 invalid template/bounds, 404 foreign hierarchy,
 409 existing labels (including archived reservations). Transactional and audited;
 never skips duplicates or partially creates a batch. UI: Units → Bulk-create units.
+
+### CSV portfolio imports
+
+`POST /api/v1/imports/units` (units.write) or `/imports/tenants` (tenants.write).
+Body `{csv: string, dryRun?: boolean}`; dryRun defaults true. Units require
+propertyId and accept nullable buildingId; tenants reject hierarchy parameters.
+JSON `{valid,count,imported,errors:[{row,field,message}],replayed?}` with HTTP 200
+for validation results. Row 1 = header; 0 = whole-file error. 400 invalid envelope,
+404 foreign/mismatched hierarchy, 409 database conflict. Max 200 data rows/256 KiB.
+
+Unit header: `label,floor,bedrooms,bathrooms,marketRentMinor`.
+Tenant header: `fullName,phone,email,language,emergencyContactName,emergencyContactPhone`.
+Headers are exact/in order; optional blanks allowed. Rent is integer santim, not
+ETB decimal. Source files must be UTF-8 comma-delimited CSV. No ID data permitted.
+Validate first then commit with dryRun=false; commit revalidates transactionally.
+All rows or none. Exact file/kind/hierarchy fingerprints replay without new rows
+within the organization. Report errors omit source values. See CSV_IMPORT_REPORT.md.
