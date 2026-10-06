@@ -723,3 +723,13 @@ resend cooldown, and `request-code` never reveals whether a number is enrolled.
 OTP delivery goes through the existing notification queue (mock SMS worker),
 keeping the future real SMS swap a worker-only change. Portal routes mount
 before the `'/'`-mounted routers that apply router-level `requireAuth`.
+
+## ADR-0038 — Private ID numbers: masked by default, revealed once, audited always
+
+Accepted 2026-10-06. Tenant identity numbers stay AES-GCM-encrypted at rest;
+every list surface returns only `****` plus the last four digits. Reading the
+full number is a separate, named endpoint gated by `tenants.ids.read`, and
+each read writes an `read_id` audit row carrying actor, type and last four —
+never the number. Staff review toggles `verifiedAt` via a `tenants.write`
+endpoint with `verify` audit rows. Cross-organization access returns 404 so
+other organizations' documents are not even acknowledged.

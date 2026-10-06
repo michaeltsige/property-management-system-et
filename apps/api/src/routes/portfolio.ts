@@ -29,7 +29,7 @@ import { organizationIdOf, requireAuth } from '../middleware/context.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
 import { businessRule, notFound } from '../lib/errors.js';
-import { encryptField, lastFour } from '../lib/crypto.js';
+import { decryptField, encryptField, lastFour } from '../lib/crypto.js';
 import { pstr, str } from '../lib/query.js';
 import { getPrisma } from '../lib/prisma.js';
 import { balanceMinor, postLedgerEntry } from '../services/ledger.js';
@@ -415,6 +415,104 @@ portfolioRouter.get(
           verifiedAt: document.verifiedAt,
         })),
       });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * Reveal one document's full number. `tenants.ids.read` only, and every read is
+ * audited: the number is sensitive data and its access must be explainable.
+ */
+portfolioRouter.get(
+  '/tenants/:tenantId/id-documents/:documentId',
+  requirePermission('tenants.ids.read'),
+  validate({ params: z.object({ tenantId: uuidSchema, documentId: uuidSchema }) }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const organizationId = organizationIdOf(req);
+      const document = await prisma.tenantIdDocument.findFirst({
+        where: {
+          id: String(req.params.documentId ?? ''),
+          tenantId: pstr(req, 'tenantId'),
+          organizationId,
+        },
+        include: { tenant: { select: { deletedAt: true } } },
+      });
+      if (!document || document.tenant.deletedAt) throw notFound('Document not found in this organization');
+
+      await recordAudit(prisma, {
+        organizationId,
+        actorUserId: req.auth?.userId,
+        action: 'read_id',
+        entityType: 'TenantIdDocument',
+        entityId: document.id,
+        // The audit row proves the read happened without storing the number.
+        after: { typeCode: document.typeCode, last4: document.numberLast4 },
+        requestId: req.requestId,
+      });
+
+      res.json({
+        document: {
+          id: document.id,
+          type: document.typeCode,
+          number: decryptField(document.numberEncrypted),
+          last4: document.numberLast4,
+          issuedBy: document.issuedBy,
+          issuedAt: document.issuedAt,
+          expiresAt: document.expiresAt,
+          verifiedAt: document.verifiedAt,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * Staff review: mark a document verified (or undo it). `verifiedAt` is the only
+ * state this sets; the document itself never changes.
+ */
+portfolioRouter.post(
+  '/tenants/:tenantId/id-documents/:documentId/verification',
+  requirePermission('tenants.write'),
+  validate({
+    params: z.object({ tenantId: uuidSchema, documentId: uuidSchema }),
+    body: z.object({ verified: z.boolean() }),
+  }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const organizationId = organizationIdOf(req);
+      const document = await prisma.tenantIdDocument.findFirst({
+        where: {
+          id: String(req.params.documentId ?? ''),
+          tenantId: pstr(req, 'tenantId'),
+          organizationId,
+        },
+        include: { tenant: { select: { deletedAt: true } } },
+      });
+      if (!document || document.tenant.deletedAt) throw notFound('Document not found in this organization');
+
+      const verifiedAt = req.body.verified ? new Date() : null;
+      const updated = await prisma.tenantIdDocument.update({
+        where: { id: document.id },
+        data: { verifiedAt },
+      });
+      await recordAudit(prisma, {
+        organizationId,
+        actorUserId: req.auth?.userId,
+        action: 'verify',
+        entityType: 'TenantIdDocument',
+        entityId: document.id,
+        after: { verified: req.body.verified },
+        requestId: req.requestId,
+      });
+
+      res.json({ document: { id: updated.id, verifiedAt: updated.verifiedAt } });
     } catch (error) {
       next(error);
     }
