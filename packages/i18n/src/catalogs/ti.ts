@@ -9,6 +9,22 @@
 import type { TranslationKey } from '../keys.js';
 
 export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Task navigation; non-English entries are unreviewed machine drafts.
+  'tasks.title': 'ኣቓልቦ ዝደሊ',
+  'tasks.overdue_charges': 'ዝሓለፈ ክፍሊታት ገምግም',
+  'tasks.open_work_orders': 'ክፉት ናይ ጽገና ስርሓት',
+  'tasks.arrears_review': 'ብሕዳር ዘለዉ ውዕላት',
+  'search.placeholder': 'ንብረታት፣ ክፍልታት፣ ተኻረይቲ ድለ',
+  'search.no_results': 'ዝተረኽበ የለን',
+  'search.properties': 'ንብረታት',
+  'search.units': 'ክፍልታት',
+  'search.tenants': 'ተኻረይቲ',
+  'search.unit': 'ክፍሊ',
+  'search.property': 'ንብረት',
+  'search.tenant': 'ተኻራዪ',
+  'property.context': 'መጠራጠሪ ንብረት',
+  'property.all': 'ኩሎም ንብረታት',
+
   // Onboarding; non-English entries are unreviewed machine drafts.
   'onboarding.profile': 'መግለጺ',
   'onboarding.billing': 'ክፍሊት',

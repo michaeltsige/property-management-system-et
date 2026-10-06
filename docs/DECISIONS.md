@@ -692,3 +692,13 @@ Store selections per calendar and derive the effective key in the same render;
 do not fix it in a later effect after an invalid render/request has already occurred.
 Withhold previous-calendar collections while refetching to avoid formatting Pagume
 as Gregorian month 13. Preserve useAsync's stale-request cancellation behavior.
+
+## ADR-0035 — Task-first sidebar, org-wide search, display-only property scope
+
+Accepted 2026-10-06. The sidebar leads with actionable counts (overdue charges,
+open work orders, arrears) computed from existing endpoints, gated client-side by
+the same permissions the API enforces. Global search reuses org-scoped list
+endpoints and filters client-side; it never introduces a new cross-entity query
+surface. The property switcher is strictly a display preference persisted in
+localStorage; screens filter locally, so it cannot act as authorization and a
+deleted property clears itself instead of hiding all rows.

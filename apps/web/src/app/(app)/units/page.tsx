@@ -11,6 +11,7 @@ import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
+import { usePropertyContext } from '@/lib/property-context';
 import { CsvImport } from '@/components/csv-import';
 import { BulkUnitForm } from '@/components/bulk-unit-form';
 import { PageHeader } from '@/components/app-shell';
@@ -53,6 +54,7 @@ export default function UnitsPage() {
   const [marketRent, setMarketRent] = useState<number | null>(null);
   const { pending, error, run } = useAction();
 
+  const [propertyContext] = usePropertyContext();
   const propertyName = useMemo(() => {
     const map = new Map((properties.data?.properties ?? []).map((property) => [property.id, property.name]));
     return (id: string) => map.get(id) ?? '—';
@@ -60,9 +62,10 @@ export default function UnitsPage() {
 
   const visible = (units.data?.units ?? []).filter(
     (unit) =>
-      search.trim() === '' ||
-      unit.label.toLowerCase().includes(search.toLowerCase()) ||
-      propertyName(unit.propertyId).toLowerCase().includes(search.toLowerCase()),
+      (propertyContext === null || unit.propertyId === propertyContext) &&
+      (search.trim() === '' ||
+        unit.label.toLowerCase().includes(search.toLowerCase()) ||
+        propertyName(unit.propertyId).toLowerCase().includes(search.toLowerCase())),
   );
 
   async function submit(event: React.FormEvent) {

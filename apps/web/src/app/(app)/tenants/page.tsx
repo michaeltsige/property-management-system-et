@@ -29,7 +29,9 @@ import {
 
 export default function TenantsPage() {
   const { t, session } = usePreferences();
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(() =>
+    typeof window === 'undefined' ? '' : (new URLSearchParams(window.location.search).get('search') ?? ''),
+  );
   const tenants = useAsync(() => api.tenants(search || undefined), [search]);
   const idTypes = useAsync(() => api.idTypes(), []);
   const [open, setOpen] = useState(false);

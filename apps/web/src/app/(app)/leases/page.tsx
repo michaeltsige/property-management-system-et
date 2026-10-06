@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from 'react';
 import { BILLING_FREQUENCIES, LEASE_STATUSES, type BillingFrequency, type LeaseStatus } from '@pms/shared';
 import { todayIn, type CalendarKind, type CivilDate } from '@pms/calendar';
 
+import { usePropertyContext } from '@/lib/property-context';
 import { api } from '@/lib/api';
 import { formatAmount, formatDate, statusTone } from '@/lib/format';
 import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
@@ -35,6 +36,7 @@ import {
 export default function LeasesPage() {
   const { t, language, calendar } = usePreferences();
   const settings = useAsync(() => api.settings(), []);
+  const [propertyContext] = usePropertyContext();
   const defaultsApplied = useRef(false);
   const leases = useAsync(() => api.leases(), []);
   const units = useAsync(() => api.units(), []);
@@ -45,6 +47,10 @@ export default function LeasesPage() {
   const { pending, error, run } = useAction();
 
   useAutoOpenModal(() => setOpen(true));
+
+  const visibleLeases = (leases.data?.leases ?? []).filter(
+    (lease) => propertyContext === null || lease.unit.property.id === propertyContext,
+  );
 
   const [form, setForm] = useState<{
     unitId: string;
@@ -152,7 +158,7 @@ export default function LeasesPage() {
             <div className="p-4">
               <Alert tone="danger">{leases.error}</Alert>
             </div>
-          ) : (leases.data?.leases.length ?? 0) === 0 ? (
+          ) : visibleLeases.length === 0 ? (
             <EmptyState title={t('common.no_results')} description={t('lease.title')} />
           ) : (
             <Table>
@@ -170,7 +176,7 @@ export default function LeasesPage() {
                 </tr>
               </thead>
               <tbody>
-                {leases.data?.leases.map((lease) => (
+                {visibleLeases.map((lease) => (
                   <tr key={lease.id}>
                     <Td>
                       <span className="font-medium text-slate-900">{lease.unit.label}</span>

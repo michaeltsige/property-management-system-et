@@ -3,6 +3,26 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AppShell } from '@/components/app-shell';
+
+// The shell now mounts the task panel, global search and property switcher,
+// which would otherwise hit the network in every shell test.
+vi.mock('@/lib/api', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/lib/api')>();
+  return {
+    ...original,
+    api: {
+      ...original.api,
+      charges: vi.fn(() => Promise.resolve({ items: [], total: 0 })),
+      workOrders: vi.fn(() => Promise.resolve({ items: [], total: 0, openCount: 0, urgentCount: 0 })),
+      arrears: vi.fn(() =>
+        Promise.resolve({ rows: [], buckets: [], totalMinor: '0', currency: 'ETB', asOf: '' }),
+      ),
+      properties: vi.fn(() => Promise.resolve({ properties: [] })),
+      units: vi.fn(() => Promise.resolve({ units: [] })),
+      tenants: vi.fn(() => Promise.resolve({ tenants: [] })),
+    },
+  };
+});
 import { PreferencesProvider } from '@/lib/preferences';
 
 const replace = vi.fn();
