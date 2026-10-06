@@ -109,3 +109,16 @@ describe('AppShell', () => {
     expect(within(screen.getByRole('main')).queryByText('Bole Demo Property Management')).toBeNull();
   });
 });
+
+it('uses Amharic script for the top-bar month when language is Amharic', async () => {
+  const { todayIn, monthName } = await import('@pms/calendar');
+  window.localStorage.setItem(
+    'pms.session.v1',
+    JSON.stringify({ ...SESSION, user: { ...SESSION.user, language: 'am' } }),
+  );
+  renderShell();
+  await screen.findByText('page content');
+  const today = todayIn('ethiopian');
+  expect(screen.getByText(`${monthName(today, 'am')} ${today.year}`)).toBeInTheDocument();
+  expect(screen.queryByText(`${monthName(today, 'en')} ${today.year}`)).not.toBeInTheDocument();
+});

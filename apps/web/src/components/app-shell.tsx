@@ -191,7 +191,7 @@ function PreferenceSwitchers({ idPrefix }: { idPrefix: string }) {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { session, t, calendar, signOut, ready } = usePreferences();
+  const { session, t, calendar, language, signOut, ready } = usePreferences();
   const [menuOpen, setMenuOpen] = useState(false);
 
   // A signed-out visitor never sees organization data.
@@ -308,7 +308,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             </Button>
             <span className="truncate text-sm font-semibold text-slate-900 lg:hidden">{t('app.name')}</span>
             <Badge tone="gold" className="hidden sm:inline-flex">
-              {formatPeriodKey(`${today.year}-${String(today.month).padStart(2, '0')}`, calendar, 'en')}
+              {formatPeriodKey(`${today.year}-${String(today.month).padStart(2, '0')}`, calendar, language)}
             </Badge>
           </div>
 
