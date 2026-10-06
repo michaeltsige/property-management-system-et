@@ -26,6 +26,7 @@
  * Env:   WEB_PORT, API_HEAP_MB, WEB_HEAP_MB, WORKER_HEAP_MB, DATABASE_URL
  */
 
+import { buildWorkspaces } from './build-workspaces.mjs';
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { createConnection } from 'node:net';
@@ -293,23 +294,7 @@ function packagesBuilt() {
 }
 
 async function buildPackages() {
-  if (packagesBuilt()) {
-    log('dev', 'workspace packages already built');
-    return;
-  }
-  log('dev', 'building workspace packages (@pms/calendar, @pms/shared, @pms/i18n)');
-  const code = await runOnce('dev', 'pnpm', [
-    'exec',
-    'turbo',
-    'run',
-    'build',
-    '--filter=./packages/*',
-    '--output-logs=errors-only',
-  ]);
-  if (code !== 0 || !packagesBuilt()) {
-    log('dev', 'building the workspace packages failed — the apps cannot start without them');
-    process.exit(code === 0 ? 1 : code);
-  }
+  await buildWorkspaces(runOnce, packagesBuilt, log);
 }
 
 /**
@@ -420,7 +405,12 @@ async function main() {
   }
 
   start('api', bin(API_DIR, 'tsx'), ['watch', 'src/server.ts'], { cwd: API_DIR, env: apiEnv });
-  await sleep(1000); // stagger the starts: three Node processes booting at once spikes RSS
+  log('dev', 'waiting for the API to answer before starting web/worker…');
+  if (!(await waitForApi(90))) {
+    log('dev', 'the API did not come up. The reason is in the [api] lines above.');
+    shutdown(1);
+    return;
+  }
 
   if (flags.worker) {
     start('worker', bin(API_DIR, 'tsx'), ['watch', 'src/worker.ts'], {

@@ -295,3 +295,18 @@ Use the error-report download for correction. Unit rents are integer santim and
 tenant CSVs must not include ID numbers/images. Import is not tenant/lease linking.
 Repeated exact submissions do not create duplicates. Apply the ImportBatch migration
 via `pnpm db:deploy`. No new packages, storage services or background processes.
+
+### Missing shared-package export after pulling changes
+
+If the API says `@pms/shared does not provide an export named ...`, rebuild:
+
+```sh
+pnpm exec turbo run build --filter='./packages/*' --force --concurrency=1
+pnpm dev:all
+```
+
+Do not delete database volumes or force reseed. dev:all now always asks Turbo to
+check source/configuration hashes before starting apps (sequential package builds);
+existing dist files alone do not mean the build is current. Worker/web start only
+after API health succeeds. Node 20 in `.nvmrc` is the tested baseline (`nvm use`).
+See DEV_CALENDAR_FIX_REPORT.md for calendar-switch regression and manual checks.
