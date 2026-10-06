@@ -583,3 +583,22 @@ organization and building/property/organization consistency in addition to API
 checks. Unit labels remain unique per property: use A-101/B-101 across blocks.
 No destructive owner/block endpoints or runtime dependencies are added. Existing
 local storage, bearer API and HttpOnly web sessions are unchanged.
+
+## ADR-0028 — Patch Vitest's worker pool without upgrading the test framework
+
+Accepted 2026-10-06. Pin `vitest>tinypool` to 2.1.2 to address
+GHSA-5gmw-xhrv-c9v3 and GHSA-85c8-ppgw-ccpr (inherited options reaching worker
+creation/run). No patched 1.x is available. The targeted override keeps Vitest 3
+and the existing Node 20 baseline; Tinypool 2 supports Node 20. No production
+package is added. Remove/revisit the override when upgrading Vitest.
+
+Four lightweight Node tests resolve the actual pool used by Vitest and verify
+inherited constructor/run options are ignored in worker-thread and child-process
+modes; they also exercise worker recycling. They run in `pnpm test` without a
+browser. The existing integration/component tests verify compatibility.
+
+`pnpm audit --audit-level=critical` now passes. The CI threshold remains critical
+(as already configured, correcting ADR-0018's older CI-command description).
+Three moderate findings and one high tooling finding remain; the local `pnpm audit`
+script still uses the stricter high threshold and can fail. This is not a clean
+zero-advisory audit, and no findings are ignored or suppressed.
