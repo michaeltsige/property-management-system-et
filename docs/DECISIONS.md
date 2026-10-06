@@ -711,3 +711,15 @@ UI action only. The unit detail screen composes existing org-scoped list
 endpoints instead of adding `GET /units/:id`, trading one extra client fetch for
 zero API surface; revisit when pagination lands. Dashboard vacancy links to the
 units screen rather than a new report.
+
+## ADR-0037 — Tenant portal access is OTP-only, reusing the existing role pipeline
+
+Accepted 2026-10-06. Tenants sign in with a one-time SMS code instead of a
+password: enrollment creates a tenant-scoped User with an unusable random
+password plus a `tenant`-role membership, and verify issues the standard token
+pair, so all existing org-scoping and permission middleware applies unchanged.
+Codes are sha256-hashed, ten-minute TTL, single-use, five guesses, 60-second
+resend cooldown, and `request-code` never reveals whether a number is enrolled.
+OTP delivery goes through the existing notification queue (mock SMS worker),
+keeping the future real SMS swap a worker-only change. Portal routes mount
+before the `'/'`-mounted routers that apply router-level `requireAuth`.

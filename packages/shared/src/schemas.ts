@@ -198,6 +198,11 @@ export const loginSchema = z.object({
   organizationSlug: slugSchema.optional(),
 });
 
+export const portalRequestSchema = z.object({ phone: phoneEtSchema }).strict();
+export const portalVerifySchema = z
+  .object({ phone: phoneEtSchema, code: z.string().regex(/^\d{6}$/) })
+  .strict();
+
 export const refreshTokenSchema = z.object({ refreshToken: z.string().min(20) });
 
 export const inviteUserSchema = z.object({

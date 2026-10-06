@@ -9,6 +9,9 @@
 import type { TranslationKey } from '../keys.js';
 
 export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Tenant portal OTP; non-English text is an unreviewed machine draft.
+  'notification.portal_otp': 'ኮድ ፖርታል ክራይ ናይኩም {code} እዩ። ብ10 ደቒቕ ይውዳእ። ንማንም ኣይትካፈሉ።',
+
   // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
   'unit.detail': 'ዝርዝር ክፍሊ',
   'unit.not_found': 'እዚ ክፍሊ ኣብ ንብረትኩም ኣይተረኽበን።',

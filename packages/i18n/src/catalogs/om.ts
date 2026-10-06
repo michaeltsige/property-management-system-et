@@ -9,6 +9,10 @@
 import type { TranslationKey } from '../keys.js';
 
 export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Tenant portal OTP; non-English text is an unreviewed machine draft.
+  'notification.portal_otp':
+    'Koodii portaalii kiraayyii keessanii {code}. Daqiiqaa 10 booda ni dhuma. Namaaf hin qoodinaa.',
+
   // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
   'unit.detail': 'Ibsa kutaa',
   'unit.not_found': 'Kutaan kun qabeenya keessan keessatti hin argamne.',
