@@ -13,7 +13,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { createTranslator, type TranslationOverride, type Translator } from '@pms/i18n';
 import type { CalendarKind, LanguageCode } from '@pms/calendar';
 
-import { loadSession, saveSession, updateStoredSession, type StoredSession } from './api';
+import {
+  SESSION_EXPIRED_EVENT,
+  api,
+  loadSession,
+  saveSession,
+  updateStoredSession,
+  type StoredSession,
+} from './api';
 
 export const LANGUAGES: { code: LanguageCode; label: string; english: string }[] = [
   { code: 'en', label: 'English', english: 'English' },
@@ -51,6 +58,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [calendar, setCalendarState] = useState<CalendarKind>('ethiopian');
 
   // Restore on mount: localStorage is not available during server rendering.
+  // The stored session is a display cache, so it is verified against the server —
+  // the cookies are the real session and this code cannot read them (ADR-0026).
   useEffect(() => {
     const stored = loadSession();
     setSession(stored);
@@ -59,13 +68,40 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       setCalendarState(stored.user.calendar);
     }
     setReady(true);
+
+    if (!stored) return;
+    let cancelled = false;
+    void api
+      .me()
+      .then(() => undefined)
+      .catch(() => {
+        // 401 already cleared the stored session; anything else (API down) keeps
+        // the user where they are and lets the next request decide.
+        if (!cancelled) setSession(loadSession());
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // A 401 that survives the server-side refresh ends the session wherever it was
+  // noticed — including inside a screen's data fetch, hence the event.
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onExpired = () => {
+      setSession(null);
+      setOverrides([]);
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, []);
 
   const refreshOverrides = useCallback(async () => {
     if (!session) return;
     try {
       const response = await fetch(`/api/v1/translations?language=${language}`, {
-        headers: { Authorization: `Bearer ${session.accessToken}` },
+        // The session cookie is HttpOnly; this code has no token to attach.
+        credentials: 'same-origin',
         cache: 'no-store',
       });
       if (!response.ok) return;
