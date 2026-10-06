@@ -15,14 +15,15 @@ The existing storage interface and dependency lockfile are unchanged.
 ## 3. Risks / human verification
 
 Backfilled landlord names come from organization names and need administrator review.
-No fee calculation or legal assumptions. Existing critical tinypool test-tooling
-advisories remain unresolved; this PR does not suppress the dependency audit gate.
-Migration tested on an empty PostgreSQL database by the integration suite; upgrading
-a populated production database has not been verified here. Back up before deploy.
+No fee calculation or legal assumptions. The critical tinypool test-tooling
+advisories are addressed by the separate test-pool fix (PR #10); the audit gate is unchanged.
+Migration tested on an empty PostgreSQL database by the integration suite and on
+a local pre-hierarchy demo database: 2 properties gained org-consistent owner links,
+7 units, 3 leases and 7 ledger rows remained. Production data remains unverified; back up before deploy.
 
 ## 4. Verification
 
-`pnpm test`: 241 tests passed (including 10 new hierarchy tests); full lint passed;
+`pnpm test`: 241 Vitest tests + 4 worker regression tests passed (including 10 new hierarchy tests); full lint passed;
 API typecheck passed. Tests cover registration defaults, owner visibility metadata,
 fee validation, optional blocks, uniqueness, RBAC, cross-org isolation, wrong-property
 blocks, and direct database constraint rejection. No browser/UI acceptance claimed.
