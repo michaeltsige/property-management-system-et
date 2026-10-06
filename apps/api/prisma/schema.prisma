@@ -27,6 +27,7 @@ datasource db {
 // ---------------------------------------------------------------------------
 
 model Organization {
+  imports ImportBatch[]
   id            String    @id @default(uuid()) @db.Uuid
   name          String
   slug          String    @unique
@@ -748,4 +749,16 @@ model JobRun {
 
   @@unique([jobName, idempotencyKey])
   @@index([jobName, startedAt])
+}
+
+/// Exact-content replay protection, never the source CSV or sensitive cell values.
+model ImportBatch {
+  id String @id @default(uuid()) @db.Uuid
+  organizationId String @db.Uuid
+  fingerprint String
+  kind String
+  count Int
+  createdAt DateTime @default(now())
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  @@unique([organizationId, fingerprint])
 }
