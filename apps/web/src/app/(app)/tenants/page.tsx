@@ -1,5 +1,7 @@
 'use client';
 
+import { roleHasPermission, type Role } from '@pms/shared';
+import { CsvImport } from '@/components/csv-import';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
@@ -26,7 +28,7 @@ import {
 } from '@/components/ui';
 
 export default function TenantsPage() {
-  const { t } = usePreferences();
+  const { t, session } = usePreferences();
   const [search, setSearch] = useState('');
   const tenants = useAsync(() => api.tenants(search || undefined), [search]);
   const idTypes = useAsync(() => api.idTypes(), []);
@@ -83,6 +85,9 @@ export default function TenantsPage() {
         titleKey="nav.tenants"
         actions={
           <>
+            {roleHasPermission(session?.role as Role, 'tenants.write') && (
+              <CsvImport kind="tenants" onImported={tenants.reload} />
+            )}
             <Input
               placeholder={t('common.search')}
               value={search}

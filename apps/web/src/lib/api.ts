@@ -17,6 +17,7 @@
  *    caller with `@pms/shared` helpers, never with `Number()` arithmetic.
  */
 
+import type { ImportKind, ImportReport } from '@pms/shared';
 import type { LanguageCode } from '@pms/calendar';
 
 import type {
@@ -246,6 +247,8 @@ export const api = {
   createProperty: (body: unknown) =>
     apiFetch<{ property: Property }>('/properties', { method: 'POST', body }),
   units: () => apiFetch<{ units: Unit[] }>('/units'),
+  importCsv: (kind: ImportKind, body: unknown) =>
+    apiFetch<ImportReport>(`/imports/${kind}`, { method: 'POST', body }),
   bulkUnits: (body: unknown) =>
     apiFetch<{ units: Unit[]; count: number }>('/units/bulk', { method: 'POST', body }),
   createUnit: (body: unknown) => apiFetch<{ unit: Unit }>('/units', { method: 'POST', body }),

@@ -12,6 +12,25 @@
  */
 
 export const EN_CATALOG = {
+  // CSV UI; non-English text is an unreviewed machine draft.
+  'csv.title': 'Import CSV',
+  'csv.hint':
+    'UTF-8, up to 200 rows / 256 KiB. All rows import together or none. Tenant IDs/images are not accepted. Row numbers count records, including the header.',
+  'csv.template': 'Download template',
+  'csv.file': 'CSV file',
+  'csv.text': 'CSV text',
+  'csv.limit': 'File exceeds 256 KiB',
+  'csv.validate': 'Validate',
+  'csv.confirm': 'Import validated rows',
+  'csv.replayed': 'This exact file was already imported; no new records created.',
+  'csv.done': 'Imported {count} records',
+  'csv.ready': '{count} rows validated; ready to import',
+  'csv.invalid': 'Correct the errors and validate again.',
+  'csv.errors': 'Download error report',
+  'csv.row': 'Row',
+  'csv.field': 'Field',
+  'csv.issue': 'Issue',
+
   // Bulk unit labels; non-English entries are unreviewed machine drafts.
   'bulk.create': 'Bulk-create units',
   'bulk.hint':

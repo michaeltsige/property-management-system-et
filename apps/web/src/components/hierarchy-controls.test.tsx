@@ -7,6 +7,7 @@ import PropertiesPage from '@/app/(app)/properties/page';
 import UnitsPage from '@/app/(app)/units/page';
 import RegisterPage from '@/app/(auth)/register/page';
 import { api } from '@/lib/api';
+import type * as ApiModule from '@/lib/api';
 
 const context = vi.hoisted(() => ({ role: 'owner_admin', signIn: vi.fn() }));
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: vi.fn() }) }));
@@ -24,11 +25,12 @@ vi.mock('@/lib/preferences', () => ({
   CALENDARS: [{ code: 'ethiopian', label: 'Ethiopian' }],
 }));
 vi.mock('@/lib/api', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@/lib/api')>();
+  const original = await importOriginal<typeof ApiModule>();
   return {
     ...original,
     api: {
       bulkUnits: vi.fn(),
+      importCsv: vi.fn(),
       owners: vi.fn(),
       properties: vi.fn(),
       units: vi.fn(),
@@ -189,4 +191,38 @@ it('previews and submits bounded bulk labels', async () => {
       naming: { pattern: 'A-{n}', start: 1, count: 10, padding: 3 },
     }),
   );
+});
+
+it('requires validation before CSV commit and resets it when text changes', async () => {
+  const { CsvImportForm } = await import('./csv-import');
+  const user = userEvent.setup();
+  vi.mocked(api.importCsv).mockResolvedValue({ valid: true, count: 1, imported: 0, errors: [] });
+  render(<CsvImportForm kind="tenants" properties={[]} onImported={vi.fn()} />);
+  const commit = screen.getByRole('button', { name: 'Import validated rows' });
+  expect(commit).toBeDisabled();
+  await user.type(
+    screen.getByLabelText('CSV text'),
+    'fullName,phone,email,language,emergencyContactName,emergencyContactPhone\nDemo,,,,,',
+  );
+  await user.click(screen.getByRole('button', { name: 'Validate' }));
+  await waitFor(() => expect(commit).toBeEnabled());
+  await user.type(screen.getByLabelText('CSV text'), 'x');
+  expect(commit).toBeDisabled();
+});
+
+it('shows row-level CSV errors and leaves import disabled', async () => {
+  const { CsvImportForm } = await import('./csv-import');
+  const user = userEvent.setup();
+  vi.mocked(api.importCsv).mockResolvedValue({
+    valid: false,
+    count: 1,
+    imported: 0,
+    errors: [{ row: 2, field: 'phone', message: 'Invalid or missing value' }],
+  });
+  render(<CsvImportForm kind="tenants" properties={[]} onImported={vi.fn()} />);
+  await user.type(screen.getByLabelText('CSV text'), 'invalid');
+  await user.click(screen.getByRole('button', { name: 'Validate' }));
+  expect(await screen.findByText('Invalid or missing value')).toBeInTheDocument();
+  expect(screen.getByRole('button', { name: 'Import validated rows' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Download error report' })).toBeEnabled();
 });

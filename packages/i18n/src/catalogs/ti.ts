@@ -9,6 +9,25 @@
 import type { TranslationKey } from '../keys.js';
 
 export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // CSV UI; non-English text is an unreviewed machine draft.
+  'csv.title': 'CSV ኣእቱ',
+  'csv.hint':
+    'UTF-8፣ ክሳብ 200 መስርዓት / 256 KiB። ኩሎም መስርዓት ብሓባር ወይ ዋላ ሓደ ኣይኣትዉን። መለለዪ/ስእልታት ኣይቅበሉን። ቁጽሪ መስርዕ ርእሲ የጠቓልል።',
+  'csv.template': 'ኣብነት ኣውርድ',
+  'csv.file': 'ፋይል CSV',
+  'csv.text': 'ጽሑፍ CSV',
+  'csv.limit': 'ፋይል ካብ 256 KiB ይዓቢ',
+  'csv.validate': 'ኣረጋግጽ',
+  'csv.confirm': 'ዝተረጋገጹ መስርዓት ኣእቱ',
+  'csv.replayed': 'እዚ ፋይል ኣቐዲሙ ኣትዩ እዩ። ሓድሽ መዝገብ ኣይተፈጥረን።',
+  'csv.done': '{count} መዝገባት ኣትዮም',
+  'csv.ready': '{count} መስርዓት ተረጋጊጾም፣ ንምእታው ድሉዋት',
+  'csv.invalid': 'ጌጋታት ኣስተኻኽሉ፣ ዳግም ኣረጋግጹ።',
+  'csv.errors': 'ጸብጻብ ጌጋ ኣውርድ',
+  'csv.row': 'መስርዕ',
+  'csv.field': 'ዓውዲ',
+  'csv.issue': 'ጸገም',
+
   // Bulk unit labels; non-English entries are unreviewed machine drafts.
   'bulk.create': 'ብዙሓት ክፍልታት ፍጠር',
   'bulk.hint': "ካብ 1–200 ባዶ ክፍልታት ኩሎም ወይ ዋላ ሓደ ኣይፍጠርን። ኣብ ቅዲ ስም ሓደ '{n}' ተጠቐሙ። ዘለዉ ኣስማት ኣይድገሙን።",

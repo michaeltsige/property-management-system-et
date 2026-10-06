@@ -284,3 +284,14 @@ or optional percentage (stored only; no fee is charged). Use the Buildings / blo
 button beside a property to create or rename its optional blocks. The unit creation
 form lists only blocks for its selected property. See `docs/OWNER_UI_REPORT.md` for
 manual checks and current scope limits. No additional services or dependencies.
+
+### Bulk units and CSV imports
+
+Units → Bulk-create units previews names such as A-001…A-010 from `A-{n}`.
+Each batch creates at most 200 vacant units, all or none. Existing labels are not
+reused. Units/Tenants → Import CSV downloads the exact header template; supply a
+UTF-8 file (max 256 KiB / 200 rows), Validate, fix errors, then Import validated rows.
+Use the error-report download for correction. Unit rents are integer santim and
+tenant CSVs must not include ID numbers/images. Import is not tenant/lease linking.
+Repeated exact submissions do not create duplicates. Apply the ImportBatch migration
+via `pnpm db:deploy`. No new packages, storage services or background processes.
