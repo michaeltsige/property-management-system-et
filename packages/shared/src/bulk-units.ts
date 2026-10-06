@@ -9,7 +9,10 @@ export const unitPatternSchema = z
       .min(3)
       .max(50)
       .refine(
-        (s) => (s.match(/\{n\}/g) ?? []).length === 1 && !s.replace('{n}', '').match(/[{}\x00-\x1f\x7f]/),
+        (s) =>
+          (s.match(/\{n\}/g) ?? []).length === 1 &&
+          !/[{}]/.test(s.replace('{n}', '')) &&
+          !Array.from(s).some((ch) => ch.charCodeAt(0) < 32 || ch.charCodeAt(0) === 127),
         'Use exactly one {n} placeholder and no other braces or control characters',
       ),
     start: z.number().int().min(0).max(999999),
