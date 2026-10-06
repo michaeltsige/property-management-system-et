@@ -346,3 +346,15 @@ Tabs remember the screens you have open (up to 8) and survive reloads; clearing
 localStorage resets them. Unit labels in Units link to a detail screen with
 leases and maintenance for that unit. The dashboard's Vacant card links to
 Units. None of this changes API behavior or background jobs.
+
+## First-load performance in Cloud Shell
+
+Two things keep the first real click fast:
+
+- `pnpm dev:all` **pre-compiles every web route in the background** right after
+  startup (look for the `warm …` lines ending in "the app is fully warm"). Wait
+  for that line before opening the preview; otherwise your first visit queues
+  behind the compile of whichever route warm-up is on.
+- The web client **deduplicates concurrent identical GETs** (shell, task panel
+  and screens all need the same lists), so one dashboard load makes one request
+  per endpoint, not four.

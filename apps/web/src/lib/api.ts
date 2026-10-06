@@ -194,7 +194,7 @@ function resolveUrl(path: string): string {
   return path.startsWith('/api/') ? path : `/api/v1${path}`;
 }
 
-export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+async function runFetch<T>(path: string, options: RequestOptions): Promise<T> {
   const response = await rawRequest(resolveUrl(path), options);
 
   if (response.status === 401) {
@@ -209,6 +209,31 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
   if (!response.ok) throw await toApiError(response);
   return parseResponse<T>(response);
+}
+
+/**
+ * Concurrent duplicate GETs share a single request.
+ *
+ * The shell mounts several components that each need the same lists (search,
+ * task panel, screens), and dev-mode StrictMount runs effects twice — without
+ * deduplication the dashboard fires four copies of the same call, and every
+ * copy pays the Cloud Shell preview's round-trip cost. Only in-flight requests
+ * are shared (never cached), so data is never stale; requests with an
+ * AbortSignal are excluded because the signal belongs to one caller.
+ */
+const inflightGets = new Map<string, Promise<unknown>>();
+
+export function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  if ((options.method ?? 'GET') !== 'GET' || options.signal) return runFetch<T>(path, options);
+
+  const existing = inflightGets.get(path);
+  if (existing) return existing as Promise<T>;
+
+  const promise = runFetch<T>(path, options).finally(() => {
+    inflightGets.delete(path);
+  });
+  inflightGets.set(path, promise);
+  return promise;
 }
 
 export const api = {
