@@ -9,6 +9,17 @@
 import type { TranslationKey } from '../keys.js';
 
 export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Bulk unit labels; non-English entries are unreviewed machine drafts.
+  'bulk.create': 'ብዙሓት ክፍልታት ፍጠር',
+  'bulk.hint': "ካብ 1–200 ባዶ ክፍልታት ኩሎም ወይ ዋላ ሓደ ኣይፍጠርን። ኣብ ቅዲ ስም ሓደ '{n}' ተጠቐሙ። ዘለዉ ኣስማት ኣይድገሙን።",
+  'bulk.pattern': 'ቅዲ ስም',
+  'bulk.start': 'መጀመርታ ቁጽሪ',
+  'bulk.count': 'ብዝሒ ክፍልታት',
+  'bulk.padding': 'ስፍሓት ቁጽሪ',
+  'bulk.preview': 'ቅድመ ትርኢት',
+  'bulk.invalid': 'ዘይቅኑዕ ቅዲ ወይ ወሰን',
+  'bulk.created': '{count} ክፍልታት ተፈጢሮም',
+
   // Hierarchy labels: unreviewed machine drafts; require native-speaker review.
   'portfolio.mode': 'ነዚ ሕሳብ ብኸመይ ክትጥቀሙሉ ኢኹም?',
   'portfolio.self_owned': 'እዞም ንብረታት ናተይ እዮም',

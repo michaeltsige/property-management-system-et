@@ -9,6 +9,18 @@
 import type { TranslationKey } from '../keys.js';
 
 export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Bulk unit labels; non-English entries are unreviewed machine drafts.
+  'bulk.create': 'Kutaalee hedduu uumi',
+  'bulk.hint':
+    "Kutaalee duwwaa 1–200 hunda ykn homaa uuma. Maqaa keessatti bakka bu'aa '{n}' tokko fayyadami. Maqaa jiru irra deebi'uun hin danda'amu.",
+  'bulk.pattern': 'Akkaataa maqaa',
+  'bulk.start': 'Lakkoofsa jalqabaa',
+  'bulk.count': "Baay'ina kutaalee",
+  'bulk.padding': "Bal'ina lakkoofsaa",
+  'bulk.preview': 'Durargii',
+  'bulk.invalid': 'Akkaataa ykn daangaa sirrii hin taane',
+  'bulk.created': 'Kutaaleen {count} uumamaniiru',
+
   // Hierarchy labels: unreviewed machine drafts; require native-speaker review.
   'portfolio.mode': 'Herrega kana akkamitti fayyadamtu?',
   'portfolio.self_owned': 'Qabeenyi kun kan koo ti',

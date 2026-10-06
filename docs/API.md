@@ -170,3 +170,12 @@ pnpm --filter @pms/api worker -- --once=notifications.send
   Invalid input returns 400, duplicates 409, missing managed owner 422.
 - Properties include owner name/id and buildings; units include building name/id.
 - Changes are audited transactionally. No owner/block delete endpoint is provided.
+
+### Bulk unit creation
+
+`POST /api/v1/units/bulk` (units.write):
+`{propertyId, buildingId?, naming:{pattern:"A-{n}",start:1,count:10,padding:3}}`.
+Optional common fields match createUnit except label/status. Creates vacant units,
+returns `{units,count}` with 201. 400 invalid template/bounds, 404 foreign hierarchy,
+409 existing labels (including archived reservations). Transactional and audited;
+never skips duplicates or partially creates a batch. UI: Units → Bulk-create units.
