@@ -9,6 +9,26 @@
 import type { TranslationKey } from '../keys.js';
 
 export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Hierarchy labels: unreviewed machine drafts; require native-speaker review.
+  'portfolio.mode': 'ነዚ ሕሳብ ብኸመይ ክትጥቀሙሉ ኢኹም?',
+  'portfolio.self_owned': 'እዞም ንብረታት ናተይ እዮም',
+  'portfolio.managed': 'ንኻልኦት ወነንቲ ንብረት የመሓድር',
+  'portfolio.owners': 'ኣካረይቲ',
+  'portfolio.owner': 'ኣካራዪ',
+  'portfolio.owner_name': 'ስም ኣካራዪ',
+  'portfolio.fee': 'ክፍሊት ምምሕዳር (%)',
+  'portfolio.fee_hint': 'ኣማራጺ፣ ንምዝገባ ጥራይ። ክፍሊት ብርእሱ ኣይቑረጽን።',
+  'portfolio.fee_invalid': 'ካብ 0 ክሳብ 100 ሚእታዊት ክሳብ ክልተ ዓስራዊ ቦታታት ኣእትዉ።',
+  'portfolio.blocks': 'ህንጻታት / ብሎካት',
+  'portfolio.block': 'ህንጻ / ብሎክ',
+  'portfolio.block_name': 'ስም ብሎክ',
+  'portfolio.no_block': 'ብሎክ የለን',
+  'portfolio.no_owners': 'ንብረት ቅድሚ ምፍጣርኩም ኣካራዪ ወስኹ።',
+  'portfolio.no_blocks': 'ብሎካት ኣማራጺ እዮም። ክፍልታት ብቐጥታ ኣብ ትሕቲ እዚ ንብረት ክኾኑ ይኽእሉ።',
+  'portfolio.add_owner': 'ኣካራዪ ወስኹ',
+  'portfolio.add_block': 'ብሎክ ወስኹ',
+  'portfolio.choose_owner': 'ኣካራዪ ምረጹ',
+
   'app.name': 'ምሕደራ ንብረት',
   'app.tagline': 'ንብረታትካ፣ ተኻረይትኻን ክራይካን ኣብ ሓደ ቦታ ኣምሓድር',
   'app.loading': 'ይጽዕን ኣሎ…',

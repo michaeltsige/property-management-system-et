@@ -3,7 +3,7 @@
 import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
-import { UNIT_STATUSES } from '@pms/shared';
+import { UNIT_STATUSES, roleHasPermission, type Role } from '@pms/shared';
 
 import { api } from '@/lib/api';
 import { formatAmount, statusTone } from '@/lib/format';
@@ -31,12 +31,14 @@ import {
 } from '@/components/ui';
 
 export default function UnitsPage() {
-  const { t, language } = usePreferences();
+  const { t, language, session } = usePreferences();
+  const canWrite = roleHasPermission(session?.role as Role, 'units.write');
   const units = useAsync(() => api.units(), []);
   const properties = useAsync(() => api.properties(), []);
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [form, setForm] = useState({
+    buildingId: '',
     propertyId: '',
     label: '',
     floor: '',
@@ -63,6 +65,7 @@ export default function UnitsPage() {
     event.preventDefault();
     await run(async () => {
       await api.createUnit({
+        buildingId: form.buildingId || null,
         propertyId: form.propertyId,
         label: form.label,
         floor: form.floor === '' ? undefined : Number(form.floor),
@@ -72,7 +75,15 @@ export default function UnitsPage() {
         marketRent: marketRent === null ? undefined : { amountMinor: marketRent, currency: 'ETB' },
       });
       setOpen(false);
-      setForm({ propertyId: '', label: '', floor: '', bedrooms: '', bathrooms: '', status: 'vacant' });
+      setForm({
+        buildingId: '',
+        propertyId: '',
+        label: '',
+        floor: '',
+        bedrooms: '',
+        bathrooms: '',
+        status: 'vacant',
+      });
       setMarketRent(null);
       units.reload();
     }).catch(() => undefined);
@@ -90,7 +101,10 @@ export default function UnitsPage() {
               onChange={(event) => setSearch(event.target.value)}
               className="h-9 w-40"
             />
-            <Button onClick={() => setOpen(true)} disabled={(properties.data?.properties.length ?? 0) === 0}>
+            <Button
+              onClick={() => setOpen(true)}
+              disabled={!canWrite || (properties.data?.properties.length ?? 0) === 0}
+            >
               <Plus className="h-4 w-4" />
               {t('common.create')}
             </Button>
@@ -117,6 +131,7 @@ export default function UnitsPage() {
                 <tr>
                   <Th>{t('unit.label')}</Th>
                   <Th>{t('nav.properties')}</Th>
+                  <Th>{t('portfolio.block')}</Th>
                   <Th>{t('unit.bedrooms')}</Th>
                   <Th>{t('unit.area_sqm')}</Th>
                   <Th>{t('unit.market_rent')}</Th>
@@ -128,6 +143,7 @@ export default function UnitsPage() {
                   <tr key={unit.id}>
                     <Td className="font-medium text-slate-900">{unit.label}</Td>
                     <Td>{unit.property?.name ?? propertyName(unit.propertyId)}</Td>
+                    <Td>{unit.building?.name ?? t('portfolio.no_block')}</Td>
                     <Td>
                       {unit.bedrooms ?? '—'} / {unit.bathrooms ?? '—'}
                     </Td>
@@ -159,7 +175,7 @@ export default function UnitsPage() {
             <Button variant="secondary" onClick={() => setOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button form="unit-form" type="submit" disabled={pending}>
+            <Button form="unit-form" type="submit" disabled={pending || !canWrite}>
               {pending ? t('app.loading') : t('common.save')}
             </Button>
           </>
@@ -172,7 +188,9 @@ export default function UnitsPage() {
               id="propertyId"
               required
               value={form.propertyId}
-              onChange={(event) => setForm((current) => ({ ...current, propertyId: event.target.value }))}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, propertyId: event.target.value, buildingId: '' }))
+              }
             >
               <option value="">—</option>
               {properties.data?.properties.map((property) => (
@@ -183,6 +201,23 @@ export default function UnitsPage() {
             </Select>
           </div>
 
+          <div className="space-y-1">
+            <Label htmlFor="buildingId">{t('portfolio.block')}</Label>
+            <Select
+              id="buildingId"
+              value={form.buildingId}
+              onChange={(e) => setForm((f) => ({ ...f, buildingId: e.target.value }))}
+            >
+              <option value="">{t('portfolio.no_block')}</option>
+              {properties.data?.properties
+                .find((p) => p.id === form.propertyId)
+                ?.buildings?.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+            </Select>
+          </div>
           <div className="space-y-1">
             <Label htmlFor="label">{t('unit.label')}</Label>
             <Input

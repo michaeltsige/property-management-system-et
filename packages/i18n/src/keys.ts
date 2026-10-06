@@ -12,6 +12,25 @@
  */
 
 export const EN_CATALOG = {
+  'portfolio.mode': 'How will you use the account?',
+  'portfolio.self_owned': 'I own these properties',
+  'portfolio.managed': 'I manage properties for other owners',
+  'portfolio.owners': 'Landlords',
+  'portfolio.owner': 'Landlord',
+  'portfolio.owner_name': 'Landlord name',
+  'portfolio.fee': 'Management fee (%)',
+  'portfolio.fee_hint': 'Optional, stored only. No fees are charged automatically.',
+  'portfolio.fee_invalid': 'Enter a percentage from 0 to 100 with up to two decimal places.',
+  'portfolio.blocks': 'Buildings / blocks',
+  'portfolio.block': 'Building / block',
+  'portfolio.block_name': 'Block name',
+  'portfolio.no_block': 'No block',
+  'portfolio.no_owners': 'Add a landlord before creating their property.',
+  'portfolio.no_blocks': 'Blocks are optional. Units can belong directly to this property.',
+  'portfolio.add_owner': 'Add landlord',
+  'portfolio.add_block': 'Add block',
+  'portfolio.choose_owner': 'Choose a landlord',
+
   // --- app shell -----------------------------------------------------------
   'app.name': 'Property Management',
   'app.tagline': 'Manage your properties, tenants and rent in one place',
