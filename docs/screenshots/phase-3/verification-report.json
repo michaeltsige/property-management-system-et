@@ -1,0 +1,114 @@
+{
+  "walkthrough": [
+    {
+      "step": "mobile drawer opens",
+      "ok": true
+    },
+    {
+      "step": "property created at phone width",
+      "ok": true
+    },
+    {
+      "step": "unit created at phone width",
+      "ok": true
+    },
+    {
+      "step": "lease created at phone width",
+      "ok": true,
+      "leaseRows": 4
+    },
+    {
+      "step": "payment recorded at phone width",
+      "ok": true,
+      "receiptText": "Payment recorded · receipt RCT-2026-000003"
+    }
+  ],
+  "axe": [
+    {
+      "page": "payments (phone)",
+      "url": "http://localhost:3000/payments",
+      "violations": []
+    },
+    {
+      "page": "dashboard",
+      "url": "http://localhost:3000/dashboard",
+      "violations": []
+    },
+    {
+      "page": "leases",
+      "url": "http://localhost:3000/leases",
+      "violations": []
+    },
+    {
+      "page": "payments",
+      "url": "http://localhost:3000/payments",
+      "violations": []
+    },
+    {
+      "page": "charges",
+      "url": "http://localhost:3000/charges",
+      "violations": []
+    },
+    {
+      "page": "tenants",
+      "url": "http://localhost:3000/tenants",
+      "violations": []
+    },
+    {
+      "page": "properties",
+      "url": "http://localhost:3000/properties",
+      "violations": []
+    },
+    {
+      "page": "maintenance",
+      "url": "http://localhost:3000/maintenance",
+      "violations": []
+    },
+    {
+      "page": "reports",
+      "url": "http://localhost:3000/reports",
+      "violations": []
+    },
+    {
+      "page": "settings",
+      "url": "http://localhost:3000/settings",
+      "violations": []
+    },
+    {
+      "page": "translations",
+      "url": "http://localhost:3000/settings/translations",
+      "violations": []
+    },
+    {
+      "page": "login",
+      "url": "http://localhost:3000/login",
+      "violations": []
+    }
+  ],
+  "pwa": [
+    {
+      "check": "manifest served",
+      "ok": true,
+      "status": 200
+    },
+    {
+      "check": "service worker registration",
+      "ok": true,
+      "state": "active"
+    },
+    {
+      "check": "page controlled by worker",
+      "ok": true
+    },
+    {
+      "check": "offline fallback page shown",
+      "ok": true
+    },
+    {
+      "check": "offline page reachable online",
+      "ok": true
+    }
+  ],
+  "errors": [],
+  "consoleErrors": ["[pwa] Failed to load resource: net::ERR_INTERNET_DISCONNECTED"]
+}

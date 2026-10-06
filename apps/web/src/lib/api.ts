@@ -4,10 +4,15 @@
  * The single API client for the web app.
  *
  * Rules it enforces for every call:
- *  - relative URLs only, so the same build works locally, in the sandbox preview
- *    and behind a load balancer (see `next.config.ts` for the rewrite);
- *  - the access token rides in `Authorization`, never in a query string;
- *  - one transparent refresh when a token has expired, with the request replayed;
+ *  - relative URLs only, so the same build works locally, in Cloud Shell Web
+ *    Preview and behind a load balancer;
+ *  - **no credentials in JavaScript at all**: the session lives in `HttpOnly`
+ *    cookies that this code cannot read, and the proxy in
+ *    `app/api/v1/[...path]/route.ts` attaches the Bearer token server-side. This
+ *    client never sends an `Authorization` header (ADR-0026);
+ *  - a 401 is retried behind a server-side refresh, so access-token expiry is
+ *    invisible; if the refresh cookie is dead too, the session is over and the
+ *    app is told to sign out;
  *  - money arrives as decimal strings (BigInt on the server) and is parsed by the
  *    caller with `@pms/shared` helpers, never with `Number()` arithmetic.
  */
@@ -37,9 +42,14 @@ import type {
   WorkOrder,
 } from './types';
 
+/**
+ * What the browser remembers about the session.
+ *
+ * Identity only. It is a display cache so the shell can render instantly on a
+ * reload; everything in it is re-verified against `GET /api/session/me`, and none
+ * of it grants access — the cookies do that, and they are not readable here.
+ */
 export interface StoredSession {
-  accessToken: string;
-  refreshToken: string;
   user: {
     id: string;
     email: string;
@@ -78,7 +88,17 @@ export function loadSession(): StoredSession | null {
   if (typeof window === 'undefined') return null;
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as StoredSession) : null;
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<StoredSession> & Record<string, unknown>;
+    if (!parsed?.user || !parsed?.organization) return null;
+
+    // Rebuild the object field by field. An older build stored tokens here; they
+    // are dropped rather than carried forward (ADR-0026).
+    return {
+      user: parsed.user as StoredSession['user'],
+      organization: parsed.organization as StoredSession['organization'],
+      role: typeof parsed.role === 'string' ? parsed.role : '',
+    };
   } catch {
     return null;
   }
@@ -100,28 +120,38 @@ export function updateStoredSession(patch: Partial<StoredSession>): StoredSessio
 
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
+/**
+ * Broadcast when the session is over, so the shell can send the user to `/login`
+ * even though the failure happened inside some screen's data fetch.
+ */
+export const SESSION_EXPIRED_EVENT = 'pms:session-expired';
+
 interface RequestOptions {
   method?: HttpMethod;
   body?: unknown;
-  /** Skip the automatic refresh (used by the refresh call itself). */
-  skipRefresh?: boolean;
-  /** Send the request without a token (login, register). */
-  anonymous?: boolean;
   signal?: AbortSignal;
 }
 
-async function rawRequest(path: string, options: RequestOptions = {}): Promise<Response> {
-  const session = loadSession();
+function requestHeaders(options: RequestOptions): Record<string, string> {
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
-  if (!options.anonymous && session?.accessToken) headers.Authorization = `Bearer ${session.accessToken}`;
 
-  return fetch(`/api/v1${path}`, {
+  // Required by the proxy on every state-changing request (CSRF, see ADR-0026).
+  // A cross-site page cannot set a custom header without a preflight this server
+  // never approves.
+  if ((options.method ?? 'GET') !== 'GET') headers['X-Requested-With'] = 'XMLHttpRequest';
+  return headers;
+}
+
+async function rawRequest(path: string, options: RequestOptions = {}): Promise<Response> {
+  return fetch(path, {
     method: options.method ?? 'GET',
-    headers,
+    headers: requestHeaders(options),
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     signal: options.signal,
     cache: 'no-store',
+    // Same-origin: the session cookie rides along, and nothing else does.
+    credentials: 'same-origin',
   });
 }
 
@@ -130,27 +160,6 @@ async function parseResponse<T>(response: Response): Promise<T> {
   const text = await response.text();
   if (!text) return undefined as T;
   return JSON.parse(text) as T;
-}
-
-async function refreshSession(): Promise<boolean> {
-  const session = loadSession();
-  if (!session?.refreshToken) return false;
-
-  const response = await rawRequest('/auth/refresh', {
-    method: 'POST',
-    anonymous: true,
-    body: { refreshToken: session.refreshToken },
-  });
-  if (!response.ok) {
-    saveSession(null);
-    return false;
-  }
-  const payload = await parseResponse<{ tokens: { accessToken: string; refreshToken: string } }>(response);
-  updateStoredSession({
-    accessToken: payload.tokens.accessToken,
-    refreshToken: payload.tokens.refreshToken,
-  });
-  return true;
 }
 
 /** Parse a `{ error: { code, message, details } }` envelope into an `ApiError`. */
@@ -170,12 +179,28 @@ async function toApiError(response: Response): Promise<ApiError> {
   }
 }
 
-export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  let response = await rawRequest(path, options);
+/**
+ * Resolve a call to a URL this origin serves.
+ *
+ * Data calls pass an API path (`/properties`); session calls pass the absolute
+ * path they live at (`/api/session/login`). Both stay relative to the page origin,
+ * so the same build works in every environment.
+ */
+function resolveUrl(path: string): string {
+  return path.startsWith('/api/') ? path : `/api/v1${path}`;
+}
 
-  if (response.status === 401 && !options.anonymous && !options.skipRefresh) {
-    const refreshed = await refreshSession();
-    if (refreshed) response = await rawRequest(path, { ...options, skipRefresh: true });
+export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
+  const response = await rawRequest(resolveUrl(path), options);
+
+  if (response.status === 401) {
+    // The proxy has already tried a refresh before answering 401, so this means
+    // the session is genuinely over.
+    if (typeof window !== 'undefined') {
+      saveSession(null);
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+    }
+    throw await toApiError(response);
   }
 
   if (!response.ok) throw await toApiError(response);
@@ -184,22 +209,24 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
 
 export const api = {
   // --- auth -----------------------------------------------------------------
+  // Session endpoints live on the web server: they call the API, set HttpOnly
+  // cookies and return identity only. Tokens never reach this code (ADR-0026).
   register: (body: unknown) =>
-    apiFetch<{ tokens: { accessToken: string; refreshToken: string } }>('/auth/register', {
-      method: 'POST',
-      body,
-      anonymous: true,
-    }),
+    apiFetch<{ user: StoredSession['user']; organization: StoredSession['organization'] }>(
+      '/api/session/register',
+      { method: 'POST', body },
+    ),
   login: (body: { email: string; password: string }) =>
     apiFetch<{
-      tokens: { accessToken: string; refreshToken: string };
       user: StoredSession['user'];
       organization: StoredSession['organization'];
+      /** The role this session acts as. */
       role: string;
-    }>('/auth/login', { method: 'POST', body, anonymous: true }),
-  logout: () =>
-    apiFetch<void>('/auth/logout', { method: 'POST', body: { refreshToken: loadSession()?.refreshToken } }),
-  me: () => apiFetch<{ user: StoredSession['user'] }>('/auth/me'),
+      /** Every organization the user can switch to. */
+      memberships: { organizationId: string; name: string; slug: string; role: string }[];
+    }>('/api/session/login', { method: 'POST', body }),
+  logout: () => apiFetch<void>('/api/session/logout', { method: 'POST', body: {} }),
+  me: () => apiFetch<{ user: StoredSession['user'] & { role?: string } }>('/api/session/me'),
 
   // --- portfolio ------------------------------------------------------------
   properties: () => apiFetch<{ properties: Property[] }>('/properties'),
@@ -278,11 +305,7 @@ export const api = {
     apiFetch<{ override: unknown }>(`/translations/${encodeURIComponent(key)}`, { method: 'PUT', body }),
   /** CSV is text, not JSON: fetched raw so it can be saved to a file verbatim. */
   exportTranslations: async (language: string): Promise<string> => {
-    const session = loadSession();
-    const response = await fetch(`/api/v1/translations/export?language=${language}`, {
-      headers: session?.accessToken ? { Authorization: `Bearer ${session.accessToken}` } : {},
-      cache: 'no-store',
-    });
+    const response = await rawRequest(`/api/v1/translations/export?language=${language}`);
     if (!response.ok) throw await toApiError(response);
     return response.text();
   },

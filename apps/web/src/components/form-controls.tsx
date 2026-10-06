@@ -7,7 +7,7 @@
  * months for Ethiopian leases, including Pagume).
  */
 
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 
 import { daysInMonth, monthName, todayIn, type CalendarKind } from '@pms/calendar';
 
@@ -34,6 +34,10 @@ export function MoneyInput({
   id?: string;
 }) {
   const { t } = usePreferences();
+  // Without an explicit id the label would float next to an unlabelled input;
+  // `useId` is stable across server and client rendering.
+  const generatedId = useId();
+  const inputId = id ?? `money-${generatedId}`;
   const [text, setText] = useState(value === null ? '' : toInputAmount(value));
   const [error, setError] = useState<string | null>(null);
 
@@ -55,16 +59,17 @@ export function MoneyInput({
 
   return (
     <div className="space-y-1">
-      <Label htmlFor={id}>
+      <Label htmlFor={inputId}>
         {label}
         {required ? <span className="text-red-600"> *</span> : null}
       </Label>
       <div className="relative">
-        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">
           {currency === 'ETB' ? 'Br' : currency}
         </span>
         <Input
-          id={id}
+          id={inputId}
+          aria-describedby={`${inputId}-hint`}
           inputMode="decimal"
           className="pl-9 tabular"
           placeholder="1,500.00"
@@ -72,8 +77,12 @@ export function MoneyInput({
           onChange={(event) => commit(event.target.value)}
         />
       </div>
-      {error ? <p className="text-xs text-red-600">{error}</p> : null}
-      <p className="text-[11px] text-slate-500">
+      {error ? (
+        <p className="text-xs text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
+      <p className="text-[11px] text-slate-500" id={`${inputId}-hint`}>
         {currency} · {t('money.amount')}
       </p>
     </div>

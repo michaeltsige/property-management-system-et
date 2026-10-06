@@ -238,6 +238,10 @@ export default function ReportsPage() {
                       label: bucket.label,
                       value: Number(bucket.totalMinor) / 100,
                     }))}
+                    ariaLabel={t('reports.arrears')}
+                    bucketLabel={t('reports.period')}
+                    currencyLabel={currency}
+                    chartDataLabel={t('a11y.chart_data')}
                   />
                 )}
               </CardContent>

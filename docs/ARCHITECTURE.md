@@ -113,7 +113,21 @@ HTTP → helmet → CORS allowlist → JSON body limit
 
 Access tokens (HS256, `jose`) are short-lived (15 min); refresh tokens are random
 256-bit values stored **hashed** in `AuthSession`, rotated on every refresh, and a
-reused token revokes the whole family. Roles are `owner_admin`, `manager`,
+reused token revokes the whole family.
+
+For the web app the lifecycle starts one step earlier, in Next.js (ADR-0026):
+
+```
+browser → /api/session/*  → cookie jar (HttpOnly pms_at / pms_rt) → Express
+browser → /api/v1/*       → Next route handler adds Authorization: Bearer → Express
+                            401 → refresh once, server-side → replay
+```
+
+The browser neither holds nor sends a token, the API never sees the browser's `Origin`
+or `Cookie`, and the endpoints that return tokens are not reachable through the web
+proxy. Non-GET calls must carry `X-Requested-With: XMLHttpRequest` and a matching
+`Origin`. Anything that speaks to the API directly (curl, scripts, the future mobile
+app) uses `Bearer` exactly as before. Roles are `owner_admin`, `manager`,
 `accountant`, `maintenance`, `tenant`, resolved against the single permission
 matrix in `packages/shared/src/permissions.ts` — the web app uses the same table to
 hide actions the user cannot perform.
@@ -188,7 +202,9 @@ default for the signed-in user.
 ## Security
 
 Argon2id password hashing; rate limiting on `/auth/*`; `helmet`; strict CORS
-allowlist; Zod validation on every endpoint; uploads restricted by MIME type and
+allowlist for direct API clients (the web app is same-origin and does not need it);
+tokens in HttpOnly cookies for the browser, with the CSRF pair described above;
+Zod validation on every endpoint; uploads restricted by MIME type and
 size with a path-traversal-safe storage key; secrets only from the environment with
 fail-fast validation at startup; tenant ID numbers encrypted at rest and redacted
 from audit snapshots. `AuditLog` records who/when/before/after for every create,

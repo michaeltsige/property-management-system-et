@@ -78,15 +78,13 @@ export default function DocumentsPage() {
   }
 
   /**
-   * Downloads go through the API with the Authorization header, so the file is
-   * fetched as a blob and handed to the browser rather than linking to a URL that
-   * would need a token in the query string.
+   * Downloads are fetched as a blob and handed to the browser, so the file never
+   * needs a token in a query string. The proxy attaches the Bearer token from the
+   * session cookie (ADR-0026).
    */
   async function download(id: string, filename: string) {
     const response = await fetch(`/api/v1/documents/${id}/download`, {
-      headers: {
-        Authorization: `Bearer ${JSON.parse(window.localStorage.getItem('pms.session.v1') ?? '{}').accessToken ?? ''}`,
-      },
+      credentials: 'same-origin',
     });
     if (!response.ok) return;
     const blob = await response.blob();

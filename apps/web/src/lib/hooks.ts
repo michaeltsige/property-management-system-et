@@ -57,6 +57,40 @@ export function useAsync<T>(loader: () => Promise<T>, deps: unknown[] = []): Asy
   return { data, error, loading, reload };
 }
 
+/**
+ * Open a screen's create dialog when it is reached from a dashboard quick action
+ * (`?new=1`), then clean the query string so a refresh, a bookmark or a
+ * back-navigation does not re-open it.
+ *
+ * It reads `window.location` instead of `useSearchParams` on purpose: a client
+ * page that calls `useSearchParams` must be wrapped in a Suspense boundary to be
+ * prerendered, which would be a steep price for one query parameter.
+ */
+export function useAutoOpenModal(open: () => void, param = 'new') {
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get(param) !== '1') return;
+    open();
+    params.delete(param);
+    const query = params.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
+    // Runs once per mount: the URL is cleaned immediately afterwards.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [param]);
+}
+
+/**
+ * Keep the document title in sync with the current screen.
+ *
+ * The title is announced by screen readers when the route changes and names the
+ * tab in the browser history, so every page sets one (see ADR-0024).
+ */
+export function useDocumentTitle(title: string) {
+  useEffect(() => {
+    document.title = title;
+  }, [title]);
+}
+
 /** A single in-flight action (submit buttons), with its error surfaced inline. */
 export function useAction() {
   const [pending, setPending] = useState(false);

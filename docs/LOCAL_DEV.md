@@ -108,22 +108,78 @@ echo "https://3000-$WEB_HOST"     # $WEB_HOST is set by Cloud Shell
 ```
 
 **Only port 3000 is published.** The browser calls `/api/v1/...` on that origin and
-the Next.js server rewrites it to the Express API on `127.0.0.1:4000`
-(`apps/web/next.config.ts`, `API_PROXY_TARGET`). The API port is never exposed to
-the browser, so nothing in the front end hardcodes `localhost` — and this is also
-why you do **not** need to touch `CORS_ORIGINS` for Web Preview: the request the
-browser makes is same-origin, and the proxied call is server-to-server.
+route handlers in `apps/web/src/app/api/` forward the call to the Express API on
+`127.0.0.1:4000` (`API_PROXY_TARGET`). The API port is never exposed to the browser,
+so nothing in the front end hardcodes `localhost`.
 
-Check the API from the Cloud Shell terminal (server-side is fine):
+**The browser never holds a token and never sends an `Authorization` header.** It
+gets an HttpOnly session cookie instead; the Next.js server reads that cookie and
+adds `Authorization: Bearer …` on the way to the API. This is why Web Preview needs
+no `CORS_ORIGINS` entry — every browser request is same-origin, and the call to the
+API is server-to-server. See ADR-0026 for the full design (session endpoints, CSRF,
+cookie flags, refresh handling).
+
+| Browser calls                   | What happens                                                                                                                                                                                        |
+| ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/api/session/{login,register}` | Forwards to the API, stores `pms_at` / `pms_rt` as **HttpOnly** cookies (`SameSite=Lax`, `Path=/`, `Secure` when the browser used https), returns **only** `{ user, organization }` — never tokens. |
+| `/api/session/me`               | Returns the current identity, or `401 NO_SESSION`.                                                                                                                                                  |
+| `/api/session/{refresh,logout}` | Rotates or clears the cookies.                                                                                                                                                                      |
+| `/api/v1/<anything else>`       | Forwards with the cookie's token as a Bearer header; on `401` it refreshes **once on the server** and replays the request.                                                                          |
+
+`POST /api/v1/auth/login`, `/auth/register` and `/auth/refresh` are **not reachable
+from the browser** — they return `404 NOT_PROXIED`, because those are the three
+responses that contain tokens.
+
+State-changing requests through the proxy must send `X-Requested-With: XMLHttpRequest`,
+which the web client does on every non-GET call; the proxy also checks `Origin` when
+the browser sends one. If you point the app at a hostname the Node process cannot
+guess — some tunnel that rewrites the host — set `APP_ORIGIN=https://your-host` in
+`.env`. Behind Cloud Shell's proxy you should not need to.
+
+Check the API from the Cloud Shell terminal (server-side is fine — the API still
+takes plain Bearer tokens):
 
 ```bash
 curl -s localhost:4000/api/v1/health
-curl -s -X POST localhost:3000/api/v1/auth/login \
+TOKEN=$(curl -s -X POST localhost:4000/api/v1/auth/login \
   -H 'content-type: application/json' \
-  -d '{"email":"owner@demo.test","password":"DemoPass123"}' | head -c 200
+  -d '{"email":"owner@demo.test","password":"DemoPass123"}' \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["tokens"]["accessToken"])')
+curl -s localhost:4000/api/v1/auth/me -H "Authorization: Bearer $TOKEN" | head -c 200
 ```
 
-### 3. When the VM resets (it will)
+To check the browser path from the terminal, use the session endpoint (it needs the
+custom header and an `Origin` the proxy will accept):
+
+```bash
+curl -si -X POST localhost:3000/api/session/login \
+  -H 'content-type: application/json' -H 'x-requested-with: XMLHttpRequest' \
+  -H 'origin: http://localhost:3000' \
+  -d '{"email":"owner@demo.test","password":"DemoPass123"}' | head -20
+```
+
+### 3. Five-minute check in Web Preview
+
+Run through this once after any change to `apps/web/src/lib/server/` or the `/api/`
+route handlers. Nothing else exercises the real proxy in front of Cloud Shell.
+
+1. Sign in with `owner@demo.test` / `DemoPass123` → you land on `/dashboard`.
+2. **Dashboard shows real numbers** (ETB amounts, occupied units) — not zeros and not
+   an error box. This is the one that fails when the browser cannot authenticate.
+3. Press **F5** → still signed in, no flash of the login page.
+4. Open another page with a list on it (Leases, Payments) → rows load.
+5. Record a payment, or edit and save anything → the save succeeds.
+6. **Sign out** → back at `/login`; press F5 → still at `/login`.
+7. DevTools → Application → Cookies: `pms_at` and `pms_rt` are there and **HttpOnly**.
+   `localStorage` holds no token, and no request in the Network tab has an
+   `Authorization` header.
+
+If step 2 fails with `Failed to fetch` and the Network tab shows the request never
+reaching the API, the edge is interfering with the browser's requests themselves
+(not just with headers) — stop and report it with the screenshot; that is a
+different bug from the one ADR-0026 fixes.
+
+### 4. When the VM resets (it will)
 
 Cloud Shell **terminates the VM after ~40 minutes of inactivity** (12 h maximum
 session, 50 h per week). Everything outside `$HOME` is gone; the 5 GB home
@@ -144,7 +200,7 @@ Recovery is always the same two lines:
 cd ~/property-management-system-et && pnpm dev:all
 ```
 
-### 4. Keeping Cloud Shell comfortable
+### 5. Keeping Cloud Shell comfortable
 
 The VM is small. The defaults here are chosen for it: capped Node heaps (384 MB for
 the API and worker, 768 MB for the web dev server), Next.js telemetry disabled, and
@@ -175,7 +231,7 @@ NODE_OPTIONS=--max-old-space-size=768 pnpm build
 Cloud Shell is a preview environment: `pnpm dev:all` is the intended workflow there,
 and CI is where production builds are verified.
 
-### 5. Before you push
+### 6. Before you push
 
 ```bash
 pnpm format          # Prettier
@@ -204,8 +260,17 @@ that guard is deliberate. `docker compose up -d` creates both `pms_dev` and
 
 ## Why the browser never calls the API directly
 
-`apps/web/src/lib/api.ts` uses relative URLs (`/api/v1/...`) only.
-`apps/web/next.config.ts` rewrites `/api/:path*` server-side to
-`API_PROXY_TARGET` (default `http://127.0.0.1:4000`). One origin in every
-environment; no hostname in the bundle; no `localhost` in a browser request; and a
-single port to publish behind Cloud Shell, a tunnel, or a load balancer.
+`apps/web/src/lib/api.ts` uses relative URLs (`/api/v1/...`) only, and route handlers
+in `apps/web/src/app/api/` forward those server-side to `API_PROXY_TARGET` (default
+`http://127.0.0.1:4000`). One origin in every environment; no hostname in the bundle;
+no `localhost` in a browser request; a single port to publish behind Cloud Shell, a
+tunnel, or a load balancer.
+
+The same handlers are where the session lives (ADR-0026): the tokens stay in
+HttpOnly cookies the JavaScript cannot read, and the `Authorization: Bearer` header
+is added by the server, not by the browser. A proxy that rewrites or strips request
+headers therefore cannot break authentication — it never sees one — and a token
+cannot leak through the front end, because there is none in it.
+
+Direct API access is unaffected: the Express API still authenticates `Bearer` tokens
+for scripts, `curl` and the future mobile app.

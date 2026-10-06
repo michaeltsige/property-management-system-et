@@ -23,11 +23,14 @@
   --color-brand-900: #0d2f28;
   --color-gold-400: #e8b22b;
   --color-gold-500: #d29a17;
-  --color-gold-600: #a97710;
+  /* gold-600 and up are the text-safe steps: #a97710 measured 3.5:1 on the gold
+     tint and white on #d29a17 only 2.5:1, both below WCAG AA. */
+  --color-gold-600: #8a5f0c;
+  --color-gold-700: #6f4c09;
 
   --font-sans:
-    'Noto Sans Ethiopic', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
+    'Noto Sans Ethiopic', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -44,6 +47,27 @@ body {
 :lang(am),
 :lang(ti) {
   line-height: 1.75;
+}
+
+/*
+ * Keyboard focus is never optional (WCAG 2.4.7). Components style their own
+ * focus rings; this is the safety net for anything that does not.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+}
+
+/* A user who asked the system for less motion gets less motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 ::selection {

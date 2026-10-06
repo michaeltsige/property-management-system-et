@@ -122,6 +122,7 @@ export default function TranslationsPage() {
               value={target}
               onChange={(event) => setTarget(event.target.value as LanguageCode)}
               className="h-9 w-40"
+              aria-label={t('preferences.language')}
             >
               {LANGUAGES.map((option) => (
                 <option key={option.code} value={option.code}>
@@ -130,6 +131,7 @@ export default function TranslationsPage() {
               ))}
             </Select>
             <Input
+              aria-label={t('common.search')}
               placeholder={t('common.search')}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
@@ -212,6 +214,7 @@ export default function TranslationsPage() {
                     <Td className="max-w-xs text-xs">{row.english}</Td>
                     <Td>
                       <Input
+                        aria-label={`${t('translation.current')} — ${row.key}`}
                         defaultValue={row.current}
                         onChange={(event) =>
                           setEdits((current) => ({ ...current, [row.key]: event.target.value }))
@@ -238,7 +241,7 @@ export default function TranslationsPage() {
                           {t('translation.override')}
                         </span>
                       ) : (
-                        <span className="mt-1 block text-[10px] text-slate-400">{row.source}</span>
+                        <span className="mt-1 block text-[10px] text-slate-500">{row.source}</span>
                       )}
                     </Td>
                     <Td>

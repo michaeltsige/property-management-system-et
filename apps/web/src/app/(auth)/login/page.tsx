@@ -24,11 +24,11 @@ export default function LoginPage() {
     try {
       const result = await api.login({ email, password });
       signIn({
-        accessToken: result.tokens.accessToken,
-        refreshToken: result.tokens.refreshToken,
+        // Identity only: the tokens stayed on the server, inside HttpOnly
+        // cookies this code cannot read (ADR-0026).
         user: result.user,
         organization: result.organization,
-        role: result.role,
+        role: result.role ?? result.memberships[0]?.role ?? '',
       });
       router.replace('/dashboard');
     } catch (cause) {

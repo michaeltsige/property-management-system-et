@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { api } from '@/lib/api';
-import { useAction, useAsync } from '@/lib/hooks';
+import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
 import { LANGUAGES, usePreferences } from '@/lib/preferences';
 
 import { PageHeader } from '@/components/app-shell';
@@ -31,6 +31,7 @@ export default function TenantsPage() {
   const tenants = useAsync(() => api.tenants(search || undefined), [search]);
   const idTypes = useAsync(() => api.idTypes(), []);
   const [open, setOpen] = useState(false);
+  useAutoOpenModal(() => setOpen(true));
   const [form, setForm] = useState({
     fullName: '',
     phone: '',

@@ -265,8 +265,8 @@ export default function SettingsPage() {
                   <tbody>
                     {members.data?.members.map((member) => (
                       <tr key={member.id}>
-                        <Td className="font-medium text-slate-900">{member.user.fullName}</Td>
-                        <Td className="text-xs">{member.user.email}</Td>
+                        <Td className="font-medium text-slate-900">{member.fullName}</Td>
+                        <Td className="text-xs">{member.email}</Td>
                         <Td>{t(`role.${member.role}` as never)}</Td>
                         <Td>
                           <Badge tone={member.status === 'active' ? 'brand' : 'neutral'}>

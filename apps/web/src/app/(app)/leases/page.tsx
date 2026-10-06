@@ -8,7 +8,7 @@ import { todayIn, type CalendarKind, type CivilDate } from '@pms/calendar';
 
 import { api } from '@/lib/api';
 import { formatAmount, formatDate, statusTone } from '@/lib/format';
-import { useAction, useAsync } from '@/lib/hooks';
+import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
@@ -39,7 +39,10 @@ export default function LeasesPage() {
   const tenants = useAsync(() => api.tenants(), []);
   const [open, setOpen] = useState(false);
   const [terminateId, setTerminateId] = useState<string | null>(null);
+  const [terminateReason, setTerminateReason] = useState('');
   const { pending, error, run } = useAction();
+
+  useAutoOpenModal(() => setOpen(true));
 
   const [form, setForm] = useState<{
     unitId: string;
@@ -95,6 +98,7 @@ export default function LeasesPage() {
         reason: reason || undefined,
       });
       setTerminateId(null);
+      setTerminateReason('');
       leases.reload();
     }).catch(() => undefined);
   }
@@ -262,7 +266,7 @@ export default function LeasesPage() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="billingFrequency">{t('money.amount')}</Label>
+            <Label htmlFor="billingFrequency">{t('lease.billing_frequency')}</Label>
             <Select
               id="billingFrequency"
               value={form.billingFrequency}
@@ -275,7 +279,7 @@ export default function LeasesPage() {
             >
               {BILLING_FREQUENCIES.map((frequency) => (
                 <option key={frequency} value={frequency}>
-                  {frequency.replace(/_/g, ' ')}
+                  {t(`billing.${frequency}` as never)}
                 </option>
               ))}
             </Select>
@@ -349,20 +353,21 @@ export default function LeasesPage() {
             <Button variant="secondary" onClick={() => setTerminateId(null)}>
               {t('common.cancel')}
             </Button>
-            <Button
-              variant="destructive"
-              disabled={pending}
-              onClick={() => void terminate('Terminated from the web app')}
-            >
-              {pending ? t('app.loading') : t('common.save')}
+            <Button variant="destructive" disabled={pending} onClick={() => void terminate(terminateReason)}>
+              {pending ? t('app.loading') : t('lease.terminate')}
             </Button>
           </>
         }
       >
-        <p className="text-sm text-slate-600">
-          The lease ends today, the unit becomes vacant again, and the ledger keeps every charge and payment
-          already recorded.
-        </p>
+        <div className="space-y-2">
+          <Label htmlFor="terminate-reason">{t('lease.terminate_reason')}</Label>
+          <Input
+            id="terminate-reason"
+            value={terminateReason}
+            onChange={(event) => setTerminateReason(event.target.value)}
+          />
+          <p className="text-[11px] text-slate-500">{t('lease.terminate_hint')}</p>
+        </div>
         {error ? (
           <Alert tone="danger" className="mt-3">
             {error}

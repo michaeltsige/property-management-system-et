@@ -111,6 +111,35 @@ describe('login, refresh and logout', () => {
     await request(app).post('/api/v1/auth/refresh').send({ refreshToken: newRefresh }).expect(401);
   });
 
+  it('returns the flat session shape the web client stores', async () => {
+    // The web app keeps `{tokens, role, user, organization}` in local storage and
+    // renders `role` in the header. A missing field shows up as "role.undefined"
+    // on every screen rather than as a failed request, so the shape is asserted.
+    const fixture = await createOrganizationFixture('session-shape');
+    const prisma = getPrisma();
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: fixture.userId } });
+
+    const login = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: user.email, password: TEST_PASSWORD })
+      .expect(200);
+
+    expect(typeof login.body.tokens.accessToken).toBe('string');
+    expect(typeof login.body.tokens.refreshToken).toBe('string');
+    expect(login.body.role).toBe('owner_admin');
+    expect(login.body.user).toMatchObject({ email: user.email, fullName: user.fullName });
+    expect(login.body.user.passwordHash).toBeUndefined();
+    expect(login.body.organization).toMatchObject({
+      id: fixture.organizationId,
+      currency: 'ETB',
+      calendar: 'ethiopian',
+    });
+    expect(login.body.memberships[0]).toMatchObject({
+      organizationId: fixture.organizationId,
+      role: 'owner_admin',
+    });
+  });
+
   it('does not reveal whether an email exists', async () => {
     const fixture = await createOrganizationFixture('enum');
     const prisma = getPrisma();
