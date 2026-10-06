@@ -12,6 +12,22 @@
  */
 
 export const EN_CATALOG = {
+  // Task navigation; non-English entries are unreviewed machine drafts.
+  'tasks.title': 'Needs attention',
+  'tasks.overdue_charges': 'Review overdue charges',
+  'tasks.open_work_orders': 'Open work orders',
+  'tasks.arrears_review': 'Leases in arrears',
+  'search.placeholder': 'Search properties, units, tenants',
+  'search.no_results': 'No matches',
+  'search.properties': 'Properties',
+  'search.units': 'Units',
+  'search.tenants': 'Tenants',
+  'search.unit': 'Unit',
+  'search.property': 'Property',
+  'search.tenant': 'Tenant',
+  'property.context': 'Property scope',
+  'property.all': 'All properties',
+
   // Onboarding; non-English entries are unreviewed machine drafts.
   'onboarding.profile': 'Profile',
   'onboarding.billing': 'Billing',

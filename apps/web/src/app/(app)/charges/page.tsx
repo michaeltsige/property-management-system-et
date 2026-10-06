@@ -37,7 +37,9 @@ import {
 export default function ChargesPage() {
   const { t, language, calendar } = usePreferences();
   const [periodKey, setPeriodKey] = useCalendarPeriod(calendar);
-  const [status, setStatus] = useState('');
+  const [status, setStatus] = useState(() =>
+    typeof window === 'undefined' ? '' : (new URLSearchParams(window.location.search).get('status') ?? ''),
+  );
   const [waiveTarget, setWaiveTarget] = useState<{ id: string; description: string } | null>(null);
   const [reason, setReason] = useState('');
   const { pending, error, message, setMessage, run } = useAction();

@@ -9,6 +9,22 @@
 import type { TranslationKey } from '../keys.js';
 
 export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Task navigation; non-English entries are unreviewed machine drafts.
+  'tasks.title': 'Xiyyeeffannoo barbaada',
+  'tasks.overdue_charges': 'Kaffaltii darbe ilaali',
+  'tasks.open_work_orders': 'Hojii suphaa banaa',
+  'tasks.arrears_review': 'Kiraayitota liqii qaban',
+  'search.placeholder': 'Qabeenya, kutaalee, kirayitota barbaadi',
+  'search.no_results': 'Walsimu hin argamne',
+  'search.properties': 'Qabeenyota',
+  'search.units': 'Kutaalee',
+  'search.tenants': 'Kirayitota',
+  'search.unit': 'Kutaa',
+  'search.property': 'Qabeenya',
+  'search.tenant': 'Kirayitaa',
+  'property.context': 'Daangaa qabeenyaa',
+  'property.all': 'Qabeenya hunda',
+
   // Onboarding; non-English entries are unreviewed machine drafts.
   'onboarding.profile': 'Seenaa',
   'onboarding.billing': 'Kaffaltii',

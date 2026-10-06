@@ -9,6 +9,22 @@
 import type { TranslationKey } from '../keys.js';
 
 export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
+  // Task navigation; non-English entries are unreviewed machine drafts.
+  'tasks.title': 'ትኩረት የሚፈልግ',
+  'tasks.overdue_charges': 'ያለፈባቸውን ክፍያዎች ይገምግሙ',
+  'tasks.open_work_orders': 'ክፍት የጥገና ስራዎች',
+  'tasks.arrears_review': 'በብድር ያሉ ውሎች',
+  'search.placeholder': 'ንብረቶችን፣ ክፍሎችን፣ ተከራዮችን ይፈልጉ',
+  'search.no_results': 'ምንም አልተገኘም',
+  'search.properties': 'ንብረቶች',
+  'search.units': 'ክፍሎች',
+  'search.tenants': 'ተከራዮች',
+  'search.unit': 'ክፍል',
+  'search.property': 'ንብረት',
+  'search.tenant': 'ተከራይ',
+  'property.context': 'የንብረት ማጣሪያ',
+  'property.all': 'ሁሉም ንብረቶች',
+
   // Onboarding; non-English entries are unreviewed machine drafts.
   'onboarding.profile': 'መገለጫ',
   'onboarding.billing': 'ክፍያ',

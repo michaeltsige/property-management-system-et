@@ -330,3 +330,12 @@ unregister anything listed, then hard-refresh (Ctrl+Shift+R). First visits in de
 compile each route on demand (Dashboard can take 10–20 s on small machines); that
 is expected, not a crash. Offline/PWA belongs to the production build. See
 SLOW_LOAD_REPORT.md.
+
+### Task sidebar, search and property scope
+
+The sidebar's "Needs attention" counts come from charges/work-orders/arrears
+endpoints and respect the signed-in role. Header search filters the org's
+properties/units/tenants locally; selecting a tenant opens `/tenants?search=…`.
+The property scope switcher persists in localStorage and filters Units and
+Leases; clearing it or deleting the property restores the full list. No new
+service or job is involved.

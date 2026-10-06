@@ -48,6 +48,9 @@ import { ROLE_LABEL_FALLBACK } from '@/lib/roles';
 import { cn } from '@/lib/utils';
 
 import { Badge, Button } from './ui';
+import { GlobalSearch } from './global-search';
+import { PropertySwitcher } from './property-switcher';
+import { TaskPanel } from './task-panel';
 
 interface NavItem {
   href: string;
@@ -108,7 +111,8 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   const activeHref = activeHrefFor(pathname);
 
   return (
-    <nav aria-label={t('nav.menu')} className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
+    <nav aria-label={t('nav.menu')} className="flex-1 space-y-4 overflow-y-auto">
+      <TaskPanel />
       {NAV_GROUPS.map((group) => (
         <div key={group.labelKey}>
           <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
@@ -310,11 +314,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <Badge tone="gold" className="hidden sm:inline-flex">
               {formatPeriodKey(`${today.year}-${String(today.month).padStart(2, '0')}`, calendar, language)}
             </Badge>
+            <div className="hidden min-w-0 flex-1 justify-center px-2 md:flex">
+              <GlobalSearch />
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="hidden md:flex">
               <PreferenceSwitchers idPrefix="header" />
+            </div>
+            <div className="hidden lg:block">
+              <PropertySwitcher id="header-property-context" />
             </div>
             <div className="hidden items-center gap-2 border-l border-slate-200 pl-3 sm:flex">
               <div className="text-right">
