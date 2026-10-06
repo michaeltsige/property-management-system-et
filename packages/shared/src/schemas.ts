@@ -157,7 +157,10 @@ export type AddressInput = z.infer<typeof addressSchema>;
 // Auth & organization
 // ---------------------------------------------------------------------------
 
+export const portfolioModeSchema = z.enum(['self_owned', 'managed']);
+
 export const registerSchema = z.object({
+  portfolioMode: portfolioModeSchema.default('self_owned'),
   organizationName: z.string().trim().min(2).max(120),
   organizationSlug: slugSchema.optional(),
   fullName: z.string().trim().min(2).max(120),
@@ -216,7 +219,25 @@ export type UpdateOrganizationSettings = z.infer<typeof organizationSettingsSche
 // Portfolio
 // ---------------------------------------------------------------------------
 
+export const createOwnerSchema = z
+  .object({
+    name: z.string().trim().min(2).max(160),
+    phone: phoneEtSchema.nullable().optional(),
+    email: emailSchema.nullable().optional(),
+    managementFeeBps: z.number().int().min(0).max(10000).nullable().optional(),
+  })
+  .strict();
+export const updateOwnerSchema = createOwnerSchema.partial();
+export const createBuildingSchema = z
+  .object({
+    propertyId: uuidSchema,
+    name: z.string().trim().min(1).max(80),
+  })
+  .strict();
+export const updateBuildingSchema = createBuildingSchema.pick({ name: true });
+
 export const createPropertySchema = z.object({
+  ownerId: uuidSchema.optional(),
   name: z.string().trim().min(2).max(160),
   type: z.enum(PROPERTY_TYPES),
   code: z.string().trim().max(40).optional(),
@@ -231,6 +252,7 @@ export const updatePropertySchema = createPropertySchema.partial().extend({
 });
 
 export const createUnitSchema = z.object({
+  buildingId: uuidSchema.nullable().optional(),
   propertyId: uuidSchema,
   label: z.string().trim().min(1).max(60),
   floor: z.number().int().min(-5).max(200).optional(),

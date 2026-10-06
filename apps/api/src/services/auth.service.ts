@@ -35,6 +35,7 @@ export interface AuthTokens {
 
 export interface RegisterInput {
   organizationName: string;
+  portfolioMode?: 'self_owned' | 'managed';
   organizationSlug?: string;
   fullName: string;
   email: string;
@@ -79,10 +80,21 @@ export async function registerOrganization(input: RegisterInput, meta: { request
     const organization = await tx.organization.create({
       data: {
         name: input.organizationName,
+        portfolioMode: input.portfolioMode ?? 'self_owned',
         slug,
         currency: DEFAULT_ORG_SETTINGS.currency,
         calendar: input.calendar,
         language: input.language,
+      },
+    });
+
+    await tx.owner.create({
+      data: {
+        organizationId: organization.id,
+        name: input.fullName,
+        phone: input.phone ?? null,
+        email: input.email,
+        defaultKey: 'self',
       },
     });
 

@@ -25,6 +25,8 @@ export const PERMISSIONS = [
   'translations.manage',
   'audit.read',
   // portfolio
+  'owners.read',
+  'owners.write',
   'properties.read',
   'properties.write',
   'units.read',
@@ -87,6 +89,8 @@ const READ_ONLY_PORTFOLIO: readonly Permission[] = [
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   owner_admin: PERMISSIONS,
   manager: [
+    'owners.read',
+    'owners.write',
     'org.read',
     'users.read',
     'users.invite',
@@ -120,6 +124,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'audit.read',
   ],
   accountant: [
+    'owners.read',
     'org.read',
     ...READ_ONLY_PORTFOLIO.filter((p) => p !== 'documents.read' && p !== 'maintenance.read'),
     'leases.read',

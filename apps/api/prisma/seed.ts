@@ -161,9 +161,17 @@ async function main(): Promise<void> {
   });
 
   // --- portfolio -----------------------------------------------------------
+  const landlord = await prisma.owner.create({
+    data: {
+      organizationId: organization.id,
+      name: 'Bole Demo Landlord',
+      defaultKey: 'self',
+    },
+  });
   const bole = await prisma.property.create({
     data: {
       organizationId: organization.id,
+      ownerId: landlord.id,
       name: 'Bole Apartments',
       code: 'BOL-01',
       type: 'apartment_block',
@@ -183,6 +191,7 @@ async function main(): Promise<void> {
   const shop = await prisma.property.create({
     data: {
       organizationId: organization.id,
+      ownerId: landlord.id,
       name: 'Megenagna Commercial',
       code: 'MEG-02',
       type: 'commercial_building',
