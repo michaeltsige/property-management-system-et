@@ -679,3 +679,16 @@ without portfolio_pending cannot invoke it. Skip creates no portfolio records.
 No new migration or dependency. First setup is intentionally an apartment property;
 advanced details remain outside this quick path. Fixed late fees are configuration
 only until the scheduled billing implementation; no automatic financial entries.
+
+## ADR-0034 — Source-aware bootstrap and calendar-owned period state
+
+Accepted 2026-10-06. Build-output existence is not freshness. Always run Turbo's
+hash-based package build before starting apps; use concurrency=1 to limit memory.
+Fail before starting worker/web if API health never succeeds. No database repair
+is warranted for missing JavaScript exports after a pull.
+
+Dashboard/Reports period keys belong to a calendar, not just a year/month string.
+Store selections per calendar and derive the effective key in the same render;
+do not fix it in a later effect after an invalid render/request has already occurred.
+Withhold previous-calendar collections while refetching to avoid formatting Pagume
+as Gregorian month 13. Preserve useAsync's stale-request cancellation behavior.

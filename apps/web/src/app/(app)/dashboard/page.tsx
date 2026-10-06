@@ -1,10 +1,11 @@
 'use client';
 
+import { useCalendarPeriod } from '@/lib/use-calendar-period';
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Building2, CalendarPlus, UserPlus, Wallet } from 'lucide-react';
 
-import { formatAmount, formatPeriodKey, todayFor } from '@/lib/format';
+import { formatAmount, formatPeriodKey } from '@/lib/format';
 import { useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { api } from '@/lib/api';
@@ -42,19 +43,24 @@ export default function DashboardPage() {
     () => (session?.role === 'owner_admin' ? api.settings() : Promise.resolve(null)),
     [session?.role],
   );
-  const today = todayFor(calendar);
-  const [periodKey, setPeriodKey] = useState(`${today.year}-${String(today.month).padStart(2, '0')}`);
+  const [periodKey, setPeriodKey] = useCalendarPeriod(calendar);
 
   const query = `?periodKey=${periodKey}&calendar=${calendar}`;
   const summary = useAsync(() => api.summary(query), [query]);
-  const collections = useAsync(() => api.collections(`?calendar=${calendar}&months=13`), [calendar]);
+  const collections = useAsync(
+    async () => ({
+      requestedCalendar: calendar,
+      ...(await api.collections(`?calendar=${calendar}&months=13`)),
+    }),
+    [calendar],
+  );
   const occupancy = useAsync(() => api.occupancy(), []);
   const arrears = useAsync(() => api.arrears(), []);
 
   const currency = summary.data?.organization.currency ?? session?.organization.currency ?? 'ETB';
 
   const collectionSeries = useMemo(() => {
-    const rows = collections.data?.rows ?? [];
+    const rows = collections.data?.requestedCalendar === calendar ? collections.data.rows : [];
     return {
       labels: rows.map((row) => formatPeriodKey(row.periodKey, calendar, language)),
       values: rows.map((row) => Number(row.totalMinor) / 100),

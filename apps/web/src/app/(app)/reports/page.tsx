@@ -1,5 +1,6 @@
 'use client';
 
+import { useCalendarPeriod } from '@/lib/use-calendar-period';
 import { Download } from 'lucide-react';
 import { useState } from 'react';
 
@@ -43,7 +44,7 @@ export default function ReportsPage() {
   const { t, language, calendar, session } = usePreferences();
   const today = todayIn(calendar);
   const [tab, setTab] = useState<Tab>('rent_roll');
-  const [periodKey, setPeriodKey] = useState(`${today.year}-${String(today.month).padStart(2, '0')}`);
+  const [periodKey, setPeriodKey] = useCalendarPeriod(calendar);
 
   const currency = session?.organization.currency ?? 'ETB';
   const rentRoll = useAsync(
@@ -52,7 +53,13 @@ export default function ReportsPage() {
   );
   const arrears = useAsync(() => api.arrears(), [tab]);
   const occupancy = useAsync(() => api.occupancy(), [tab]);
-  const collections = useAsync(() => api.collections(`?calendar=${calendar}&months=13`), [tab, calendar]);
+  const collections = useAsync(
+    async () => ({
+      requestedCalendar: calendar,
+      ...(await api.collections(`?calendar=${calendar}&months=13`)),
+    }),
+    [tab, calendar],
+  );
 
   function exportCsv(filename: string, rows: (string | number)[][], header: string[]) {
     const csv = [header, ...rows]
@@ -382,7 +389,7 @@ export default function ReportsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {collections.data?.rows
+                  {(collections.data?.requestedCalendar === calendar ? collections.data.rows : [])
                     .slice()
                     .reverse()
                     .map((row) => (
