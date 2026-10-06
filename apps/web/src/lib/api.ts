@@ -309,6 +309,11 @@ export const api = {
     }>('/reports/occupancy'),
   collections: (query = '') =>
     apiFetch<{ calendar: string; currency: string; rows: CollectionRow[] }>(`/reports/collections${query}`),
+  finishOnboarding: (body: unknown) =>
+    apiFetch<{ status: string; replayed: boolean; propertyId?: string | null }>('/organizations/onboarding', {
+      method: 'POST',
+      body,
+    }),
   settings: () => apiFetch<{ settings: Record<string, unknown> }>('/organizations/settings'),
   updateSettings: (body: unknown) =>
     apiFetch<{ settings: Record<string, unknown> }>('/organizations/settings', { method: 'PATCH', body }),

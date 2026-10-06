@@ -664,3 +664,18 @@ legacy lateFeePercent as a compatibility configuration value, not a ledger amoun
 ETB only. Billing due day follows the existing lease 1–28 restriction. Live payment
 credentials are separate from accepted-method preferences. Automatic billing,
 legal enforceability and tenant fund custody are not introduced by signup settings.
+
+## ADR-0033 — Resumable onboarding with atomic portfolio completion
+
+Accepted 2026-10-06. Signup collects profile/billing/review, retaining no password
+in persistent browser storage. A successful registration is tracked in component
+state so an immediate login retry does not register twice. Re-enter through login
+if the page was refreshed. Dashboard offers the persisted portfolio_pending step.
+
+Owner/admin-only POST /organizations/onboarding creates optional landlord, property
+and units in one transaction. An organization transaction lock plus persisted
+complete/skipped state prevents duplicate concurrent/retried setup. Older orgs
+without portfolio_pending cannot invoke it. Skip creates no portfolio records.
+No new migration or dependency. First setup is intentionally an apartment property;
+advanced details remain outside this quick path. Fixed late fees are configuration
+only until the scheduled billing implementation; no automatic financial entries.

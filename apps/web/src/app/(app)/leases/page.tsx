@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { BILLING_FREQUENCIES, LEASE_STATUSES, type BillingFrequency, type LeaseStatus } from '@pms/shared';
 import { todayIn, type CalendarKind, type CivilDate } from '@pms/calendar';
@@ -34,6 +34,8 @@ import {
 
 export default function LeasesPage() {
   const { t, language, calendar } = usePreferences();
+  const settings = useAsync(() => api.settings(), []);
+  const defaultsApplied = useRef(false);
   const leases = useAsync(() => api.leases(), []);
   const units = useAsync(() => api.units(), []);
   const tenants = useAsync(() => api.tenants(), []);
@@ -66,6 +68,19 @@ export default function LeasesPage() {
   const [rent, setRent] = useState<number | null>(null);
   const [deposit, setDeposit] = useState<number | null>(null);
 
+  useEffect(() => {
+    if (!settings.data || defaultsApplied.current) return;
+    defaultsApplied.current = true;
+    const s = settings.data.settings;
+    const billing = s.defaultBillingCalendar === 'gregorian' ? 'gregorian' : 'ethiopian';
+    setForm((current) => ({
+      ...current,
+      billingCalendar: billing,
+      startDate: todayIn(billing),
+      dueDayOfMonth: typeof s.rentDueDay === 'number' ? s.rentDueDay : 5,
+    }));
+  }, [settings.data]);
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     await run(async () => {
@@ -76,6 +91,14 @@ export default function LeasesPage() {
         billingFrequency: form.billingFrequency,
         status: form.status,
         dueDayOfMonth: form.dueDayOfMonth,
+        gracePeriodDays:
+          typeof settings.data?.settings.gracePeriodDays === 'number'
+            ? settings.data.settings.gracePeriodDays
+            : 0,
+        lateFeePercent:
+          settings.data?.settings.lateFeeEnabled && settings.data?.settings.lateFeeType === 'percent'
+            ? settings.data.settings.lateFeePercent
+            : undefined,
         startDate: form.startDate,
         endDate: form.endDate,
         rentAmount: { amountMinor: rent ?? 0, currency: 'ETB' },
@@ -107,6 +130,7 @@ export default function LeasesPage() {
 
   return (
     <div>
+      {settings.error && <Alert tone="danger">{settings.error}</Alert>}
       <PageHeader
         titleKey="nav.leases"
         actions={
@@ -353,7 +377,11 @@ export default function LeasesPage() {
             <Button variant="secondary" onClick={() => setTerminateId(null)}>
               {t('common.cancel')}
             </Button>
-            <Button variant="destructive" disabled={pending} onClick={() => void terminate(terminateReason)}>
+            <Button
+              variant="destructive"
+              disabled={pending || settings.loading || !!settings.error}
+              onClick={() => void terminate(terminateReason)}
+            >
               {pending ? t('app.loading') : t('lease.terminate')}
             </Button>
           </>

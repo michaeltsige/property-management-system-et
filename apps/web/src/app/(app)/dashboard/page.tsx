@@ -38,6 +38,10 @@ const QUICK_ACTIONS = [
 
 export default function DashboardPage() {
   const { t, language, calendar, session } = usePreferences();
+  const setup = useAsync(
+    () => (session?.role === 'owner_admin' ? api.settings() : Promise.resolve(null)),
+    [session?.role],
+  );
   const today = todayFor(calendar);
   const [periodKey, setPeriodKey] = useState(`${today.year}-${String(today.month).padStart(2, '0')}`);
 
@@ -72,6 +76,13 @@ export default function DashboardPage() {
 
   return (
     <div>
+      {setup.data?.settings.onboardingStatus === 'portfolio_pending' && (
+        <Alert>
+          <Link href="/onboarding" className="underline">
+            {t('onboarding.resume')}
+          </Link>
+        </Alert>
+      )}
       <PageHeader
         titleKey="dashboard.title"
         description={`${formatPeriodKey(periodKey, calendar, language)} · ${summary.data?.portfolio.properties ?? 0} ${t('nav.properties').toLowerCase()}`}

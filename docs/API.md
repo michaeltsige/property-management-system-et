@@ -208,3 +208,13 @@ amount nonnegative safe integer santim. Payment methods are a nonempty unique li
 of cash/bank_transfer/telebirr/chapa. Omitted billing uses Ethiopian billing, due
 5, zero grace/fees, cash+bank transfer. No fees are automatically posted at signup.
 These defaults are organization settings saved with the new account transaction.
+
+### Complete or skip first-portfolio setup
+
+`POST /organizations/onboarding` requires org.settings.manage and a persisted
+portfolio_pending signup state. Send `{action:"skip"}` or
+`{action:"create",property:{name,type,...},ownerName?,units?:{pattern,start,count,padding}}`.
+Managed mode requires ownerName; self-owned resolves the hidden owner. Units are
+vacant. Returns `{status,propertyId?,replayed}`. Repeated completed/skipped calls
+return replayed=true without new records. Writes and audit entries are atomic.
+Old organizations without pending setup return 422; invalid input 400, RBAC 403.
