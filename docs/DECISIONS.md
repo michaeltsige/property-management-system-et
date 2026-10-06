@@ -702,3 +702,12 @@ endpoints and filters client-side; it never introduces a new cross-entity query
 surface. The property switcher is strictly a display preference persisted in
 localStorage; screens filter locally, so it cannot act as authorization and a
 deleted property clears itself instead of hiding all rows.
+
+## ADR-0036 — Workspace tabs are presentation state; unit detail composes lists
+
+Accepted 2026-10-06. Open tabs persist in localStorage via
+`useSyncExternalStore` with an identity-stable snapshot cache; closing tabs is a
+UI action only. The unit detail screen composes existing org-scoped list
+endpoints instead of adding `GET /units/:id`, trading one extra client fetch for
+zero API surface; revisit when pagination lands. Dashboard vacancy links to the
+units screen rather than a new report.

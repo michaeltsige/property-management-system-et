@@ -51,6 +51,8 @@ import { Badge, Button } from './ui';
 import { GlobalSearch } from './global-search';
 import { PropertySwitcher } from './property-switcher';
 import { TaskPanel } from './task-panel';
+import { WorkspaceTabs, isTabbedRoute } from './workspace-tabs';
+import { openWorkspaceTab } from '@/lib/workspace-tabs';
 
 interface NavItem {
   href: string;
@@ -208,6 +210,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     setMenuOpen(false);
   }, [pathname]);
 
+  // Visiting a workspace screen opens (or re-orders) its tab.
+  useEffect(() => {
+    if (session && isTabbedRoute(pathname)) openWorkspaceTab(pathname);
+  }, [pathname, session]);
+
   if (!ready || !session) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
@@ -344,9 +351,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main id="main" tabIndex={-1} className="min-w-0 flex-1 p-4 focus:outline-none lg:p-6">
-          {children}
-        </main>
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <WorkspaceTabs />
+          <main id="main" tabIndex={-1} className="flex-1 overflow-y-auto p-4 focus:outline-none lg:p-6">
+            {children}
+          </main>
+        </div>
 
         <footer className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-2 text-[11px] text-slate-500">
           <span className="truncate">
