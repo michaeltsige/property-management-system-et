@@ -5,16 +5,16 @@ without per-slice approval. Continue separate small PRs, tests/docs/reports, and
 merge only with green checks. Update the owner in consolidated batches. Stop for
 credentials/access, licence uncertainty, destructive actions or stack changes.
 
-| Item                                                                             | State                                      |
-| -------------------------------------------------------------------------------- | ------------------------------------------ |
-| 1. Owner hierarchy, UI, bulk units, CSV                                          | Merged, PRs #9–13                          |
-| 2. Owner/admin onboarding wizard                                                 | Merged (#14, #15)                          |
-| 3. Task sidebar, property switcher/search, dashboard, unit detail, closable tabs | Merged (#19, #20)                          |
-| 4. Tenant OTP portal, enrollment/review, private IDs, PWA                        | API slice in review; web portal slice next |
-| 5. Mock payment completion, proof approval, PDFs, org gateway secrets            | Not started                                |
-| 6. Contextual documents, checklists, expiry reminders                            | Not started                                |
-| 7. Consent, self-hosted font, realistic seed                                     | Not started                                |
-| 8. CI-only Playwright, excluded from pnpm test and Cloud Shell startup           | Not started                                |
+| Item                                                                             | State                                            |
+| -------------------------------------------------------------------------------- | ------------------------------------------------ |
+| 1. Owner hierarchy, UI, bulk units, CSV                                          | Merged, PRs #9–13                                |
+| 2. Owner/admin onboarding wizard                                                 | Merged (#14, #15)                                |
+| 3. Task sidebar, property switcher/search, dashboard, unit detail, closable tabs | Merged (#19, #20)                                |
+| 4. Tenant OTP portal, enrollment/review, private IDs, PWA                        | API + web merged (#21, #22); ID review in review |
+| 5. Mock payment completion, proof approval, PDFs, org gateway secrets            | Not started                                      |
+| 6. Contextual documents, checklists, expiry reminders                            | Not started                                      |
+| 7. Consent, self-hosted font, realistic seed                                     | Not started                                      |
+| 8. CI-only Playwright, excluded from pnpm test and Cloud Shell startup           | Not started                                      |
 
 Constraints retained: local storage behind existing interface; no heavy new
 runtime dependencies; sequential memory-heavy gates; official Telebirr/Chapa

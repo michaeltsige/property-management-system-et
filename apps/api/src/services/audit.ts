@@ -15,7 +15,17 @@ export type PrismaLike = PrismaClient | Prisma.TransactionClient;
 export interface AuditEvent {
   organizationId?: string | null;
   actorUserId?: string | null;
-  action: 'create' | 'update' | 'delete' | 'login' | 'logout' | 'export' | 'reversal' | 'generate' | 'verify';
+  action:
+    | 'create'
+    | 'update'
+    | 'delete'
+    | 'login'
+    | 'logout'
+    | 'export'
+    | 'reversal'
+    | 'generate'
+    | 'verify'
+    | 'read_id';
   entityType: string;
   entityId?: string | null;
   before?: AuditSnapshot;
