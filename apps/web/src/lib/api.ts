@@ -33,6 +33,7 @@ import type {
   Notification,
   OccupancyRow,
   Payment,
+  PortalMe,
   Property,
   RentRoll,
   StatementLine,
@@ -230,6 +231,18 @@ export const api = {
     }>('/api/session/login', { method: 'POST', body }),
   logout: () => apiFetch<void>('/api/session/logout', { method: 'POST', body: {} }),
   me: () => apiFetch<{ user: StoredSession['user'] & { role?: string } }>('/api/session/me'),
+  /** Ask for an OTP; the answer is identical for known and unknown numbers. */
+  portalRequestCode: (body: { phone: string }) =>
+    apiFetch<{ ok: boolean }>('/api/session/portal-request', { method: 'POST', body }),
+  /** Consume the OTP; sets the HttpOnly session cookies server-side. */
+  portalVerify: (body: { phone: string; code: string }) =>
+    apiFetch<{
+      user: StoredSession['user'];
+      organization: StoredSession['organization'];
+      role: string;
+      memberships: unknown[];
+      tenant: { id: string; fullName: string };
+    }>('/api/session/portal-verify', { method: 'POST', body }),
 
   // --- portfolio ------------------------------------------------------------
   owners: () => apiFetch<{ owners: Owner[]; portfolioMode: 'self_owned' | 'managed' }>('/owners'),
@@ -255,6 +268,15 @@ export const api = {
   tenants: (search?: string) =>
     apiFetch<{ tenants: Tenant[] }>(`/tenants${search ? `?search=${encodeURIComponent(search)}` : ''}`),
   createTenant: (body: unknown) => apiFetch<{ tenant: Tenant }>('/tenants', { method: 'POST', body }),
+  enableTenantPortal: (tenantId: string) =>
+    apiFetch<{ enrolled: boolean; replayed?: boolean }>(`/tenants/${tenantId}/portal`, {
+      method: 'POST',
+      body: {},
+    }),
+  disableTenantPortal: (tenantId: string) =>
+    apiFetch<{ enrolled: boolean }>(`/tenants/${tenantId}/portal`, { method: 'DELETE' }),
+  /** What a signed-in tenant sees on their portal page. */
+  portalMe: () => apiFetch<PortalMe>('/portal/me'),
   leases: () => apiFetch<{ leases: LeaseSummary[] }>('/leases'),
   lease: (id: string) => apiFetch<{ lease: LeaseDetail; balanceMinor: string }>(`/leases/${id}`),
   createLease: (body: unknown) => apiFetch<{ lease: LeaseDetail }>('/leases', { method: 'POST', body }),

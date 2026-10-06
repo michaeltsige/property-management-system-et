@@ -152,6 +152,25 @@ export const EN_CATALOG = {
   'auth.session_expired': 'Your session has expired. Please sign in again.',
   'auth.too_many_attempts': 'Too many attempts. Please try again in {minutes} minutes.',
 
+  // --- tenant portal ----------------------------------------------------
+  'portal.title': 'Tenant portal',
+  'portal.login_hint': 'Sign in with the phone number you gave your landlord. We will text you a code.',
+  'portal.phone': 'Phone number',
+  'portal.send_code': 'Send me a code',
+  'portal.code_sent': 'We sent a 6-digit code to your phone. It expires in 10 minutes.',
+  'portal.code': 'Code',
+  'portal.verify': 'Sign in',
+  'portal.resend': 'Request a new code',
+  'portal.welcome': 'Welcome, {name}',
+  'portal.my_leases': 'My leases',
+  'portal.due_balance': 'Amount due',
+  'portal.no_leases': 'You have no leases yet.',
+  'portal.up_to_date': 'You are up to date — nothing is due.',
+  'portal.not_tenant': 'This page is for tenant accounts. Sign in with the code sent to your phone.',
+  'tenant.portal': 'Portal',
+  'tenant.portal_enable': 'Enable portal',
+  'tenant.portal_disable': 'Disable portal',
+
   // --- calendar & dates ---------------------------------------------------
   'calendar.ethiopian': 'Ethiopian',
   'calendar.gregorian': 'Gregorian',
@@ -352,6 +371,8 @@ export const EN_CATALOG = {
   'property.kebele': 'Kebele',
   'property.house_number': 'House number',
   'common.all': 'All',
+  'common.enabled': 'Enabled',
+  'common.disabled': 'Disabled',
   'org.late_fee_enabled': 'Late fee',
   // --- web UI shell, charts and offline (Phase 3) --------------------------
   'nav.menu': 'Menu',

@@ -85,6 +85,11 @@ describe('portal OTP login', () => {
       .expect(200);
     expect(ok.body.role).toBe('tenant');
     expect(ok.body.tenant.id).toBe(f.tenantId);
+    // Same identity shape as /auth/login so the web session layer treats an OTP
+    // sign-in exactly like a password sign-in.
+    expect(ok.body.user.email).toContain('@tenants.invalid');
+    expect(ok.body.organization.id).toBe(f.organizationId);
+    expect(ok.body.memberships).toEqual([]);
     const replay = await request(app)
       .post('/api/v1/portal/verify')
       .send({ phone: '0911234567', code })

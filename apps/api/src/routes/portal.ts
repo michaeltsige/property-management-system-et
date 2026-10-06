@@ -98,8 +98,25 @@ portalRouter.post(
       });
       res.json({
         tokens,
-        tenant: { id: tenant.id, fullName: tenant.fullName, organizationId },
         role: 'tenant',
+        // Same identity shape as `/auth/login` so the web session layer can treat
+        // a verified OTP exactly like a password sign-in.
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.fullName,
+          calendar: user.calendar,
+          language: user.language,
+        },
+        organization: {
+          id: tenant.organization.id,
+          name: tenant.organization.name,
+          slug: tenant.organization.slug,
+          calendar: tenant.organization.calendar,
+          currency: tenant.organization.currency,
+        },
+        memberships: [],
+        tenant: { id: tenant.id, fullName: tenant.fullName, organizationId },
       });
     } catch (error) {
       next(error);

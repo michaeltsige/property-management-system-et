@@ -12,6 +12,25 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   // Tenant portal OTP; non-English text is an unreviewed machine draft.
   'notification.portal_otp': 'የቤት ክራይ ፖርታል ኮድዎ {code} ነው። በ10 ደቂቃ ውስጥ ያበቃል። ለማንም አያካፍሉ።',
 
+  // Tenant portal UI; non-English text is an unreviewed machine draft.
+  'portal.title': 'የኪራይተኞች ፖርታል',
+  'portal.login_hint': 'ለቤት ባለቤትዎ የሰጡትን ስልክ ቁጥር በመጠቀም ይግቡ። ኮድ በኤስኤምኤስ እንልካለን።',
+  'portal.phone': 'ስልክ ቁጥር',
+  'portal.send_code': 'ኮድ ላኩልኝ',
+  'portal.code_sent': 'ወደ ስልክዎ የ6 አሃዝ ኮድ ልከናል። በ10 ደቂቃ ውስጥ ያበቃል።',
+  'portal.code': 'ኮድ',
+  'portal.verify': 'ግባ',
+  'portal.resend': 'አዲስ ኮድ ጠይቅ',
+  'portal.welcome': 'እንኳን ደህና መጡ፣ {name}',
+  'portal.my_leases': 'የእኔ ውሎች',
+  'portal.due_balance': 'የሚጠበቅ ክፍያ',
+  'portal.no_leases': 'እስካሁን ምንም ውል የለዎትም።',
+  'portal.up_to_date': 'ክፍያዎ የተስተካከለ ነው — ምንም አይጠበቅም።',
+  'portal.not_tenant': 'ይህ ገጽ ለኪራይተኞች ነው። በስልክዎ በተላከው ኮድ ይግቡ።',
+  'tenant.portal': 'ፖርታል',
+  'tenant.portal_enable': 'ፖርታል አብራ',
+  'tenant.portal_disable': 'ፖርታል አጥፋ',
+
   // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
   'unit.detail': 'የክፍል ዝርዝር',
   'unit.not_found': 'ይህ ክፍል በንብረትዎ ውስጥ አልተገኘም።',
@@ -339,6 +358,8 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'property.kebele': 'ቀበሌ',
   'property.house_number': 'የቤት ቁጥር',
   'common.all': 'ሁሉም',
+  'common.enabled': 'ነቅቷል',
+  'common.disabled': 'ጠፍቷል',
   'org.late_fee_enabled': 'የዘገየ ክፍያ',
   'nav.menu': 'ዝርዝር',
   'a11y.skip_to_content': 'ወደ ዋና ይዘት ዝለል',

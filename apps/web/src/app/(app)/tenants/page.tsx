@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { api } from '@/lib/api';
+import type { Tenant } from '@/lib/types';
 import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
 import { LANGUAGES, usePreferences } from '@/lib/preferences';
 
@@ -48,6 +49,19 @@ export default function TenantsPage() {
     idNumber: '',
   });
   const { pending, error, run } = useAction();
+  const canManagePortal = roleHasPermission(session?.role as Role, 'tenants.write');
+  const [portalPendingId, setPortalPendingId] = useState<string | null>(null);
+
+  async function togglePortal(tenant: Tenant) {
+    setPortalPendingId(tenant.id);
+    try {
+      if (tenant.portalEnabledAt) await api.disableTenantPortal(tenant.id);
+      else await api.enableTenantPortal(tenant.id);
+      tenants.reload();
+    } finally {
+      setPortalPendingId(null);
+    }
+  }
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -126,6 +140,7 @@ export default function TenantsPage() {
                   <Th>{t('tenant.employer')}</Th>
                   <Th>{t('tenant.emergency_contact')}</Th>
                   <Th>{t('preferences.language')}</Th>
+                  {canManagePortal ? <Th>{t('tenant.portal')}</Th> : null}
                 </tr>
               </thead>
               <tbody>
@@ -148,6 +163,27 @@ export default function TenantsPage() {
                           tenant.language}
                       </Badge>
                     </Td>
+                    {canManagePortal ? (
+                      <Td>
+                        <div className="flex items-center gap-2">
+                          <Badge tone={tenant.portalEnabledAt ? 'brand' : 'neutral'}>
+                            {tenant.portalEnabledAt ? t('common.enabled') : t('common.disabled')}
+                          </Badge>
+                          <Button
+                            variant="secondary"
+                            className="h-7 px-2 text-xs"
+                            disabled={portalPendingId === tenant.id}
+                            onClick={() => togglePortal(tenant)}
+                          >
+                            {portalPendingId === tenant.id
+                              ? t('app.loading')
+                              : tenant.portalEnabledAt
+                                ? t('tenant.portal_disable')
+                                : t('tenant.portal_enable')}
+                          </Button>
+                        </div>
+                      </Td>
+                    ) : null}
                   </tr>
                 ))}
               </tbody>

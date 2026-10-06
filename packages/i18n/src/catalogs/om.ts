@@ -13,6 +13,26 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'notification.portal_otp':
     'Koodii portaalii kiraayyii keessanii {code}. Daqiiqaa 10 booda ni dhuma. Namaaf hin qoodinaa.',
 
+  // Tenant portal UI; non-English text is an unreviewed machine draft.
+  'portal.title': 'Portaala kireeffattootaa',
+  'portal.login_hint':
+    'Lakkoofsa bilbilaa abbaa manaatiif kennitaniin seenaa. Koodii SMS dhaan isinii ergina.',
+  'portal.phone': 'Lakkoofsa bilbilaa',
+  'portal.send_code': 'Koodii naaf ergi',
+  'portal.code_sent': 'Koodii dijitii 6 bilbila keessaniif ergineerra. Daqiiqaa 10 booda ni dhuma.',
+  'portal.code': 'Koodii',
+  'portal.verify': 'Seeni',
+  'portal.resend': 'Koodii haaraa gaafadhu',
+  'portal.welcome': 'Baga nagaan dhufte, {name}',
+  'portal.my_leases': 'Kakuulee koo',
+  'portal.due_balance': 'Kaffaltii eegamu',
+  'portal.no_leases': 'Hanga ammaatti kakuu hin qabdan.',
+  'portal.up_to_date': 'Kaffaltiin keessan sirrii dha — wanti eegamu hin jiru.',
+  'portal.not_tenant': 'Fuuli kun kan kireeffattootaaf qofa. Koodii bilbilaan ergameen seenaa.',
+  'tenant.portal': 'Portaala',
+  'tenant.portal_enable': 'Portaala bani',
+  'tenant.portal_disable': 'Portaala cufi',
+
   // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
   'unit.detail': 'Ibsa kutaa',
   'unit.not_found': 'Kutaan kun qabeenya keessan keessatti hin argamne.',
@@ -342,6 +362,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'property.kebele': 'Ganda',
   'property.house_number': 'Lakkoofsa manaa',
   'common.all': 'Hunda',
+  'common.enabled': 'Banaa',
+  'common.disabled': 'Cufaa',
   'org.late_fee_enabled': 'Adabbii tursiisuu',
   'nav.menu': 'Baafata',
   'a11y.skip_to_content': 'Gara qabiyyee darbi',

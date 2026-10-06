@@ -12,6 +12,25 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   // Tenant portal OTP; non-English text is an unreviewed machine draft.
   'notification.portal_otp': 'ኮድ ፖርታል ክራይ ናይኩም {code} እዩ። ብ10 ደቒቕ ይውዳእ። ንማንም ኣይትካፈሉ።',
 
+  // Tenant portal UI; non-English text is an unreviewed machine draft.
+  'portal.title': 'ፖርታል ተኻረይቲ',
+  'portal.login_hint': 'በቲ ንወናኒ ዝሃብኩሞ ቁጽሪ ተለፎን እተዉ። ኮድ ብመልእኽቲ ክንልእኸልኩም ኢና።',
+  'portal.phone': 'ቁጽሪ ተለፎን',
+  'portal.send_code': 'ኮድ ስደዱለይ',
+  'portal.code_sent': 'ናብ ተለፎንኩም ናይ 6 ኣሃዝ ኮድ ሰዲድና ኣሎና። ኣብ 10 ደቓይቕ ይውዳእ።',
+  'portal.code': 'ኮድ',
+  'portal.verify': 'እተዉ',
+  'portal.resend': 'ሓድሽ ኮድ ሕተት',
+  'portal.welcome': 'እንቋዕ ብደሓን መጻእኩም፣ {name}',
+  'portal.my_leases': 'ውዕላተይ',
+  'portal.due_balance': 'ዝግባእ ክፍሊት',
+  'portal.no_leases': 'ክሳብ ሕጂ ውዕል የብልኩምን።',
+  'portal.up_to_date': 'ክፍሊትኩም ጽቡቕ ኣሎ — ዝግባእ የለን።',
+  'portal.not_tenant': 'እዚ ገጽ ንተኻረይቲ እዩ። በቲ ብተለፎን ዝተላእከ ኮድ እተዉ።',
+  'tenant.portal': 'ፖርታል',
+  'tenant.portal_enable': 'ፖርታል ክፈት',
+  'tenant.portal_disable': 'ፖርታል ዕጾ',
+
   // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
   'unit.detail': 'ዝርዝር ክፍሊ',
   'unit.not_found': 'እዚ ክፍሊ ኣብ ንብረትኩም ኣይተረኽበን።',
@@ -338,6 +357,8 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'property.kebele': 'ጣቢያ',
   'property.house_number': 'ቁጽሪ ገዛ',
   'common.all': 'ኩሉ',
+  'common.enabled': 'ክፉት',
+  'common.disabled': 'ዕጹው',
   'org.late_fee_enabled': 'ናይ ዝደንገየ ክፍሊት',
   'nav.menu': 'ዝርዝር',
   'a11y.skip_to_content': 'ናብ ቀንዲ ትሕዝቶ ስገር',
