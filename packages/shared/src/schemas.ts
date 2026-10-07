@@ -281,6 +281,8 @@ export const createUnitSchema = z.object({
   buildingId: uuidSchema.nullable().optional(),
   propertyId: uuidSchema,
   label: z.string().trim().min(1).max(60),
+  /** Apartment type (e.g. "1BR", "Studio"); market rent is managed per type. */
+  typeLabel: z.string().trim().max(60).optional(),
   floor: z.number().int().min(-5).max(200).optional(),
   bedrooms: z.number().int().min(0).max(50).optional(),
   bathrooms: z.number().int().min(0).max(50).optional(),
@@ -291,6 +293,16 @@ export const createUnitSchema = z.object({
 });
 
 export const updateUnitSchema = createUnitSchema.partial().omit({ propertyId: true });
+
+/**
+ * Update the market rent of every unit of one apartment type within a
+ * property. Active lease rents are never touched.
+ */
+export const setRentByTypeSchema = z.object({
+  propertyId: uuidSchema,
+  typeLabel: z.string().trim().min(1).max(60),
+  marketRent: moneySchema,
+});
 
 export const tenantIdDocumentSchema = z.object({
   type: z.string().trim().min(2).max(60),

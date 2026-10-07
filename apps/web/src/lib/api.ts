@@ -290,6 +290,11 @@ export const api = {
     apiFetch<ImportReport>(`/imports/${kind}`, { method: 'POST', body }),
   bulkUnits: (body: unknown) =>
     apiFetch<{ units: Unit[]; count: number }>('/units/bulk', { method: 'POST', body }),
+  setRentByType: (body: {
+    propertyId: string;
+    typeLabel: string;
+    marketRent: { amountMinor: number; currency: string };
+  }) => apiFetch<{ updated: number }>('/units/rent-by-type', { method: 'PATCH', body }),
   createUnit: (body: unknown) => apiFetch<{ unit: Unit }>('/units', { method: 'POST', body }),
   tenants: (search?: string) =>
     apiFetch<{ tenants: Tenant[] }>(`/tenants${search ? `?search=${encodeURIComponent(search)}` : ''}`),

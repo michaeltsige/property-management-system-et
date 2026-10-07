@@ -126,6 +126,9 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'bulk.preview': 'ቅድመ እይታ',
   'bulk.invalid': 'ልክ ያልሆነ ንድፍ ወይም ወሰን',
   'bulk.created': '{count} ክፍሎች ተፈጥረዋል',
+  'bulk.type_label': 'የክፍል ዓይነት (አማራጭ)',
+  'bulk.type_hint': 'ለቡድኑ ዓይነት ይስጡ (ለምሳሌ 1 መኝታ ወይም ስቱዲዮ) — የገበያ ኪራይ በዓይነት ይተዳደራል።',
+  'bulk.market_rent_optional': 'የገበያ ኪራይ (አማራጭ)',
 
   // Hierarchy labels: unreviewed machine drafts; require native-speaker review.
   'portfolio.mode': 'መለያውን እንዴት ይጠቀሙበታል?',
@@ -209,6 +212,11 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'unit.label': 'ክፍል',
   'unit.status': 'ሁኔታ',
   'unit.market_rent': 'የገበያ ኪራይ',
+  'units.type': 'ዓይነት',
+  'units.set_rent_by_type': 'ኪራይ በዓይነት ያዘጋጁ',
+  'units.rent_by_type_hint': 'በንብረቱ ውስጥ ያሉ የዚህ ዓይነት ክፍሎችን ሁሉ የገበያ ኪራይ ያዘምናል። ያሉ የኪራይ ውሎች አይነኩም።',
+  'units.rent_updated': 'የገበያ ኪራይ ለ{count} ክፍሎች ተዘምኗል',
+  'units.no_types': 'በዚህ ንብረት እስካሁን የክፍል ዓይነቶች የሉም',
 
   'tenant.full_name': 'ሙሉ ስም',
   'tenant.phone': 'ስልክ',

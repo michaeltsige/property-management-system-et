@@ -99,3 +99,104 @@ describe('bulk units', () => {
     expect(await getPrisma().unit.count()).toBe(0);
   });
 });
+
+describe('unit types and per-type rent', () => {
+  it('bulk creation stamps the type and rent; rent-by-type reprices only that type', async () => {
+    const f = await setup();
+
+    const oneBr = await request(app)
+      .post('/api/v1/units/bulk')
+      .set(f.h)
+      .send({
+        propertyId: f.propertyId,
+        naming: { pattern: '1BR-{n}', start: 1, count: 4, padding: 2 },
+        typeLabel: '1BR',
+        marketRent: { amountMinor: 800_000, currency: 'ETB' },
+      })
+      .expect(201);
+    expect(oneBr.body.units.every((u: { typeLabel: string }) => u.typeLabel === '1BR')).toBe(true);
+    expect(oneBr.body.units.every((u: { marketRentMinor: string }) => u.marketRentMinor === '800000')).toBe(
+      true,
+    );
+
+    await request(app)
+      .post('/api/v1/units/bulk')
+      .set(f.h)
+      .send({
+        propertyId: f.propertyId,
+        naming: { pattern: '2BR-{n}', start: 1, count: 2, padding: 2 },
+        typeLabel: '2BR',
+        marketRent: { amountMinor: 1_200_000, currency: 'ETB' },
+      })
+      .expect(201);
+
+    const raised = await request(app)
+      .patch('/api/v1/units/rent-by-type')
+      .set(f.h)
+      .send({
+        propertyId: f.propertyId,
+        typeLabel: '1BR',
+        marketRent: { amountMinor: 900_000, currency: 'ETB' },
+      })
+      .expect(200);
+    expect(raised.body.updated).toBe(4);
+
+    const units = await getPrisma().unit.findMany({ where: { propertyId: f.propertyId } });
+    for (const unit of units) {
+      const expected = unit.typeLabel === '1BR' ? BigInt(900_000) : BigInt(1_200_000);
+      expect(unit.marketRentMinor).toBe(expected);
+    }
+    expect(
+      await getPrisma().auditLog.count({
+        where: { entityType: 'UnitType', organizationId: f.organizationId },
+      }),
+    ).toBe(1);
+
+    // A single unit can carry a type too.
+    const single = await request(app)
+      .post('/api/v1/units')
+      .set(f.h)
+      .send({
+        propertyId: f.propertyId,
+        label: 'S-01',
+        typeLabel: 'Studio',
+        marketRent: { amountMinor: 600_000, currency: 'ETB' },
+      })
+      .expect(201);
+    expect(single.body.unit.typeLabel).toBe('Studio');
+  });
+
+  it('rent-by-type refuses foreign properties and unknown types', async () => {
+    const f = await setup();
+    const other = await setup();
+    await request(app)
+      .post('/api/v1/units/bulk')
+      .set(f.h)
+      .send({
+        propertyId: f.propertyId,
+        naming: { pattern: 'T-{n}', start: 1, count: 1, padding: 1 },
+        typeLabel: '1BR',
+      })
+      .expect(201);
+
+    await request(app)
+      .patch('/api/v1/units/rent-by-type')
+      .set(f.h)
+      .send({
+        propertyId: other.propertyId,
+        typeLabel: '1BR',
+        marketRent: { amountMinor: 900_000, currency: 'ETB' },
+      })
+      .expect(404);
+
+    await request(app)
+      .patch('/api/v1/units/rent-by-type')
+      .set(f.h)
+      .send({
+        propertyId: f.propertyId,
+        typeLabel: 'Penthouse',
+        marketRent: { amountMinor: 900_000, currency: 'ETB' },
+      })
+      .expect(404);
+  });
+});

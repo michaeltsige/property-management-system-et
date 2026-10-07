@@ -55,6 +55,37 @@ export default function UnitsPage() {
   const [marketRent, setMarketRent] = useState<number | null>(null);
   const { pending, error, run } = useAction();
 
+  // Rent-by-type: one click reprices every unit of an apartment type.
+  const [rentTypeOpen, setRentTypeOpen] = useState(false);
+  const [rentTypeForm, setRentTypeForm] = useState({ propertyId: '', typeLabel: '' });
+  const [rentTypeValue, setRentTypeValue] = useState<number | null>(null);
+  const [rentTypeResult, setRentTypeResult] = useState<number | null>(null);
+
+  const typesInProperty = useMemo(() => {
+    const set = new Set<string>();
+    for (const unit of units.data?.units ?? []) {
+      if (unit.propertyId === rentTypeForm.propertyId && unit.typeLabel) set.add(unit.typeLabel);
+    }
+    return Array.from(set).sort();
+  }, [units.data, rentTypeForm.propertyId]);
+
+  async function submitRentByType(event: React.FormEvent) {
+    event.preventDefault();
+    if (rentTypeValue === null) return;
+    await run(async () => {
+      const result = await api.setRentByType({
+        propertyId: rentTypeForm.propertyId,
+        typeLabel: rentTypeForm.typeLabel,
+        marketRent: { amountMinor: rentTypeValue, currency: 'ETB' },
+      });
+      setRentTypeResult(result.updated);
+      setRentTypeOpen(false);
+      setRentTypeForm({ propertyId: '', typeLabel: '' });
+      setRentTypeValue(null);
+      units.reload();
+    }).catch(() => undefined);
+  }
+
   const [propertyContext] = usePropertyContext();
   const propertyName = useMemo(() => {
     const map = new Map((properties.data?.properties ?? []).map((property) => [property.id, property.name]));
@@ -119,6 +150,11 @@ export default function UnitsPage() {
                 {t('bulk.create')}
               </Button>
             )}
+            {canWrite && (
+              <Button variant="secondary" onClick={() => setRentTypeOpen(true)}>
+                {t('units.set_rent_by_type')}
+              </Button>
+            )}
             <Input
               placeholder={t('common.search')}
               value={search}
@@ -137,6 +173,9 @@ export default function UnitsPage() {
       />
 
       {bulkCount !== null && <Alert>{t('bulk.created', { count: bulkCount })}</Alert>}
+      {rentTypeResult !== null && (
+        <Alert tone="success">{t('units.rent_updated', { count: rentTypeResult })}</Alert>
+      )}
       {canWrite && (
         <Modal open={bulkOpen} onOpenChange={setBulkOpen} title={t('bulk.create')}>
           <BulkUnitForm
@@ -167,6 +206,7 @@ export default function UnitsPage() {
               <thead>
                 <tr>
                   <Th>{t('unit.label')}</Th>
+                  <Th>{t('units.type')}</Th>
                   <Th>{t('nav.properties')}</Th>
                   <Th>{t('portfolio.block')}</Th>
                   <Th>{t('unit.bedrooms')}</Th>
@@ -183,6 +223,7 @@ export default function UnitsPage() {
                         {unit.label}
                       </Link>
                     </Td>
+                    <Td>{unit.typeLabel ?? '—'}</Td>
                     <Td>{unit.property?.name ?? propertyName(unit.propertyId)}</Td>
                     <Td>{unit.building?.name ?? t('portfolio.no_block')}</Td>
                     <Td>
@@ -316,6 +357,86 @@ export default function UnitsPage() {
               <Alert tone="danger">{error}</Alert>
             </div>
           ) : null}
+        </form>
+      </Modal>
+
+      <Modal
+        open={rentTypeOpen}
+        onOpenChange={(value) => {
+          setRentTypeOpen(value);
+          if (!value) {
+            setRentTypeForm({ propertyId: '', typeLabel: '' });
+            setRentTypeValue(null);
+          }
+        }}
+        title={t('units.set_rent_by_type')}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setRentTypeOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              form="rent-by-type-form"
+              type="submit"
+              disabled={
+                pending || !rentTypeForm.propertyId || !rentTypeForm.typeLabel || rentTypeValue === null
+              }
+            >
+              {pending ? t('app.loading') : t('common.save')}
+            </Button>
+          </>
+        }
+      >
+        <form id="rent-by-type-form" className="grid gap-3" onSubmit={submitRentByType}>
+          <div className="space-y-1">
+            <Label htmlFor="rentTypeProperty">{t('nav.properties')}</Label>
+            <Select
+              id="rentTypeProperty"
+              required
+              value={rentTypeForm.propertyId}
+              onChange={(event) => setRentTypeForm({ propertyId: event.target.value, typeLabel: '' })}
+            >
+              <option value="">—</option>
+              {properties.data?.properties.map((property) => (
+                <option key={property.id} value={property.id}>
+                  {property.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="rentTypeLabel">{t('units.type')}</Label>
+            <Select
+              id="rentTypeLabel"
+              required
+              value={rentTypeForm.typeLabel}
+              disabled={!rentTypeForm.propertyId}
+              onChange={(event) =>
+                setRentTypeForm((current) => ({ ...current, typeLabel: event.target.value }))
+              }
+            >
+              <option value="">—</option>
+              {typesInProperty.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </Select>
+            {rentTypeForm.propertyId && typesInProperty.length === 0 ? (
+              <p className="text-xs text-slate-500">{t('units.no_types')}</p>
+            ) : null}
+          </div>
+
+          <MoneyInput
+            label={t('unit.market_rent')}
+            value={rentTypeValue}
+            onChange={setRentTypeValue}
+            required
+          />
+          <p className="text-xs text-slate-500">{t('units.rent_by_type_hint')}</p>
+
+          {error ? <Alert tone="danger">{error}</Alert> : null}
         </form>
       </Modal>
     </div>

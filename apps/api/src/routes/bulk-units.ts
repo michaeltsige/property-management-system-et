@@ -42,6 +42,7 @@ bulkUnitsRouter.post(
               propertyId: property.id,
               buildingId: input.buildingId ?? null,
               label,
+              typeLabel: input.typeLabel ?? null,
               status: 'vacant',
               floor: input.floor,
               bedrooms: input.bedrooms,
