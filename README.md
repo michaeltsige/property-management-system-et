@@ -135,6 +135,7 @@ API port is never published, and the web app does not need `CORS_ORIGINS`.
   and the Web Preview sign-in checklist.
 - `docs/ROADMAP.md` — the phase plan and what is done, with open questions.
 - `docs/ARCHITECTURE.md` — how the pieces fit and why, plus the domain ERD and MVP scope.
+- `docs/FEATURES.md` — the complete feature list per side of the system (owner/staff roles, tenants) and how each feature works.
 - `docs/FEATURE_MATRIX.md` — feature-by-feature comparison with the reference projects.
 - `docs/SCREENS.md` — navigation tree and screen inventory.
 - `docs/DECISIONS.md` — ADRs, plus the list of rules that **need a local accountant
