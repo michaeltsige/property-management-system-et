@@ -351,10 +351,12 @@ Units. None of this changes API behavior or background jobs.
 
 Two things keep the first real click fast:
 
-- `pnpm dev:all` **pre-compiles every web route in the background** right after
-  startup (look for the `warm …` lines ending in "the app is fully warm"). Wait
+- `pnpm dev:all` **pre-compiles the first-session routes** (login, dashboard,
+  portal, session endpoint) in the background right after startup — look for the
+  `warm …` lines ending in "the app is fully warm" (about half a minute). Wait
   for that line before opening the preview; otherwise your first visit queues
-  behind the compile of whichever route warm-up is on.
+  behind the compile of whichever route warm-up is on. Other screens compile on
+  first click in 1-3 s.
 - The web client **deduplicates concurrent identical GETs** (shell, task panel
   and screens all need the same lists), so one dashboard load makes one request
   per endpoint, not four.
