@@ -56,34 +56,14 @@ export function EChart({
     chart.current?.setOption(option, true);
   }, [option]);
 
-  return (
-    <div>
-      <div ref={container} role="img" aria-label={ariaLabel} style={{ height }} className="w-full" />
-      {summary ? (
-        <table className="sr-only">
-          <caption>{summary.caption}</caption>
-          <thead>
-            <tr>
-              {summary.columns.map((column) => (
-                <th key={column} scope="col">
-                  {column}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {summary.rows.map((row, rowIndex) => (
-              <tr key={rowIndex}>
-                {row.map((cell, cellIndex) => (
-                  <td key={cellIndex}>{cell}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : null}
-    </div>
-  );
+  // The summary rides inside the image's accessible name instead of a hidden
+  // DOM table: screen readers still hear the numbers, but nothing renders (or
+  // leaks into copy/paste) below the chart.
+  const label = summary
+    ? `${ariaLabel} — ${summary.caption}: ${summary.rows.map((row) => row.join(' ')).join('; ')}`
+    : ariaLabel;
+
+  return <div ref={container} role="img" aria-label={label} style={{ height }} className="w-full" />;
 }
 
 /** Expected rent vs collected, for the dashboard. */

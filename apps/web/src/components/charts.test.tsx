@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import { ArrearsChart, CollectionsChart, MoneyComparisonChart, OccupancyChart } from '@/components/charts';
@@ -10,7 +10,7 @@ vi.mock('echarts', () => ({
 }));
 
 describe('chart accessibility', () => {
-  it('exposes the money comparison as a labelled image with a text table', () => {
+  it('exposes the money comparison as a labelled image, with data in the label', () => {
     render(
       <MoneyComparisonChart
         expected={30000}
@@ -23,16 +23,16 @@ describe('chart accessibility', () => {
       />,
     );
 
-    expect(screen.getByRole('img', { name: 'Rent this period' })).toBeInTheDocument();
-
-    const table = screen.getByRole('table', { name: 'Chart data as a table' });
-    const rows = within(table).getAllByRole('row');
-    expect(rows).toHaveLength(3);
-    expect(within(rows[1]).getAllByRole('cell')[1]).toHaveTextContent('30,000');
-    expect(within(rows[2]).getAllByRole('cell')[1]).toHaveTextContent('21,500');
+    // No visible or hidden table below the chart: the numbers live in the
+    // accessible name of the image itself.
+    expect(screen.queryByRole('table')).toBeNull();
+    const image = screen.getByRole('img');
+    expect(image.getAttribute('aria-label')).toContain('Rent this period');
+    expect(image.getAttribute('aria-label')).toContain('30,000');
+    expect(image.getAttribute('aria-label')).toContain('21,500');
   });
 
-  it('lists every collection period in the text table', () => {
+  it('carries every collection period in the image label', () => {
     render(
       <CollectionsChart
         labels={['Meskerem 2018', 'Tir 2018']}
@@ -44,11 +44,11 @@ describe('chart accessibility', () => {
       />,
     );
 
-    const table = screen.getByRole('table');
-    const rows = within(table).getAllByRole('row');
-    expect(rows).toHaveLength(3);
-    expect(within(rows[1]).getAllByRole('cell')[0]).toHaveTextContent('Meskerem 2018');
-    expect(within(rows[2]).getAllByRole('cell')[1]).toHaveTextContent('3,400');
+    expect(screen.queryByRole('table')).toBeNull();
+    const label = screen.getByRole('img').getAttribute('aria-label') ?? '';
+    expect(label).toContain('Collections trend');
+    expect(label).toContain('Meskerem 2018');
+    expect(label).toContain('3,400');
   });
 
   it('gives the occupancy chart one row per property', () => {
@@ -65,10 +65,11 @@ describe('chart accessibility', () => {
       />,
     );
 
-    expect(screen.getByRole('img', { name: 'Occupancy' })).toBeInTheDocument();
-    const rows = within(screen.getByRole('table')).getAllByRole('row');
-    expect(rows).toHaveLength(3);
-    expect(within(rows[1]).getAllByRole('cell')).toHaveLength(3);
+    expect(screen.queryByRole('table')).toBeNull();
+    const label = screen.getByRole('img').getAttribute('aria-label') ?? '';
+    expect(label).toContain('Occupancy');
+    expect(label).toContain('Bole Tower');
+    expect(label).toContain('CMC Villas');
   });
 
   it('keeps arrears buckets readable as text', () => {
@@ -85,8 +86,9 @@ describe('chart accessibility', () => {
       />,
     );
 
-    const rows = within(screen.getByRole('table')).getAllByRole('row');
-    expect(within(rows[2]).getAllByRole('cell')[0]).toHaveTextContent('90+');
-    expect(within(rows[2]).getAllByRole('cell')[1]).toHaveTextContent('9,000');
+    expect(screen.queryByRole('table')).toBeNull();
+    const label = screen.getByRole('img').getAttribute('aria-label') ?? '';
+    expect(label).toContain('90+');
+    expect(label).toContain('9,000');
   });
 });

@@ -65,11 +65,15 @@ export function getWorkspaceTabs(): string[] {
   return readStored();
 }
 
-/** Most recent tab last; duplicates move to the end instead of duplicating. */
+/**
+ * New tabs append at the end; opening a tab that is already open changes
+ * nothing — the list order is the user's, and clicking around must never
+ * shuffle it.
+ */
 export function openWorkspaceTab(path: string): void {
-  const tabs = readStored().filter((entry) => entry !== path);
-  tabs.push(path);
-  write(tabs.slice(-MAX_TABS));
+  const tabs = readStored();
+  if (tabs.includes(path)) return;
+  write([...tabs, path].slice(-MAX_TABS));
 }
 
 export function closeWorkspaceTab(path: string): string | null {

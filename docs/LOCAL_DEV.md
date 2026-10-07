@@ -19,6 +19,14 @@ migrations, seeds fake demo data, then runs the **API**, the **job worker** and 
 [worker] worker started {"queues":["charges.generate","charges.overdue-sweep","notifications.send"]}
 [web   ] ▲ Next.js 15.5.27 → http://0.0.0.0:3000
 [dev   ] ready: web :3000 · api :4000 · demo owner@demo.test / DemoPass123
+
+### Tenant portal demo
+
+The seed enrolls **Almaz Bekele (demo)** in the tenant portal. To try the
+tenant side: open `/portal/login`, enter `+251911000001`, request a code, and
+read the one-time code from the `[worker]` log line `DEV demo: mock SMS body`
+(dev only — production never logs message bodies). On an existing database you
+can instead enable any tenant with the Portal toggle on the Tenants screen.
 ```
 
 Two steps exist because a clean clone cannot run without them, and both used to be
