@@ -117,7 +117,9 @@ function totalMemoryMb() {
 const TOTAL_MB = totalMemoryMb();
 const SMALL_MACHINE = TOTAL_MB <= 2400; // Cloud Shell, small VMs, containers
 const API_HEAP_MB = process.env.API_HEAP_MB ?? (SMALL_MACHINE ? '320' : '512');
-const WEB_HEAP_MB = process.env.WEB_HEAP_MB ?? (SMALL_MACHINE ? '512' : '1024');
+// Next dev holds the module graph of every compiled route; on roomy machines
+// the warm-up below needs headroom or the web process dies mid-startup.
+const WEB_HEAP_MB = process.env.WEB_HEAP_MB ?? (SMALL_MACHINE ? '512' : TOTAL_MB >= 7000 ? '2048' : '1024');
 const WORKER_HEAP_MB = process.env.WORKER_HEAP_MB ?? (SMALL_MACHINE ? '256' : '384');
 
 const children = [];
@@ -353,6 +355,10 @@ async function waitForApi(seconds) {
  * Visit every route once, in the background, right after startup, so the first
  * real click pays nothing.
  */
+// Only the routes a first session actually touches. Every extra route costs
+// compile time AND resident memory (Next keeps each graph alive), and warming
+// all 18 pushed the dev server past its heap on an 8 GB VM. First clicks on
+// the remaining screens compile in 1-3 s, which is fine.
 const WARMUP_ROUTES = [
   '/',
   '/login',
@@ -360,17 +366,6 @@ const WARMUP_ROUTES = [
   '/dashboard',
   '/portal/login',
   '/portal',
-  '/offline',
-  '/units',
-  '/tenants',
-  '/properties',
-  '/leases',
-  '/payments',
-  '/charges',
-  '/maintenance',
-  '/documents',
-  '/reports',
-  '/settings',
   '/api/session/me',
 ];
 
