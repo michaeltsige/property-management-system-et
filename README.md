@@ -167,3 +167,9 @@ API port is never published, and the web app does not need `CORS_ORIGINS`.
 ## License
 
 MIT — see `LICENSE`. Third-party attributions: `THIRD_PARTY_NOTICES.md`.
+
+## Attribution
+
+- Login-screen photograph: Addis Ababa skyline at dusk by **DaneyWiki**,
+  [Wikimedia Commons](https://commons.wikimedia.org/wiki/File:AddisView.jpg),
+  licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).

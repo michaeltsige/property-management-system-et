@@ -18,6 +18,7 @@
  */
 
 import Link from 'next/link';
+import { Logo } from './logo';
 import { usePathname, useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useEffect, useState } from 'react';
@@ -239,9 +240,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const brand = (
     <div className="flex min-w-0 items-center gap-2">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-brand-600 text-sm font-bold text-white">
-        ቤ
-      </div>
+      <Logo size={34} className="shrink-0" />
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-slate-900">{t('app.name')}</p>
         <p className="truncate text-xs text-slate-500">{session.organization.name}</p>
