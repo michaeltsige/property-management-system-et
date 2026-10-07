@@ -39,14 +39,21 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
-      <div className="w-full max-w-sm">
+    <div className="relative flex min-h-screen items-center justify-center px-4">
+      {/* Addis Ababa at golden hour; the overlay keeps text readable (WCAG). */}
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: "url('/images/login-hero.jpg')" }}
+      />
+      <div aria-hidden="true" className="absolute inset-0 bg-slate-900/55" />
+      <div className="relative w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-lg bg-brand-600 text-lg font-bold text-white">
+          <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-lg bg-brand-600 text-lg font-bold text-white shadow-lg">
             ቤ
           </div>
-          <h1 className="text-lg font-semibold text-slate-900">{t('app.name')}</h1>
-          <p className="text-xs text-slate-500">{t('app.tagline')}</p>
+          <h1 className="text-lg font-semibold text-white">{t('app.name')}</h1>
+          <p className="text-xs text-white/70">{t('app.tagline')}</p>
         </div>
 
         <Card>
