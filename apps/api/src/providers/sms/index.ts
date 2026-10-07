@@ -51,10 +51,16 @@ export class MockSmsProvider implements SmsProvider {
   async send(message: SmsMessage): Promise<SmsSendResult> {
     const body = renderSmsBody(message);
     this.outbox.push({ to: message.to, body, language: message.language, at: new Date() });
-    logger.info(
-      { to: message.to, language: message.language, template: message.templateKey },
-      'mock SMS captured (body not logged: it may contain personal data)',
-    );
+    if (getConfig().isDevelopment) {
+      // Demo affordance: in dev there is no real phone, so the code must be
+      // readable somewhere. Production never logs message bodies.
+      logger.info({ to: message.to, body }, 'DEV demo: mock SMS body');
+    } else {
+      logger.info(
+        { to: message.to, language: message.language, template: message.templateKey },
+        'mock SMS captured (body not logged: it may contain personal data)',
+      );
+    }
     return { providerRef: `MOCK-SMS-${this.outbox.length}`, status: 'sent' };
   }
 }

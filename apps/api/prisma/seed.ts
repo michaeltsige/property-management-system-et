@@ -11,6 +11,8 @@
 
 import { PrismaClient } from '@prisma/client';
 
+import { enrollTenantPortal } from '../src/services/portal.js';
+
 import { todayIn, periodForDate, shiftPeriod, utcDateToCivil, type CalendarKind } from '@pms/calendar';
 import { DEFAULT_ORG_SETTINGS, ETHIOPIAN_REGIONS, UNVERIFIED_TAX_DEFAULTS } from '@pms/shared';
 
@@ -375,12 +377,25 @@ async function main(): Promise<void> {
     });
   }
 
+  // --- tenant portal demo ---------------------------------------------------
+  // Enroll the first tenant so the tenant side can be tried immediately:
+  // /portal/login with the phone number; the one-time code is printed by the
+  // worker in dev (mock SMS).
+  const ownerUser = await prisma.user.findUniqueOrThrow({ where: { email: 'owner@demo.test' } });
+  await enrollTenantPortal(prisma, {
+    organizationId: organization.id,
+    actorUserId: ownerUser.id,
+    tenantId: tenants[0]!.id,
+  });
+
   console.warn(
     [
       '',
       'Demo seed complete.',
       `  Organization : ${organization.name} (slug: ${DEMO_SLUG})`,
       `  Sign in with : owner@demo.test / ${DEMO_PASSWORD}  (also manager@, accountant@, maintenance@)`,
+      `  Tenant portal: ${tenants[0]!.fullName} — open /portal/login, phone ${tenants[0]!.phone}`,
+      '                 (no password: the one-time code is printed in the [worker] log)',
       `  Properties   : 2 (${units.length + 1} units)`,
       `  Tenants      : ${tenants.length}`,
       `  Leases       : 3 (2 Ethiopian-calendar, 1 Gregorian, 1 quarterly)`,

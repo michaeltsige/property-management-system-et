@@ -75,7 +75,9 @@ export function WorkspaceTabs() {
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs',
-                  active ? 'bg-brand-50 font-medium text-brand-800' : 'text-slate-600 hover:bg-slate-100',
+                  active
+                    ? 'bg-brand-600 font-semibold text-white shadow-sm'
+                    : 'text-slate-600 hover:bg-slate-100',
                 )}
               >
                 {labelFor(path)}
@@ -84,7 +86,12 @@ export function WorkspaceTabs() {
                 type="button"
                 aria-label={`${t('tabs.close')} ${labelFor(path)}`}
                 onClick={(event) => close(event, path)}
-                className="-ml-1 rounded p-0.5 text-slate-400 hover:bg-slate-200 hover:text-slate-700"
+                className={cn(
+                  '-ml-1 rounded p-0.5',
+                  active
+                    ? 'text-white/70 hover:bg-white/20 hover:text-white'
+                    : 'text-slate-400 hover:bg-slate-200 hover:text-slate-700',
+                )}
               >
                 <X className="h-3.5 w-3.5" aria-hidden="true" />
               </button>

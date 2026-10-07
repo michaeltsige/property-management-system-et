@@ -24,11 +24,12 @@ beforeEach(() => {
 });
 
 describe('workspace tab store', () => {
-  it('opens, de-duplicates and bounds the tab list', () => {
+  it('opens, de-duplicates and bounds the tab list without reordering', () => {
     openWorkspaceTab('/dashboard');
     openWorkspaceTab('/units');
+    // Re-opening an existing tab must not move it: order belongs to the user.
     openWorkspaceTab('/dashboard');
-    expect(getWorkspaceTabs()).toEqual(['/units', '/dashboard']);
+    expect(getWorkspaceTabs()).toEqual(['/dashboard', '/units']);
     for (let index = 0; index < MAX_TABS + 3; index += 1) openWorkspaceTab(`/properties?tab=${index}`);
     expect(getWorkspaceTabs().length).toBeLessThanOrEqual(MAX_TABS);
   });
