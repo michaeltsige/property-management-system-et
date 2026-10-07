@@ -22,7 +22,7 @@
  * output. `Ctrl-C` stops all of them.
  *
  * Flags: --port <n> | --skip-docker | --skip-seed | --skip-install | --skip-worker
- *        --watch-packages | --help
+ *        --watch-packages | --production | --help
  * Env:   WEB_PORT, API_HEAP_MB, WEB_HEAP_MB, WORKER_HEAP_MB, DATABASE_URL
  */
 
@@ -62,6 +62,7 @@ function parseArgs(argv) {
     install: true,
     worker: true,
     watchPackages: false,
+    production: false,
     port: undefined,
     help: false,
   };
@@ -73,6 +74,7 @@ function parseArgs(argv) {
     else if (arg === '--skip-install') flags.install = false;
     else if (arg === '--skip-worker') flags.worker = false;
     else if (arg === '--watch-packages') flags.watchPackages = true;
+    else if (arg === '--production') flags.production = true;
     else if (arg === '--port') flags.port = argv[++i];
     else if (arg.startsWith('--port=')) flags.port = arg.slice('--port='.length);
     else {
@@ -94,6 +96,8 @@ if (flags.help) {
   --skip-install     do not check that dependencies are installed
   --skip-worker      do not run the background job worker (saves ~100 MB)
   --watch-packages   keep rebuilding @pms/* while you edit them (one extra process)
+  --production       build the web app once and serve it pre-rendered (fastest;
+                     no on-demand compile, but a one-time build of a few minutes)
   --help             this text
 `);
   process.exit(0);
@@ -477,15 +481,37 @@ async function main() {
     log('dev', 'worker skipped (--skip-worker): scheduled jobs will not run');
   }
 
-  start('web', bin(WEB_DIR, 'next'), ['dev', '--hostname', '0.0.0.0', '--port', String(PORT)], {
-    cwd: WEB_DIR,
-    env: {
-      NODE_OPTIONS: `--max-old-space-size=${WEB_HEAP_MB}`,
-      NEXT_TELEMETRY_DISABLED: '1',
-      // The browser only ever talks to this server; it proxies /api/* to the API.
-      API_PROXY_TARGET: process.env.API_PROXY_TARGET ?? `http://127.0.0.1:${API_PORT}`,
-    },
-  });
+  const webEnv = {
+    NODE_OPTIONS: `--max-old-space-size=${WEB_HEAP_MB}`,
+    NEXT_TELEMETRY_DISABLED: '1',
+    // The browser only ever talks to this server; it proxies /api/* to the API.
+    API_PROXY_TARGET: process.env.API_PROXY_TARGET ?? `http://127.0.0.1:${API_PORT}`,
+  };
+
+  if (flags.production) {
+    // Production mode: build once, then serve pre-rendered pages. No
+    // on-demand compilation, no dev-server overhead — the fastest the app can
+    // possibly be, at the cost of a one-time build of a few minutes.
+    log('dev', 'building the web app for production (one-time, a few minutes)…');
+    const buildCode = await runOnce('dev', bin(WEB_DIR, 'next'), ['build'], {
+      cwd: WEB_DIR,
+      env: { ...webEnv, NODE_ENV: 'production' },
+    });
+    if (buildCode !== 0) {
+      log('dev', 'the production web build failed — see the output above.');
+      shutdown(1);
+      return;
+    }
+    start('web', bin(WEB_DIR, 'next'), ['start', '--hostname', '0.0.0.0', '--port', String(PORT)], {
+      cwd: WEB_DIR,
+      env: { ...webEnv, NODE_ENV: 'production' },
+    });
+  } else {
+    start('web', bin(WEB_DIR, 'next'), ['dev', '--hostname', '0.0.0.0', '--port', String(PORT)], {
+      cwd: WEB_DIR,
+      env: webEnv,
+    });
+  }
 
   log('dev', 'waiting for the API to answer…');
   if (!(await waitForApi(90))) {
@@ -495,7 +521,11 @@ async function main() {
   }
 
   banner();
-  void warmupWeb();
+  if (flags.production) {
+    log('dev', 'production mode: no warm-up needed — every page is pre-built.');
+  } else {
+    void warmupWeb();
+  }
 }
 
 main().catch((error) => {

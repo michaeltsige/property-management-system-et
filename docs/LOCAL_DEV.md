@@ -360,3 +360,17 @@ Two things keep the first real click fast:
 - The web client **deduplicates concurrent identical GETs** (shell, task panel
   and screens all need the same lists), so one dashboard load makes one request
   per endpoint, not four.
+
+### When dev mode still feels slow: production mode
+
+Dev mode compiles on demand and serves through the dev server, so even a warm
+app carries real overhead. For a review/demo session run the stack in
+production mode instead:
+
+```bash
+pnpm dev:all --production
+```
+
+That builds the web app once (a few minutes) and then serves pre-rendered
+pages with no compilation at all — the fastest the app can possibly be. Code
+changes are not picked up until you stop and re-run it.
