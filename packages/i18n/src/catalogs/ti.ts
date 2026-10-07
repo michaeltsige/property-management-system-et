@@ -209,6 +209,7 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'property.address_landmark': 'መግለጺ ቦታ',
 
   'unit.label': 'ክፍሊ',
+  'unit.floor': 'ደርቢ',
   'unit.status': 'ኩነታት',
   'unit.market_rent': 'ክራይ ዕዳጋ',
   'units.type': 'ዓይነት',

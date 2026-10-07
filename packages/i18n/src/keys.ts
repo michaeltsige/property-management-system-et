@@ -218,6 +218,7 @@ export const EN_CATALOG = {
   'property.address_landmark': 'Landmark description',
 
   'unit.label': 'Unit',
+  'unit.floor': 'Floor',
   'unit.status': 'Status',
   'unit.market_rent': 'Market rent',
   'units.type': 'Type',
