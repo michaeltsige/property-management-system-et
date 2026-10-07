@@ -129,6 +129,9 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'bulk.preview': 'Durargii',
   'bulk.invalid': 'Akkaataa ykn daangaa sirrii hin taane',
   'bulk.created': 'Kutaaleen {count} uumamaniiru',
+  'bulk.type_label': 'Gosa kutaa (filannoo)',
+  'bulk.type_hint': 'Garee kana gosa kenni (fkn. 1BR ykn Studio) — kiraan gabaa gosaan bulfama.',
+  'bulk.market_rent_optional': 'Kira gabaa (filannoo)',
 
   // Hierarchy labels: unreviewed machine drafts; require native-speaker review.
   'portfolio.mode': 'Herrega kana akkamitti fayyadamtu?',
@@ -213,6 +216,12 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'unit.label': 'Kutaa',
   'unit.status': 'Haala',
   'unit.market_rent': 'Kiree gabaa',
+  'units.type': 'Gosa',
+  'units.set_rent_by_type': 'Kira gosaan qindeessi',
+  'units.rent_by_type_hint':
+    'Kira gabaa kutaa gosa kanaa hunda qabeenyicha keessaa haaromsa; kiraan waliigaltee jiru hin tuqamu.',
+  'units.rent_updated': 'Kira gaba kutaa {count} haaromfameera',
+  'units.no_types': 'Qabeenya kana keessatti gosi kutaa hanga ammaa hin jiru',
 
   'tenant.full_name': 'Maqaa guutuu',
   'tenant.phone': 'Bilbila',

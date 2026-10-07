@@ -22,6 +22,7 @@ import {
   updatePropertySchema,
   updateTenantSchema,
   updateUnitSchema,
+  setRentByTypeSchema,
   uuidSchema,
 } from '@pms/shared';
 
@@ -200,6 +201,7 @@ portfolioRouter.post(
             propertyId: property.id,
             buildingId: req.body.buildingId ?? null,
             label: req.body.label,
+            typeLabel: req.body.typeLabel ?? null,
             floor: req.body.floor ?? null,
             bedrooms: req.body.bedrooms ?? null,
             bathrooms: req.body.bathrooms ?? null,
@@ -253,6 +255,55 @@ portfolioRouter.get('/units', requirePermission('units.read'), async (req, res, 
 });
 
 portfolioRouter.patch(
+  '/units/rent-by-type',
+  requirePermission('units.write'),
+  validate({ body: setRentByTypeSchema }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const organizationId = organizationIdOf(req);
+      const property = await prisma.property.findFirst({
+        where: { id: req.body.propertyId, organizationId, deletedAt: null },
+        include: { organization: { select: { currency: true } } },
+      });
+      if (!property) throw notFound('Property not found in this organization');
+
+      const result = await prisma.unit.updateMany({
+        where: {
+          organizationId,
+          propertyId: property.id,
+          typeLabel: req.body.typeLabel,
+          deletedAt: null,
+        },
+        data: {
+          marketRentMinor: BigInt(req.body.marketRent.amountMinor),
+          currency: req.body.marketRent.currency ?? property.organization?.currency ?? 'ETB',
+        },
+      });
+      if (result.count === 0) throw notFound('No units of this type in the property');
+
+      await recordAudit(prisma, {
+        organizationId,
+        actorUserId: req.auth?.userId,
+        action: 'update',
+        entityType: 'UnitType',
+        entityId: property.id,
+        after: {
+          typeLabel: req.body.typeLabel,
+          marketRentMinor: req.body.marketRent.amountMinor,
+          unitsUpdated: result.count,
+        },
+        requestId: req.requestId,
+      });
+
+      res.json({ updated: result.count });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+portfolioRouter.patch(
   '/units/:unitId',
   requirePermission('units.write'),
   validate({ params: z.object({ unitId: uuidSchema }), body: updateUnitSchema }),
@@ -272,6 +323,7 @@ portfolioRouter.patch(
           data: {
             ...(req.body.buildingId !== undefined ? { buildingId: req.body.buildingId } : {}),
             ...(req.body.label !== undefined ? { label: req.body.label } : {}),
+            ...(req.body.typeLabel !== undefined ? { typeLabel: req.body.typeLabel || null } : {}),
             ...(req.body.status !== undefined ? { status: req.body.status } : {}),
             ...(req.body.marketRent !== undefined
               ? { marketRentMinor: req.body.marketRent ? BigInt(req.body.marketRent.amountMinor) : null }

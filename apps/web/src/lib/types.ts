@@ -59,6 +59,7 @@ export interface Unit {
   id: string;
   propertyId: string;
   label: string;
+  typeLabel?: string | null;
   floor: number | null;
   bedrooms: number | null;
   bathrooms: number | null;

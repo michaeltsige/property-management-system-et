@@ -106,6 +106,9 @@ export const EN_CATALOG = {
   'bulk.preview': 'Preview',
   'bulk.invalid': 'Invalid pattern or range',
   'bulk.created': 'Created {count} units',
+  'bulk.type_label': 'Unit type (optional)',
+  'bulk.type_hint': 'Give the batch a type like 1BR or Studio — market rent is then managed per type.',
+  'bulk.market_rent_optional': 'Market rent (optional)',
 
   'portfolio.mode': 'How will you use the account?',
   'portfolio.self_owned': 'I own these properties',
@@ -217,6 +220,12 @@ export const EN_CATALOG = {
   'unit.label': 'Unit',
   'unit.status': 'Status',
   'unit.market_rent': 'Market rent',
+  'units.type': 'Type',
+  'units.set_rent_by_type': 'Set rent by type',
+  'units.rent_by_type_hint':
+    'Updates the market rent of every unit of this type in the property. Existing lease rents stay unchanged.',
+  'units.rent_updated': 'Market rent updated for {count} units',
+  'units.no_types': 'No unit types in this property yet',
 
   'tenant.full_name': 'Full name',
   'tenant.phone': 'Phone',

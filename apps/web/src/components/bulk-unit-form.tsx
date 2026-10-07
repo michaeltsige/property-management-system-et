@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import type { Property } from '@/lib/types';
 import { useAction } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
+import { MoneyInput } from './form-controls';
 import { Alert, Button, Input, Label, Select } from './ui';
 
 export function BulkUnitForm({
@@ -21,6 +22,8 @@ export function BulkUnitForm({
   const [start, setStart] = useState(1);
   const [count, setCount] = useState(10);
   const [padding, setPadding] = useState(3);
+  const [typeLabel, setTypeLabel] = useState('');
+  const [marketRent, setMarketRent] = useState<number | null>(null);
   const { pending, error, run } = useAction();
   let labels: string[] = [];
   try {
@@ -39,6 +42,8 @@ export function BulkUnitForm({
             propertyId,
             buildingId: buildingId || null,
             naming: { pattern, start, count, padding },
+            typeLabel: typeLabel.trim() || undefined,
+            marketRent: marketRent === null ? undefined : { amountMinor: marketRent, currency: 'ETB' },
           });
           onSaved(result.count);
         }).catch(() => undefined);
@@ -119,6 +124,17 @@ export function BulkUnitForm({
           />
         </div>
       </div>
+      <div>
+        <Label htmlFor="bulk-type">{t('bulk.type_label')}</Label>
+        <Input
+          id="bulk-type"
+          maxLength={60}
+          value={typeLabel}
+          onChange={(e) => setTypeLabel(e.target.value)}
+        />
+        <p className="mt-1 text-[11px] text-slate-500">{t('bulk.type_hint')}</p>
+      </div>
+      <MoneyInput label={t('bulk.market_rent_optional')} value={marketRent} onChange={setMarketRent} />
       <p className="break-words text-sm" aria-live="polite">
         {t('bulk.preview')}:{' '}
         {labels.length

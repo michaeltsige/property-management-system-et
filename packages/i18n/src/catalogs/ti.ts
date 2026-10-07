@@ -125,6 +125,9 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'bulk.preview': 'ቅድመ ትርኢት',
   'bulk.invalid': 'ዘይቅኑዕ ቅዲ ወይ ወሰን',
   'bulk.created': '{count} ክፍልታት ተፈጢሮም',
+  'bulk.type_label': 'ዓይነት ክፍሊ (ኣማራጺ)',
+  'bulk.type_hint': 'ነዚ ጉጅለ ዓይነት ሃቦ (ንኣብነት 1 መደቀሲ ወይ ስቱድዮ) — ክራይ ዕዳጋ ብዓይነት ይመሓደር።',
+  'bulk.market_rent_optional': 'ክራይ ዕዳጋ (ኣማራጪ)',
 
   // Hierarchy labels: unreviewed machine drafts; require native-speaker review.
   'portfolio.mode': 'ነዚ ሕሳብ ብኸመይ ክትጥቀሙሉ ኢኹም?',
@@ -208,6 +211,11 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'unit.label': 'ክፍሊ',
   'unit.status': 'ኩነታት',
   'unit.market_rent': 'ክራይ ዕዳጋ',
+  'units.type': 'ዓይነት',
+  'units.set_rent_by_type': 'ክራይ ብዓይነት ኣቐምጥ',
+  'units.rent_by_type_hint': 'ኣብዚ ንብረት ዘሎ ኩሉ ናይዚ ዓይነት ክፍሊ ክራይ ዕዳጋ የሐድስ፤ ክራይ ዘለዎም ውዕላት ኣይትንከፉን።',
+  'units.rent_updated': 'ክራይ ዕዳጋ ን{count} ክፍልታት ተሐዲሱ',
+  'units.no_types': 'ኣብዚ ንብረት ክሳብ ሕጂ ዓይነት ክፍሊ የለን',
 
   'tenant.full_name': 'ምሉእ ስም',
   'tenant.phone': 'ተሌፎን',
