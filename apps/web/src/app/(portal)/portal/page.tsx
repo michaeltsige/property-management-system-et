@@ -12,6 +12,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
+import { Logo } from '@/components/logo';
 import { api } from '@/lib/api';
 import { formatAmount, formatDate, statusTone } from '@/lib/format';
 import { useAction, useAsync } from '@/lib/hooks';
@@ -100,9 +101,12 @@ export default function PortalPage() {
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-          <div>
-            <p className="text-sm font-semibold text-slate-900">{t('portal.title')}</p>
-            <p className="text-xs text-slate-500">{session.user.fullName}</p>
+          <div className="flex items-center gap-2">
+            <Logo size={30} />
+            <div>
+              <p className="text-sm font-semibold text-slate-900">{t('portal.title')}</p>
+              <p className="text-xs text-slate-500">{session.user.fullName}</p>
+            </div>
           </div>
           <Button variant="secondary" onClick={logout}>
             {t('auth.sign_out')}

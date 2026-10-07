@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import { usePreferences } from '@/lib/preferences';
 
+import { Logo } from '@/components/logo';
 import { Alert, Button, Card, CardContent, Input, Label } from '@/components/ui';
 
 export default function LoginPage() {
@@ -46,12 +47,10 @@ export default function LoginPage() {
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/images/login-hero.jpg')" }}
       />
-      <div aria-hidden="true" className="absolute inset-0 bg-slate-900/55" />
+      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/55 to-slate-900/30" />
       <div className="relative w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-lg bg-brand-600 text-lg font-bold text-white shadow-lg">
-            ቤ
-          </div>
+          <Logo size={52} className="mx-auto mb-3 drop-shadow-md" />
           <h1 className="text-lg font-semibold text-white">{t('app.name')}</h1>
           <p className="text-xs text-white/70">{t('app.tagline')}</p>
         </div>
@@ -89,8 +88,8 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        <p className="mt-4 text-center text-xs text-slate-500">
-          <Link href="/register" className="text-brand-700 underline-offset-2 hover:underline">
+        <p className="mt-4 text-center text-xs text-white/70">
+          <Link href="/register" className="font-medium text-white underline-offset-2 hover:underline">
             {t('auth.register_organization')}
           </Link>
         </p>

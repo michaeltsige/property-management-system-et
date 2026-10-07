@@ -11,6 +11,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
+import { Logo } from '@/components/logo';
 import { api } from '@/lib/api';
 import { usePreferences } from '@/lib/preferences';
 
@@ -63,12 +64,10 @@ export default function PortalLoginPage() {
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/images/login-hero.jpg')" }}
       />
-      <div aria-hidden="true" className="absolute inset-0 bg-slate-900/55" />
+      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/55 to-slate-900/30" />
       <div className="relative w-full max-w-sm">
         <div className="mb-6 text-center">
-          <div className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-lg bg-brand-600 text-lg font-bold text-white shadow-lg">
-            ቤ
-          </div>
+          <Logo size={52} className="mx-auto mb-3 drop-shadow-md" />
           <h1 className="text-lg font-semibold text-white">{t('portal.title')}</h1>
           <p className="mt-1 text-xs text-white/70">{t('portal.login_hint')}</p>
         </div>
