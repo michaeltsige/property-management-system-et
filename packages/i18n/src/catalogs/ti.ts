@@ -162,6 +162,13 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'nav.maintenance': 'ጽገና',
   'nav.reports': 'ጸብጻባት',
   'nav.settings': 'ቅጥዒታት',
+  'nav.organization': 'ውድብ',
+  'nav.group.organization': 'ውድብ',
+  'org.team': 'ጋን',
+  'org.profile': 'መግለጺ ውድብ',
+  'org.billing_defaults': 'ንቡር ሕታት ክሊት',
+  'org.overdue_reminder_hint': 'ሰራሕተኛ ንተከረቲ ዝሰዶ ዘሎ ዝደንጐየ ክፍሊት መዘኻኸሪ ብዝሒ።',
+  'org.late_fee_hint': 'ናይ ዝደንጐየ ክፍሊት ናይ ከባቢ ሕጋዊ ጉዳይ እዩ — ቅድሚ ምኽፋልካ docs/DECISIONS.md ርአ',
   'nav.translations': 'ትርጉማት',
 
   'auth.sign_in': 'እቶ',

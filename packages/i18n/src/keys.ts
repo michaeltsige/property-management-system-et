@@ -143,6 +143,13 @@ export const EN_CATALOG = {
   'nav.maintenance': 'Maintenance',
   'nav.reports': 'Reports',
   'nav.settings': 'Settings',
+  'nav.organization': 'Organization',
+  'nav.group.organization': 'Organization',
+  'org.team': 'Team',
+  'org.profile': 'Organization profile',
+  'org.billing_defaults': 'Billing defaults',
+  'org.overdue_reminder_hint': 'How often the worker sends overdue SMS reminders to tenants.',
+  'org.late_fee_hint': 'Late fees are a local legal question — see docs/DECISIONS.md before enabling.',
   'nav.translations': 'Translations',
 
   // --- auth ---------------------------------------------------------------

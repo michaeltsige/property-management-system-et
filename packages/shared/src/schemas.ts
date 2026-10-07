@@ -216,6 +216,10 @@ export const updateMembershipSchema = z.object({
   status: z.enum(['active', 'disabled']).optional(),
 });
 
+export const updateOrganizationProfileSchema = z.object({
+  name: z.string().trim().min(2).max(160),
+});
+
 export const organizationSettingsSchema = z.object({
   currency: z
     .string()

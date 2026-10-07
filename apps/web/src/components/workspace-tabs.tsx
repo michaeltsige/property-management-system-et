@@ -21,8 +21,9 @@ const ROUTE_LABEL_KEYS: Record<string, string> = {
   '/reports': 'nav.reports',
   '/maintenance': 'nav.maintenance',
   '/documents': 'nav.documents',
-  '/settings': 'nav.settings',
-  '/settings/translations': 'nav.translations',
+  '/organization': 'nav.organization',
+  '/organization/team': 'org.team',
+  '/organization/translations': 'nav.translations',
   '/onboarding': 'onboarding.first_property',
 };
 
