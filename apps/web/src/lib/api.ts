@@ -44,6 +44,7 @@ import type {
   Unit,
   Vendor,
   WorkOrder,
+  WorkOrderNote,
 } from './types';
 
 /**
@@ -336,6 +337,12 @@ export const api = {
     apiFetch<{ workOrder: WorkOrder }>('/work-orders', { method: 'POST', body }),
   updateWorkOrder: (id: string, body: unknown) =>
     apiFetch<{ workOrder: WorkOrder }>(`/work-orders/${id}`, { method: 'PATCH', body }),
+  workOrder: (id: string) => apiFetch<{ workOrder: WorkOrder }>(`/work-orders/${id}`),
+  addWorkOrderNote: (id: string, body: { body: string; internal?: boolean }) =>
+    apiFetch<{ note: WorkOrderNote }>(`/work-orders/${id}/notes`, { method: 'POST', body }),
+  portalMaintenanceRequests: () => apiFetch<{ items: WorkOrder[] }>('/portal/maintenance-requests'),
+  createPortalMaintenanceRequest: (body: { title: string; description?: string }) =>
+    apiFetch<{ workOrder: WorkOrder }>('/portal/maintenance-requests', { method: 'POST', body }),
   vendors: () => apiFetch<{ vendors: Vendor[] }>('/vendors'),
   createVendor: (body: unknown) => apiFetch<{ vendor: Vendor }>('/vendors', { method: 'POST', body }),
   documents: (query = '') => apiFetch<{ items: Document[]; total: number }>(`/documents${query}`),

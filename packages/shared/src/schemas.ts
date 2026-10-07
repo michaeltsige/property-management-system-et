@@ -491,6 +491,18 @@ export const updateWorkOrderSchema = z.object({
   resolutionNotes: z.string().max(2000).optional(),
 });
 
+/** A note on a work order. `internal` notes are staff-only. */
+export const workOrderNoteSchema = z.object({
+  body: z.string().trim().min(3).max(2000),
+  internal: z.boolean().optional(),
+});
+
+/** A tenant-submitted maintenance request via the portal. */
+export const portalMaintenanceRequestSchema = z.object({
+  title: z.string().trim().min(5).max(160),
+  description: z.string().trim().max(4000).optional(),
+});
+
 /**
  * Upload body.
  *

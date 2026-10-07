@@ -106,7 +106,11 @@ describe('maintenance work orders', () => {
     const done = await request(app)
       .patch(`/api/v1/work-orders/${workOrderId}`)
       .set(headers)
-      .send({ status: 'completed', actualCost: { amountMinor: 180_000, currency: 'ETB' } })
+      .send({
+        status: 'completed',
+        actualCost: { amountMinor: 180_000, currency: 'ETB' },
+        resolutionNotes: 'Replaced the valve and tested the line.',
+      })
       .expect(200);
     expect(done.body.workOrder.status).toBe('completed');
     expect(done.body.workOrder.completedAt).not.toBeNull();

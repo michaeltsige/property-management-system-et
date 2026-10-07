@@ -10,12 +10,13 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { api } from '@/lib/api';
-import { formatAmount, formatDate } from '@/lib/format';
-import { useAsync } from '@/lib/hooks';
+import { formatAmount, formatDate, statusTone } from '@/lib/format';
+import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
+import { cn } from '@/lib/utils';
 
 import {
   Alert,
@@ -24,9 +25,12 @@ import {
   Card,
   CardContent,
   EmptyState,
+  Input,
+  Label,
   Skeleton,
   Table,
   Td,
+  Textarea,
   Th,
 } from '@/components/ui';
 
@@ -40,6 +44,27 @@ export default function PortalPage() {
   }, [ready, session, router]);
 
   const me = useAsync(() => (isTenant ? api.portalMe() : Promise.resolve(null)), [isTenant, ready]);
+  const [maintenanceVersion, setMaintenanceVersion] = useState(0);
+  const requests = useAsync(
+    () => (isTenant && ready ? api.portalMaintenanceRequests() : Promise.resolve(null)),
+    [isTenant, ready, maintenanceVersion],
+  );
+  const [requestForm, setRequestForm] = useState({ title: '', description: '' });
+  const [requestSent, setRequestSent] = useState(false);
+  const { pending: submitting, error: requestError, run } = useAction();
+
+  async function submitRequest(event: React.FormEvent) {
+    event.preventDefault();
+    await run(async () => {
+      await api.createPortalMaintenanceRequest({
+        title: requestForm.title.trim(),
+        description: requestForm.description.trim() || undefined,
+      });
+      setRequestForm({ title: '', description: '' });
+      setRequestSent(true);
+      setMaintenanceVersion((version) => version + 1);
+    }).catch(() => undefined);
+  }
 
   async function logout() {
     try {
@@ -108,6 +133,98 @@ export default function PortalPage() {
                   </p>
                 </div>
                 {me.data.dueMinor === '0' ? <Badge tone="brand">{t('portal.up_to_date')}</Badge> : null}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="p-0">
+                <div className="border-b border-slate-200 px-4 py-3 text-sm font-medium text-slate-900">
+                  {t('portal.maintenance_title')}
+                </div>
+
+                {requests.loading ? (
+                  <div className="space-y-2 p-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                  </div>
+                ) : requests.error ? (
+                  <div className="p-4">
+                    <Alert tone="danger">{requests.error}</Alert>
+                  </div>
+                ) : (requests.data?.items.length ?? 0) === 0 ? (
+                  <div className="p-4">
+                    <EmptyState
+                      title={t('portal.maintenance_empty')}
+                      description={t('portal.maintenance_hint')}
+                    />
+                  </div>
+                ) : (
+                  <ul className="divide-y divide-slate-100">
+                    {(requests.data?.items ?? []).map((item) => (
+                      <li key={item.id} className="px-4 py-3">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-sm font-medium text-slate-900">{item.title}</p>
+                          <Badge className={cn(statusTone[item.status])}>
+                            {t(`work_order.status.${item.status}` as never)}
+                          </Badge>
+                        </div>
+                        <p className="mt-0.5 text-[11px] text-slate-500">
+                          {item.ticketNumber ?? ''}
+                          {item.ticketNumber ? ' · ' : ''}
+                          {formatDate(item.reportedAt, { language, calendar })}
+                        </p>
+                        {item.description ? (
+                          <p className="mt-1 whitespace-pre-wrap text-xs text-slate-600">
+                            {item.description}
+                          </p>
+                        ) : null}
+                        {(item.notes ?? []).length > 0 ? (
+                          <ul className="mt-2 space-y-1">
+                            {(item.notes ?? []).map((note) => (
+                              <li key={note.id} className="rounded-md bg-slate-50 px-2 py-1.5">
+                                <p className="whitespace-pre-wrap text-xs text-slate-700">{note.body}</p>
+                                <p className="mt-0.5 text-[10px] text-slate-400">
+                                  {note.authorName} · {formatDate(note.createdAt, { language, calendar })}
+                                </p>
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <form className="space-y-2 border-t border-slate-200 px-4 py-3" onSubmit={submitRequest}>
+                  <p className="text-xs text-slate-500">{t('portal.maintenance_hint')}</p>
+                  <div className="space-y-1">
+                    <Label htmlFor="request-title">{t('maintenance.title')}</Label>
+                    <Input
+                      id="request-title"
+                      required
+                      minLength={5}
+                      value={requestForm.title}
+                      onChange={(event) =>
+                        setRequestForm((current) => ({ ...current, title: event.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="request-description">{t('maintenance.description')}</Label>
+                    <Textarea
+                      id="request-description"
+                      value={requestForm.description}
+                      onChange={(event) =>
+                        setRequestForm((current) => ({ ...current, description: event.target.value }))
+                      }
+                    />
+                  </div>
+                  {requestError ? <Alert tone="danger">{requestError}</Alert> : null}
+                  {requestSent ? <Alert tone="success">{t('portal.maintenance_submitted')}</Alert> : null}
+                  <Button type="submit" disabled={submitting || requestForm.title.trim().length < 5}>
+                    {submitting ? t('app.loading') : t('portal.new_maintenance_request')}
+                  </Button>
+                </form>
               </CardContent>
             </Card>
 

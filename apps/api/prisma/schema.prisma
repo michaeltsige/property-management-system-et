@@ -29,6 +29,7 @@ datasource db {
 model Organization {
   imports ImportBatch[]
   otps          TenantOtp[]
+  workOrderNotes WorkOrderNote[]
   id            String    @id @default(uuid()) @db.Uuid
   name          String
   slug          String    @unique
@@ -585,6 +586,7 @@ model WorkOrder {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
+  notes        WorkOrderNote[]
   organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   property     Property     @relation(fields: [propertyId], references: [id])
   unit         Unit?        @relation(fields: [unitId], references: [id])
@@ -786,4 +788,22 @@ model TenantOtp {
   tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, consumedAt])
+}
+
+/// Staff/tenant conversation on a maintenance work order. `internal` notes are
+/// staff-only; everything else is visible to the tenant who reported the issue.
+model WorkOrderNote {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @db.Uuid
+  workOrderId    String   @db.Uuid
+  authorId       String?  @db.Uuid
+  authorName     String
+  body           String
+  internal       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workOrder    WorkOrder    @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+
+  @@index([workOrderId, createdAt])
 }

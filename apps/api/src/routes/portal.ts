@@ -1,11 +1,17 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { portalRequestSchema, portalVerifySchema, uuidSchema } from '@pms/shared';
+import {
+  portalMaintenanceRequestSchema,
+  portalRequestSchema,
+  portalVerifySchema,
+  uuidSchema,
+} from '@pms/shared';
 import { organizationIdOf, requireAuth } from '../middleware/context.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
 import { getPrisma } from '../lib/prisma.js';
-import { businessRule, notFound } from '../lib/errors.js';
+import { badRequest, businessRule, notFound } from '../lib/errors.js';
+import { nextTicketNumber } from './operations.js';
 import { authRateLimiter } from './auth.js';
 import { issueTokens } from '../services/auth.service.js';
 import {
@@ -175,3 +181,87 @@ portalRouter.get('/portal/me', requireAuth, requirePermission('portal.use'), asy
     next(error);
   }
 });
+
+// --- maintenance requests (tenant-initiated, staff-managed) -----------------
+
+async function portalTenant(
+  prisma: ReturnType<typeof getPrisma>,
+  req: { auth?: { userId?: string; organizationId?: string } },
+) {
+  const tenant = await prisma.tenant.findFirst({
+    where: { userId: req.auth?.userId, organizationId: req.auth?.organizationId, deletedAt: null },
+  });
+  if (!tenant) throw notFound('Portal account is not linked to a tenant');
+  return tenant;
+}
+
+portalRouter.post(
+  '/portal/maintenance-requests',
+  requireAuth,
+  requirePermission('portal.use'),
+  validate({ body: portalMaintenanceRequestSchema }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+
+      // The request is filed against the tenant's current home: their active
+      // lease (most recent one first). Without an active lease there is no
+      // unit to attach the request to.
+      const lease = await prisma.lease.findFirst({
+        where: { tenantId: tenant.id, organizationId: tenant.organizationId, status: 'active' },
+        include: { unit: { select: { id: true, propertyId: true } } },
+        orderBy: { startDate: 'desc' },
+      });
+      if (!lease)
+        throw badRequest('No active lease found; contact your landlord to file a maintenance request');
+
+      const ticketNumber = await nextTicketNumber(tenant.organizationId, new Date());
+      const workOrder = await prisma.workOrder.create({
+        data: {
+          organizationId: tenant.organizationId,
+          propertyId: lease.unit.propertyId,
+          unitId: lease.unit.id,
+          tenantId: tenant.id,
+          ticketNumber,
+          title: req.body.title,
+          description: req.body.description ?? null,
+          status: 'open',
+          reportedAt: new Date(),
+          createdById: req.auth?.userId ?? null,
+        },
+        include: {
+          property: { select: { id: true, name: true } },
+          unit: { select: { id: true, label: true } },
+        },
+      });
+      res.status(201).json({ workOrder });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+portalRouter.get(
+  '/portal/maintenance-requests',
+  requireAuth,
+  requirePermission('portal.use'),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      const items = await prisma.workOrder.findMany({
+        where: { tenantId: tenant.id, organizationId: tenant.organizationId },
+        include: {
+          unit: { select: { id: true, label: true } },
+          property: { select: { id: true, name: true } },
+          notes: { where: { internal: false }, orderBy: { createdAt: 'asc' } },
+        },
+        orderBy: { reportedAt: 'desc' },
+      });
+      res.json({ items });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
