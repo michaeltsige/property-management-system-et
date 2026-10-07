@@ -28,7 +28,7 @@
 
 import { buildWorkspaces } from './build-workspaces.mjs';
 import { spawn } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readFileSync, statfsSync } from 'node:fs';
 import { createConnection } from 'node:net';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -119,6 +119,32 @@ function totalMemoryMb() {
 }
 
 const TOTAL_MB = totalMemoryMb();
+
+/** Free disk space in MiB, or null when it cannot be determined. */
+function diskFreeMb(path) {
+  try {
+    const stats = statfsSync(path);
+    return Math.floor((stats.bavail * stats.bsize) / (1024 * 1024));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Next's build and dev caches need real headroom; on an exhausted disk they fail
+ * with ENOSPC mid-compile, which looks like a hang or a crash. Warn early with
+ * the cleanup recipe instead.
+ */
+function checkDiskSpace() {
+  const freeMb = diskFreeMb(ROOT);
+  if (freeMb === null) return;
+  if (freeMb < 2048) {
+    log('dev', `WARNING: only ${freeMb} MB of disk space left — builds will likely fail.`);
+    log('dev', 'Free space first, then run this again:');
+    log('dev', '  rm -rf apps/web/.next node_modules/.cache apps/*/node_modules/.cache');
+    log('dev', '  pnpm store prune && docker system prune -f && docker volume prune -f');
+  }
+}
 const SMALL_MACHINE = TOTAL_MB <= 2400; // Cloud Shell, small VMs, containers
 const API_HEAP_MB = process.env.API_HEAP_MB ?? (SMALL_MACHINE ? '320' : '512');
 // Next dev holds the module graph of every compiled route; on roomy machines
@@ -438,6 +464,7 @@ async function main() {
   console.log(
     `\n  property-management-system-et — local stack (${IN_CLOUD_SHELL ? 'Cloud Shell' : 'local'})\n`,
   );
+  checkDiskSpace();
   await ensureDependencies();
   await startDatabase();
 
