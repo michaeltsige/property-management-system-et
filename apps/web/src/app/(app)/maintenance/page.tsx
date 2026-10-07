@@ -1,9 +1,8 @@
 'use client';
 
-import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
-import { WORK_ORDER_CATEGORIES, WORK_ORDER_PRIORITIES, WORK_ORDER_STATUSES } from '@pms/shared';
+import { WORK_ORDER_STATUSES } from '@pms/shared';
 
 import { api } from '@/lib/api';
 import { formatAmount, formatDate, statusTone } from '@/lib/format';
@@ -12,7 +11,6 @@ import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
 import { PageHeader } from '@/components/app-shell';
-import { MoneyInput } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
 import {
   Alert,
@@ -21,7 +19,6 @@ import {
   Card,
   CardContent,
   EmptyState,
-  Input,
   Label,
   Select,
   Skeleton,
@@ -45,19 +42,9 @@ export default function MaintenancePage() {
   const { t, language, calendar } = usePreferences();
   const [status, setStatus] = useState('');
   const board = useAsync(() => api.workOrders(`?pageSize=100${status ? `&status=${status}` : ''}`), [status]);
-  const properties = useAsync(() => api.properties(), []);
   const vendors = useAsync(() => api.vendors(), []);
-  const [open, setOpen] = useState(false);
   const [vendorFor, setVendorFor] = useState<string | null>(null);
   const [vendorId, setVendorId] = useState('');
-  const [form, setForm] = useState({
-    propertyId: '',
-    title: '',
-    description: '',
-    category: 'plumbing',
-    priority: 'normal' as (typeof WORK_ORDER_PRIORITIES)[number],
-  });
-  const [estimate, setEstimate] = useState<number | null>(null);
   const { pending, error, run } = useAction();
 
   // Detail drawer state: which request is open, plus a version bump so adding
@@ -72,24 +59,6 @@ export default function MaintenancePage() {
   const [noteInternal, setNoteInternal] = useState(false);
   const [closeFor, setCloseFor] = useState<{ id: string; status: 'completed' | 'cancelled' } | null>(null);
   const [closingNote, setClosingNote] = useState('');
-
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    await run(async () => {
-      await api.createWorkOrder({
-        propertyId: form.propertyId,
-        title: form.title,
-        description: form.description || undefined,
-        category: form.category,
-        priority: form.priority,
-        estimatedCost: estimate === null ? undefined : { amountMinor: estimate, currency: 'ETB' },
-      });
-      setOpen(false);
-      setForm({ propertyId: '', title: '', description: '', category: 'plumbing', priority: 'normal' });
-      setEstimate(null);
-      board.reload();
-    }).catch(() => undefined);
-  }
 
   async function advance(id: string, nextStatus: string, nextVendorId?: string) {
     await run(async () => {
@@ -152,10 +121,6 @@ export default function MaintenancePage() {
                 </option>
               ))}
             </Select>
-            <Button onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4" />
-              {t('maintenance.new_request')}
-            </Button>
           </>
         }
       />
@@ -273,101 +238,6 @@ export default function MaintenancePage() {
           )}
         </CardContent>
       </Card>
-
-      <Modal
-        open={open}
-        onOpenChange={setOpen}
-        title={t('maintenance.new_request')}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setOpen(false)}>
-              {t('common.cancel')}
-            </Button>
-            <Button form="work-order-form" type="submit" disabled={pending}>
-              {pending ? t('app.loading') : t('common.save')}
-            </Button>
-          </>
-        }
-      >
-        <form id="work-order-form" className="grid gap-3" onSubmit={submit}>
-          <div className="space-y-1">
-            <Label htmlFor="propertyId">{t('nav.properties')}</Label>
-            <Select
-              id="propertyId"
-              required
-              value={form.propertyId}
-              onChange={(event) => setForm((current) => ({ ...current, propertyId: event.target.value }))}
-            >
-              <option value="">—</option>
-              {properties.data?.properties.map((property) => (
-                <option key={property.id} value={property.id}>
-                  {property.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="title">{t('maintenance.title')}</Label>
-            <Input
-              id="title"
-              required
-              value={form.title}
-              onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))}
-            />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="space-y-1">
-              <Label htmlFor="category">{t('documents.category')}</Label>
-              <Select
-                id="category"
-                value={form.category}
-                onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))}
-              >
-                {WORK_ORDER_CATEGORIES.map((category) => (
-                  <option key={category} value={category}>
-                    {category.replace(/_/g, ' ')}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label htmlFor="priority">{t('maintenance.priority')}</Label>
-              <Select
-                id="priority"
-                value={form.priority}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, priority: event.target.value as typeof form.priority }))
-                }
-              >
-                {WORK_ORDER_PRIORITIES.map((priority) => (
-                  <option key={priority} value={priority}>
-                    {t(`work_order.priority.${priority}` as never)}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="description">{t('maintenance.description')}</Label>
-            <Textarea
-              id="description"
-              value={form.description}
-              onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))}
-            />
-          </div>
-
-          <MoneyInput
-            label={`${t('money.amount')} (${t('common.optional')})`}
-            value={estimate}
-            onChange={setEstimate}
-          />
-
-          {error ? <Alert tone="danger">{error}</Alert> : null}
-        </form>
-      </Modal>
 
       <Modal
         open={vendorFor !== null}

@@ -339,7 +339,7 @@ export default function UnitsPage() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="floor">{t('common.optional')}</Label>
+            <Label htmlFor="floor">{t('unit.floor')}</Label>
             <Input
               id="floor"
               type="number"

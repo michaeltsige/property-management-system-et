@@ -214,6 +214,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'property.address_landmark': 'Ibsa bakka argamaa',
 
   'unit.label': 'Kutaa',
+  'unit.floor': 'Sadeta',
   'unit.status': 'Haala',
   'unit.market_rent': 'Kiree gabaa',
   'units.type': 'Gosa',

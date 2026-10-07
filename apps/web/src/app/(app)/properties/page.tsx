@@ -290,7 +290,7 @@ export default function PropertiesPage() {
             >
               {ETHIOPIAN_REGIONS.map((region) => (
                 <option key={region.code} value={region.code}>
-                  {region.name} / {region.nameAm}
+                  {language === 'am' ? region.nameAm : region.name}
                 </option>
               ))}
             </Select>

@@ -210,6 +210,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'property.address_landmark': 'የመገኛ ቦታ መግለጫ',
 
   'unit.label': 'ክፍል',
+  'unit.floor': 'ፎ',
   'unit.status': 'ሁኔታ',
   'unit.market_rent': 'የገበያ ኪራይ',
   'units.type': 'ዓይነት',
