@@ -118,6 +118,24 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-1">
+                  <Label htmlFor="defaultBillingCalendar">{t('org.billing_calendar')}</Label>
+                  <Select
+                    id="defaultBillingCalendar"
+                    value={String(current.defaultBillingCalendar ?? 'ethiopian')}
+                    onChange={(event) =>
+                      void save({ defaultBillingCalendar: event.target.value as CalendarKind })
+                    }
+                  >
+                    {CALENDARS.map((option) => (
+                      <option key={option.code} value={option.code}>
+                        {option.english}
+                      </option>
+                    ))}
+                  </Select>
+                  <p className="text-[11px] text-slate-500">{t('org.billing_calendar_hint')}</p>
+                </div>
+
+                <div className="space-y-1">
                   <Label htmlFor="defaultLanguage">{t('org.default_language')}</Label>
                   <Select
                     id="defaultLanguage"

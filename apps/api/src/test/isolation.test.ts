@@ -58,7 +58,6 @@ async function buildOrganization(label: string) {
     .send({
       unitId: unit.body.unit.id,
       tenantId: tenant.body.tenant.id,
-      billingCalendar: 'ethiopian',
       startDate: { year: 2015, month: 1, day: 1, calendar: 'ethiopian' },
       rentAmount: { amountMinor: 1500000, currency: 'ETB' },
       dueDayOfMonth: 5,

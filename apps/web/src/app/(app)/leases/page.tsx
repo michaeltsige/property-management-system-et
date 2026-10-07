@@ -4,7 +4,7 @@ import { Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { BILLING_FREQUENCIES, LEASE_STATUSES, type BillingFrequency, type LeaseStatus } from '@pms/shared';
-import { todayIn, type CalendarKind, type CivilDate } from '@pms/calendar';
+import { todayIn, type CivilDate } from '@pms/calendar';
 
 import { usePropertyContext } from '@/lib/property-context';
 import { api } from '@/lib/api';
@@ -55,7 +55,6 @@ export default function LeasesPage() {
   const [form, setForm] = useState<{
     unitId: string;
     tenantId: string;
-    billingCalendar: CalendarKind;
     billingFrequency: BillingFrequency;
     status: LeaseStatus;
     dueDayOfMonth: number;
@@ -64,7 +63,6 @@ export default function LeasesPage() {
   }>({
     unitId: '',
     tenantId: '',
-    billingCalendar: calendar,
     billingFrequency: 'monthly',
     status: 'active',
     dueDayOfMonth: 5,
@@ -78,10 +76,11 @@ export default function LeasesPage() {
     if (!settings.data || defaultsApplied.current) return;
     defaultsApplied.current = true;
     const s = settings.data.settings;
+    // Dates are entered in the organization's billing calendar; the lease
+    // itself inherits that calendar on the server, so it is not in the form.
     const billing = s.defaultBillingCalendar === 'gregorian' ? 'gregorian' : 'ethiopian';
     setForm((current) => ({
       ...current,
-      billingCalendar: billing,
       startDate: todayIn(billing),
       dueDayOfMonth: typeof s.rentDueDay === 'number' ? s.rentDueDay : 5,
     }));
@@ -93,7 +92,6 @@ export default function LeasesPage() {
       await api.createLease({
         unitId: form.unitId,
         tenantId: form.tenantId,
-        billingCalendar: form.billingCalendar,
         billingFrequency: form.billingFrequency,
         status: form.status,
         dueDayOfMonth: form.dueDayOfMonth,
@@ -282,17 +280,14 @@ export default function LeasesPage() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="billingCalendar">{t('lease.billing_calendar')}</Label>
-            <Select
-              id="billingCalendar"
-              value={form.billingCalendar}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, billingCalendar: event.target.value as CalendarKind }))
-              }
-            >
-              <option value="ethiopian">{t('calendar.ethiopian')}</option>
-              <option value="gregorian">{t('calendar.gregorian')}</option>
-            </Select>
+            <Label>{t('lease.billing_calendar')}</Label>
+            <p className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
+              {settings.data?.settings.defaultBillingCalendar === 'gregorian'
+                ? t('calendar.gregorian')
+                : t('calendar.ethiopian')}
+              <span className="ml-1 text-xs text-slate-400">({t('common.organization_default')})</span>
+            </p>
+            <p className="text-[11px] text-slate-500">{t('lease.billing_calendar_inherited')}</p>
           </div>
 
           <div className="space-y-1">

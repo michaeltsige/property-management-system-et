@@ -224,6 +224,7 @@ export const organizationSettingsSchema = z.object({
     .refine((code) => code in CURRENCIES, { message: 'Unsupported currency' })
     .optional(),
   defaultCalendar: calendarKindSchema.optional(),
+  defaultBillingCalendar: calendarKindSchema.optional(),
   defaultLanguage: languageSchema.optional(),
   rentDueDay: z.number().int().min(1).max(RENT_DUE_DAY_MAX).optional(),
   gracePeriodDays: z.number().int().min(0).max(60).optional(),
@@ -324,8 +325,6 @@ export const createLeaseSchema = z.object({
   /** Tenant of record; additional occupants/co-tenants go in `coTenantIds`. */
   tenantId: uuidSchema,
   coTenantIds: z.array(uuidSchema).max(10).default([]),
-  /** The calendar this lease is billed in — drives periods and due dates. */
-  billingCalendar: calendarKindSchema,
   startDate: civilDateSchema,
   /** `null` = open-ended. */
   endDate: civilDateSchema.nullish(),

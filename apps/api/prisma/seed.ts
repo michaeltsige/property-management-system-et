@@ -2,7 +2,7 @@
  * Demo seed — **all data here is fake**.
  *
  * Creates one demo organization with staff, properties, units, tenants, an
- * Ethiopian-calendar lease and a Gregorian one, generated charges and a couple of
+ * set of leases billed in the organization's Ethiopian calendar, generated charges and a couple of
  * manual payments, plus unverified tax rules and a sample translation override.
  *
  * Safe to re-run: the demo organization is deleted and recreated. Never point this
@@ -13,7 +13,7 @@ import { PrismaClient } from '@prisma/client';
 
 import { enrollTenantPortal } from '../src/services/portal.js';
 
-import { todayIn, periodForDate, shiftPeriod, utcDateToCivil, type CalendarKind } from '@pms/calendar';
+import { todayIn, periodForDate, shiftPeriod, utcDateToCivil } from '@pms/calendar';
 import { DEFAULT_ORG_SETTINGS, ETHIOPIAN_REGIONS, UNVERIFIED_TAX_DEFAULTS } from '@pms/shared';
 
 import { encryptField, lastFour, hashPassword } from '../src/lib/crypto.js';
@@ -266,10 +266,9 @@ async function main(): Promise<void> {
     tenants.push(tenant);
   }
 
-  // Two active leases: one billed in the Ethiopian calendar, one in the Gregorian.
+  // All leases inherit the organization's billing calendar (Ethiopian here).
   const today = new Date();
   const ethiopianToday = utcDateToCivil(today, 'ethiopian');
-  const gregorianToday = utcDateToCivil(today, 'gregorian');
 
   const ethiopianLease = await prisma.lease.create({
     data: {
@@ -288,14 +287,14 @@ async function main(): Promise<void> {
     },
   });
 
-  const gregorianLease = await prisma.lease.create({
+  const secondLease = await prisma.lease.create({
     data: {
       organizationId: organization.id,
       unitId: units[1]!.id,
       tenantId: tenants[1]!.id,
-      billingCalendar: 'gregorian',
+      billingCalendar: 'ethiopian',
       status: 'active',
-      startDate: new Date(Date.UTC(gregorianToday.year, gregorianToday.month - 1, 1)),
+      startDate: new Date(shiftPeriod(periodForDate(ethiopianToday), -2).key + '-01T00:00:00.000Z'),
       rentAmountMinor: BigInt(1_800_000),
       currency: 'ETB',
       dueDayOfMonth: 5,
@@ -323,20 +322,20 @@ async function main(): Promise<void> {
   });
 
   // --- charges for the last three periods ----------------------------------
-  const periodsFor = (calendar: CalendarKind) => {
-    const current = periodForDate(calendar === 'ethiopian' ? ethiopianToday : gregorianToday);
+  const periodKeys = (() => {
+    const current = periodForDate(ethiopianToday);
     return [shiftPeriod(current, -2).key, shiftPeriod(current, -1).key, current.key];
-  };
+  })();
 
   const ethiopianResult = await generateCharges(prisma, {
     organizationId: organization.id,
-    periodKeys: periodsFor('ethiopian'),
+    periodKeys,
     leaseIds: [ethiopianLease.id, shopLease.id],
   });
-  const gregorianResult = await generateCharges(prisma, {
+  const secondResult = await generateCharges(prisma, {
     organizationId: organization.id,
-    periodKeys: periodsFor('gregorian'),
-    leaseIds: [gregorianLease.id],
+    periodKeys,
+    leaseIds: [secondLease.id],
   });
 
   // --- two payments, one partial -------------------------------------------
@@ -398,8 +397,8 @@ async function main(): Promise<void> {
       '                 (no password: the one-time code is printed in the [worker] log)',
       `  Properties   : 2 (${units.length + 1} units)`,
       `  Tenants      : ${tenants.length}`,
-      `  Leases       : 3 (2 Ethiopian-calendar, 1 Gregorian, 1 quarterly)`,
-      `  Charges      : ${ethiopianResult.created + gregorianResult.created} generated`,
+      `  Leases       : 3 (all billed in the org calendar — Ethiopian; 1 quarterly)`,
+      `  Charges      : ${ethiopianResult.created + secondResult.created} generated`,
       '  All names, phone numbers and ID numbers are fictional.',
       '',
     ].join('\n'),
