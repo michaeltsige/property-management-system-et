@@ -19,6 +19,7 @@ import {
   updateVendorSchema,
   updateWorkOrderSchema,
   uuidSchema,
+  workOrderNoteSchema,
 } from '@pms/shared';
 
 import { getPrisma } from '../lib/prisma.js';
@@ -125,7 +126,7 @@ const WORK_ORDER_TRANSITIONS: Record<string, readonly string[]> = {
   cancelled: [],
 };
 
-async function nextTicketNumber(organizationId: string, when: Date): Promise<string> {
+export async function nextTicketNumber(organizationId: string, when: Date): Promise<string> {
   const prisma = getPrisma();
   const year = when.getUTCFullYear();
   const count = await prisma.workOrder.count({
@@ -240,6 +241,7 @@ operationsRouter.get('/work-orders', requirePermission('maintenance.read'), asyn
         include: {
           property: { select: { id: true, name: true } },
           unit: { select: { id: true, label: true } },
+          tenant: { select: { id: true, fullName: true } },
           vendor: { select: { id: true, name: true } },
         },
         orderBy: [{ status: 'asc' }, { priority: 'desc' }, { reportedAt: 'desc' }],
@@ -274,6 +276,7 @@ operationsRouter.get(
           unit: { select: { id: true, label: true } },
           tenant: { select: { id: true, fullName: true, phone: true } },
           vendor: true,
+          notes: { orderBy: { createdAt: 'asc' } },
         },
       });
       if (!workOrder) throw notFound('Work order not found in this organization');
@@ -316,6 +319,17 @@ operationsRouter.patch(
         }
       }
 
+      // Closing a request is a conversation with the tenant: the completion
+      // note is required and becomes a tenant-visible note on the work order.
+      const isClosing =
+        !!req.body.status &&
+        ['completed', 'cancelled'].includes(req.body.status) &&
+        req.body.status !== existing.status;
+      const closingNote = (req.body.resolutionNotes ?? '').trim();
+      if (isClosing && closingNote.length < 3) {
+        throw badRequest('A closing note describing the outcome is required to complete or cancel a request');
+      }
+
       const completedAt =
         req.body.completedAt !== undefined
           ? req.body.completedAt === null
@@ -356,10 +370,60 @@ operationsRouter.patch(
           requestId: req.requestId,
         });
 
+        if (isClosing) {
+          const actor = req.auth?.userId
+            ? await tx.user.findUnique({ where: { id: req.auth.userId }, select: { fullName: true } })
+            : null;
+          await tx.workOrderNote.create({
+            data: {
+              organizationId,
+              workOrderId: updated.id,
+              authorId: req.auth?.userId ?? null,
+              authorName: actor?.fullName ?? 'Staff',
+              body: closingNote,
+              internal: false,
+            },
+          });
+        }
+
         return updated;
       });
 
       res.json({ workOrder });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+operationsRouter.post(
+  '/work-orders/:workOrderId/notes',
+  requirePermission('maintenance.write'),
+  validate({ params: z.object({ workOrderId: uuidSchema }), body: workOrderNoteSchema }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const organizationId = organizationIdOf(req);
+      const workOrder = await prisma.workOrder.findFirst({
+        where: { id: pstr(req, 'workOrderId'), organizationId },
+        select: { id: true },
+      });
+      if (!workOrder) throw notFound('Work order not found in this organization');
+
+      const author = req.auth?.userId
+        ? await prisma.user.findUnique({ where: { id: req.auth.userId }, select: { fullName: true } })
+        : null;
+      const note = await prisma.workOrderNote.create({
+        data: {
+          organizationId,
+          workOrderId: workOrder.id,
+          authorId: req.auth?.userId ?? null,
+          authorName: author?.fullName ?? 'Staff',
+          body: req.body.body,
+          internal: req.body.internal ?? false,
+        },
+      });
+      res.status(201).json({ note });
     } catch (error) {
       next(error);
     }

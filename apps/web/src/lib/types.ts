@@ -156,6 +156,14 @@ export interface StatementLine {
   runningBalanceMinor: string;
 }
 
+export interface WorkOrderNote {
+  id: string;
+  authorName: string;
+  body: string;
+  internal: boolean;
+  createdAt: string;
+}
+
 export interface WorkOrder {
   id: string;
   ticketNumber: string | null;
@@ -173,6 +181,8 @@ export interface WorkOrder {
   property?: { id: string; name: string };
   unit?: { id: string; label: string } | null;
   vendor?: { id: string; name: string } | null;
+  tenant?: { id: string; fullName: string; phone?: string | null } | null;
+  notes?: WorkOrderNote[];
 }
 
 export interface Vendor {
