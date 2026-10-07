@@ -43,6 +43,11 @@ body {
   @apply bg-slate-50 text-slate-900 antialiased;
 }
 
+/* The one place brand color appears as a surface: text selection. */
+::selection {
+  background: var(--color-brand-100);
+}
+
 /* Amharic/Tigrinya text is a little taller than Latin; give it room to breathe. */
 :lang(am),
 :lang(ti) {

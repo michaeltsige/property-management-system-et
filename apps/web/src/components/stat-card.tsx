@@ -27,14 +27,14 @@ export function StatCard({
 
   return (
     <Card>
-      <CardContent className="space-y-1">
-        <p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p>
+      <CardContent className="space-y-1.5 py-4">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-slate-500">{label}</p>
         {loading ? (
-          <Skeleton className="h-7 w-24" />
+          <Skeleton className="h-8 w-24" />
         ) : (
-          <p className={cn('tabular text-xl font-semibold', toneClasses[tone])}>{value}</p>
+          <p className={cn('tabular text-2xl font-semibold tracking-tight', toneClasses[tone])}>{value}</p>
         )}
-        {hint ? <p className="text-[11px] text-slate-500">{hint}</p> : null}
+        {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
       </CardContent>
     </Card>
   );

@@ -389,10 +389,10 @@ export function PageHeader({
   useDocumentTitle(`${title} · ${t('app.name')}`);
 
   return (
-    <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-lg font-semibold text-slate-900">{title}</h1>
-        {description ? <p className="text-xs text-slate-500">{description}</p> : null}
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
+        {description ? <p className="mt-0.5 text-sm text-slate-600">{description}</p> : null}
       </div>
       {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
     </div>
