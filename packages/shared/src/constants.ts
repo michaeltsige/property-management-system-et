@@ -321,6 +321,8 @@ export const DEFAULT_ORG_SETTINGS = {
   currency: 'ETB',
   defaultCalendar: 'ethiopian' as 'ethiopian' | 'gregorian',
   defaultLanguage: 'en' as 'en' | 'am' | 'om' | 'ti',
+  /** The calendar rent is billed in. Organization-level decision; leases inherit it. */
+  defaultBillingCalendar: 'ethiopian' as 'ethiopian' | 'gregorian',
   lateFeeEnabled: false,
   lateFeeType: 'percent' as 'percent' | 'fixed',
   lateFeePercent: 0,

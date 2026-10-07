@@ -33,6 +33,7 @@ import { decryptField, encryptField, lastFour } from '../lib/crypto.js';
 import { pstr, str } from '../lib/query.js';
 import { getPrisma } from '../lib/prisma.js';
 import { balanceMinor, postLedgerEntry } from '../services/ledger.js';
+import { getSettings } from '../services/organizations.service.js';
 import { resolveOwner, checkBuilding } from '../services/hierarchy.js';
 import { recordAudit } from '../services/audit.js';
 
@@ -604,13 +605,18 @@ portfolioRouter.post(
           ? Math.round(req.body.rentAmount.amountMinor * req.body.depositMonths)
           : null);
 
+      // The billing calendar is an organization-level owner decision; every
+      // lease inherits it instead of picking its own.
+      const settings = await getSettings(prisma, organizationId);
+      const billingCalendar = settings.defaultBillingCalendar === 'gregorian' ? 'gregorian' : 'ethiopian';
+
       const lease = await prisma.$transaction(async (tx) => {
         const created = await tx.lease.create({
           data: {
             organizationId,
             unitId: unit.id,
             tenantId: tenant.id,
-            billingCalendar: req.body.billingCalendar,
+            billingCalendar,
             status: req.body.status,
             startDate,
             endDate,

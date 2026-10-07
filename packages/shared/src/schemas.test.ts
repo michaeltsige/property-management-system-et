@@ -94,15 +94,13 @@ describe('lease creation', () => {
   const base = {
     unitId: '5f0c1f4a-9b1e-4a3e-8f2a-0c1b2d3e4f50',
     tenantId: '5f0c1f4a-9b1e-4a3e-8f2a-0c1b2d3e4f51',
-    billingCalendar: 'ethiopian',
     startDate: { year: 2019, month: 1, day: 1, calendar: 'ethiopian' },
     rentAmount: { amountMinor: 1500000, currency: 'ETB' },
     dueDayOfMonth: 5,
   };
 
-  it('accepts an Ethiopian-calendar lease with sane defaults', () => {
+  it('accepts a lease with sane defaults', () => {
     const parsed = createLeaseSchema.parse(base);
-    expect(parsed.billingCalendar).toBe('ethiopian');
     expect(parsed.billingFrequency).toBe('monthly');
     expect(parsed.depositType).toBe('months_of_rent');
     expect(parsed.status).toBe('draft');
@@ -120,9 +118,10 @@ describe('lease creation', () => {
     ).toBe(false);
   });
 
-  it('requires a billing calendar, because periods depend on it', () => {
-    const { billingCalendar: _omitted, ...withoutCalendar } = base;
-    expect(createLeaseSchema.safeParse(withoutCalendar).success).toBe(false);
+  it('takes no per-lease billing calendar — leases inherit the organization setting', () => {
+    // A client-supplied value is dropped; the server stamps the org calendar.
+    const parsed = createLeaseSchema.parse({ ...base, billingCalendar: 'gregorian' });
+    expect(parsed).not.toHaveProperty('billingCalendar');
   });
 });
 
