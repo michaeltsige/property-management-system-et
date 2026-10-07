@@ -33,7 +33,6 @@ import {
   LogOut,
   Menu,
   Receipt,
-  Settings,
   Users,
   Wallet,
   Wrench,
@@ -90,10 +89,11 @@ const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
     ],
   },
   {
-    labelKey: 'nav.group.settings',
+    labelKey: 'nav.group.organization',
     items: [
-      { href: '/settings', labelKey: 'nav.settings', icon: Settings },
-      { href: '/settings/translations', labelKey: 'nav.translations', icon: Languages },
+      { href: '/organization', labelKey: 'nav.organization', icon: Building2 },
+      { href: '/organization/team', labelKey: 'org.team', icon: Users },
+      { href: '/organization/translations', labelKey: 'nav.translations', icon: Languages },
     ],
   },
 ];

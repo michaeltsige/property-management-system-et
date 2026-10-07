@@ -377,6 +377,13 @@ export const api = {
   updateSettings: (body: unknown) =>
     apiFetch<{ settings: Record<string, unknown> }>('/organizations/settings', { method: 'PATCH', body }),
   members: () => apiFetch<{ members: Member[] }>('/organizations/members'),
+  updateMembership: (membershipId: string, body: { role?: string; status?: 'active' | 'disabled' }) =>
+    apiFetch<{ membership: Member }>(`/organizations/members/${membershipId}`, { method: 'PATCH', body }),
+  updateOrganizationProfile: (body: { name: string }) =>
+    apiFetch<{ organization: { id: string; name: string; slug: string } }>('/organizations/profile', {
+      method: 'PATCH',
+      body,
+    }),
   idTypes: () => apiFetch<{ idTypes: TenantIdType[] }>('/organizations/id-types'),
   translations: (language: string) =>
     apiFetch<{

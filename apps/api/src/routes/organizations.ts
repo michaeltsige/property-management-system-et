@@ -10,12 +10,15 @@ import {
   organizationSettingsSchema,
   paginationSchema,
   updateMembershipSchema,
+  updateOrganizationProfileSchema,
 } from '@pms/shared';
 
 import { organizationIdOf, requireAuth } from '../middleware/context.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
 import { pstr } from '../lib/query.js';
+import { notFound } from '../lib/errors.js';
+import { recordAudit } from '../services/audit.js';
 import { getPrisma } from '../lib/prisma.js';
 import {
   getOrganization,
@@ -93,6 +96,39 @@ organizationsRouter.post(
         fullName: req.body.fullName,
       });
       res.status(201).json({ membership });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+organizationsRouter.patch(
+  '/profile',
+  requirePermission('org.settings.manage'),
+  validate({ body: updateOrganizationProfileSchema }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const organizationId = organizationIdOf(req);
+      const existing = await prisma.organization.findFirst({
+        where: { id: organizationId, deletedAt: null },
+      });
+      if (!existing) throw notFound('Organization not found');
+      const updated = await prisma.organization.update({
+        where: { id: organizationId },
+        data: { name: req.body.name },
+      });
+      await recordAudit(prisma, {
+        organizationId,
+        actorUserId: req.auth?.userId,
+        action: 'update',
+        entityType: 'Organization',
+        entityId: updated.id,
+        before: { name: existing.name },
+        after: { name: updated.name },
+        requestId: req.requestId,
+      });
+      res.json({ organization: updated });
     } catch (error) {
       next(error);
     }

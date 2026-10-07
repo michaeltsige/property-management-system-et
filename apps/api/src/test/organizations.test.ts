@@ -10,6 +10,7 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 
 import { createApp } from '../app.js';
+import { getPrisma } from '../lib/prisma.js';
 import { authHeader, createOrganizationFixture } from './helpers.js';
 
 const app = createApp();
@@ -48,5 +49,34 @@ describe('organization members', () => {
     const emails = (response.body.members as { email: string }[]).map((member) => member.email);
     expect(emails).toContain(first.email);
     expect(emails).not.toContain(second.email);
+  });
+});
+
+describe('organization profile', () => {
+  it('lets an owner rename the organization with an audit trail; others are refused', async () => {
+    const fixture = await createOrganizationFixture('profile');
+    const res = await request(app)
+      .patch('/api/v1/organizations/profile')
+      .set(authHeader(fixture))
+      .send({ name: 'Renamed Management PLC' })
+      .expect(200);
+    expect(res.body.organization.name).toBe('Renamed Management PLC');
+
+    const org = await getPrisma().organization.findUniqueOrThrow({
+      where: { id: fixture.organizationId },
+    });
+    expect(org.name).toBe('Renamed Management PLC');
+    const audit = await getPrisma().auditLog.findFirstOrThrow({
+      where: { organizationId: fixture.organizationId, entityType: 'Organization' },
+    });
+    expect(audit.action).toBe('update');
+
+    const accountant = await createOrganizationFixture('profile-acct', 'accountant');
+    await request(app)
+      .patch('/api/v1/organizations/profile')
+      .set(authHeader(accountant))
+      .send({ name: 'Not allowed' })
+      .expect(403);
+    await request(app).patch('/api/v1/organizations/profile').send({ name: 'Anonymous' }).expect(401);
   });
 });

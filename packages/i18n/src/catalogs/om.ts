@@ -166,6 +166,13 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'nav.maintenance': 'Suphaa',
   'nav.reports': 'Gabaasa',
   'nav.settings': "Qindaa'ina",
+  'nav.organization': 'Dhaabbata',
+  'nav.group.organization': 'Dhaabbata',
+  'org.team': 'Garee',
+  'org.profile': 'Ibsa dhaabbataa',
+  'org.billing_defaults': 'Durtii kaffaltii',
+  'org.overdue_reminder_hint': 'Hojjetaan yaadachiisa kaffaltii harkifate kiraayitotaaf ittin ergu.',
+  'org.late_fee_hint': 'Kaffaltiin harkifachuu gaaffii seera naannoo ti — osoo hin banin dura docs/DECISIONS.md ilaali.',
   'nav.translations': 'Hiika',
 
   'auth.sign_in': 'Seeni',

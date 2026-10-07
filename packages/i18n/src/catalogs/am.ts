@@ -163,6 +163,13 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'nav.maintenance': 'ጥገና',
   'nav.reports': 'ሪፖርቶች',
   'nav.settings': 'ቅንብሮች',
+  'nav.organization': 'ድርጅት',
+  'nav.group.organization': 'ድርት',
+  'org.team': 'ቡድን',
+  'org.profile': 'የድርጅት መገለጫ',
+  'org.billing_defaults': 'ነባሪ የክፍያ ህጎች',
+  'org.overdue_reminder_hint': 'ሠራተኛው ለተከራዮች የዘገየ ክፍያ ማስታወቂያ የሚልክበት ድግግሞሽ።',
+  'org.late_fee_hint': 'የዘገየ ክፍያ የአካባቢ ህጋዊ ጉዳይ ነው — ከማንቃትዎ በት docs/DECISIONS.mdን ይመልከቱ።',
   'nav.translations': 'ትርጉሞች',
 
   'auth.sign_in': 'ግባ',
