@@ -148,16 +148,18 @@ portalRouter.get('/portal/me', requireAuth, requirePermission('portal.use'), asy
       orderBy: { startDate: 'desc' },
     });
 
-    const open = await prisma.charge.groupBy({
-      by: ['status'],
+    // Outstanding = amount minus what was already paid, over charges that are
+    // still owed ('open'/'partial'). Summing amountMinor alone would re-count
+    // money the tenant already handed over.
+    const open = await prisma.charge.findMany({
       where: {
         tenantId: tenant.id,
         organizationId: tenant.organizationId,
-        status: { in: ['pending', 'overdue'] },
+        status: { in: ['open', 'partial'] },
       },
-      _sum: { amountMinor: true },
+      select: { amountMinor: true, paidMinor: true },
     });
-    const dueMinor = open.reduce((sum, row) => sum + (row._sum.amountMinor ?? BigInt(0)), BigInt(0));
+    const dueMinor = open.reduce((sum, charge) => sum + (charge.amountMinor - charge.paidMinor), BigInt(0));
 
     res.json({
       tenant: {

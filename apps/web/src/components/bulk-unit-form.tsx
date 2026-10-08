@@ -15,7 +15,7 @@ export function BulkUnitForm({
   properties: Property[];
   onSaved: (count: number) => void;
 }) {
-  const { t } = usePreferences();
+  const { t, session } = usePreferences();
   const [propertyId, setProperty] = useState('');
   const [buildingId, setBuilding] = useState('');
   const [pattern, setPattern] = useState('A-{n}');
@@ -38,12 +38,13 @@ export function BulkUnitForm({
         e.preventDefault();
         if (!labels.length) return;
         void run(async () => {
+          const currency = (session?.organization?.currency as string | undefined) ?? 'ETB';
           const result = await api.bulkUnits({
             propertyId,
             buildingId: buildingId || null,
             naming: { pattern, start, count, padding },
             typeLabel: typeLabel.trim() || undefined,
-            marketRent: marketRent === null ? undefined : { amountMinor: marketRent, currency: 'ETB' },
+            marketRent: marketRent === null ? undefined : { amountMinor: marketRent, currency },
           });
           onSaved(result.count);
         }).catch(() => undefined);

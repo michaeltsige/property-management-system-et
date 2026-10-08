@@ -73,10 +73,11 @@ export default function UnitsPage() {
     event.preventDefault();
     if (rentTypeValue === null) return;
     await run(async () => {
+      const currency = (session?.organization?.currency as string | undefined) ?? 'ETB';
       const result = await api.setRentByType({
         propertyId: rentTypeForm.propertyId,
         typeLabel: rentTypeForm.typeLabel,
-        marketRent: { amountMinor: rentTypeValue, currency: 'ETB' },
+        marketRent: { amountMinor: rentTypeValue, currency },
       });
       setRentTypeResult(result.updated);
       setRentTypeOpen(false);
@@ -103,6 +104,7 @@ export default function UnitsPage() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     await run(async () => {
+      const currency = (session?.organization?.currency as string | undefined) ?? 'ETB';
       await api.createUnit({
         buildingId: form.buildingId || null,
         propertyId: form.propertyId,
@@ -111,7 +113,7 @@ export default function UnitsPage() {
         bedrooms: form.bedrooms === '' ? undefined : Number(form.bedrooms),
         bathrooms: form.bathrooms === '' ? undefined : Number(form.bathrooms),
         status: form.status,
-        marketRent: marketRent === null ? undefined : { amountMinor: marketRent, currency: 'ETB' },
+        marketRent: marketRent === null ? undefined : { amountMinor: marketRent, currency },
       });
       setOpen(false);
       setForm({

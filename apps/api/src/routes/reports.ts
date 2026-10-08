@@ -107,7 +107,7 @@ reportsRouter.get(
             periodCalendar: period.calendar,
             periodStart: { gte: periodFrom },
             periodEnd: { lte: periodTo },
-            status: { not: 'written_off' },
+            status: { in: ['open', 'partial', 'paid'] },
           },
           _sum: { amountMinor: true },
           _count: true,

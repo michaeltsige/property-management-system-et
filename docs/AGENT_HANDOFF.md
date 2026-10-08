@@ -16,9 +16,9 @@ Ethiopian property management system. Single pnpm + Turborepo monorepo.
 
 ## 2. Current State
 
-- **Last verified:** 2026-10-08, `main` = `5da6f27`
-- **Open PRs:** none
-- **Latest merges:** #38 UI polish (flat cards, stronger titles) · #37 Organization section (profile/team/translations, audited `PATCH /organizations/profile`) · #36 UX fixes (no staff-created maintenance requests, single-language region options, floor label) · #35 brand (real Addis Ababa photo login hero CC BY-SA 4.0, vector SVG logo) · #34 FEATURES.md
+- **Last verified:** 2026-10-08, `main` = `dc26359` · branch `fix/logic-audit` with 11 files changed, gates green (typecheck+lint pass, web/shared/calendar/i18n tests 115/115 pass; api tests need pms_test DB)
+- **Open PRs:** `fix/logic-audit` — iterative logic audit & optimization (see Update Log 2026-10-08 #2)
+- **Latest merges:** #39 handoff doc (`dc26359`) · #38 UI polish (flat cards, stronger titles) · #37 Organization section (profile/team/translations, audited `PATCH /organizations/profile`) · #36 UX fixes (no staff-created maintenance requests, single-language region options, floor label) · #35 brand (real Addis Ababa photo login hero CC BY-SA 4.0, vector SVG logo) · #34 FEATURES.md
 - **Resolved owner questions:** tenant-portal login works only for enrolled tenants; demo seed = Almaz Bekele `+251911000001` (dial `0911000001`), OTP prints in worker log (mock SMS).
 
 ## 3. Environment & Commands
@@ -63,4 +63,5 @@ Ethiopian property management system. Single pnpm + Turborepo monorepo.
 
 | Date (local, EAT) | Prompt / action | Outcome |
 | --- | --- | --- |
-| 2026-10-08 | Owner: add this handoff doc and keep it updated after every prompt/action | Created `docs/AGENT_HANDOFF.md`, merged to `main` via PR #39 (`5da6f27`) |
+| 2026-10-08 | Owner: add this handoff doc and keep it updated after every prompt/action | Created `docs/AGENT_HANDOFF.md`, merged to `main` via PR #39 (`5da6f27` → `dc26359` handoff log update) |
+| 2026-10-08 #2 | Owner: run iterative check on whole code — find logical errors, nonsensical flows, optimize without restructuring | **Branch `fix/logic-audit` (11 files):** 1) Portal `findEnrolledTenantByPhone` now filters `user.isActive` (disabled accounts couldn't log in) + re-enroll reactivates; 2) `portal/me` dueMinor fixed from `['pending','overdue']` (nonexistent statuses → always 0) to sum of outstanding on `open`/`partial`; 3) `waiveCharge` now always `waived` (was `partial` for partial pays → kept collectible); 4) `amountForPeriod` now handles lease `endDate` + multi-month span correctly (was single-month denominator); 5) `createDepositCharge` deduped + auto-wired into lease create & activation (was collected in UI but never charged); 6) `recordPayment` now requires lease/tenant/allocation + rejects waived/written_off + anchor derivation for allocation-only pays (was silently attaching to arbitrary lease); 7) Late fees now applied via `applyLateFees()` in `overdue-sweep` (was configured but never run); 8) `reports/summary` expectedMinor now excludes `waived`; 9) `generateCharges` period span fixed for quarterly/annual; 10) Leases list N+1 `balanceMinor` → single `groupBy`; 11) Web ETB hardcodes → derive from org/lease currency. Gates green. |

@@ -89,6 +89,7 @@ export default function LeasesPage() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     await run(async () => {
+      const currency = (settings.data?.settings.currency as string | undefined) ?? 'ETB';
       await api.createLease({
         unitId: form.unitId,
         tenantId: form.tenantId,
@@ -105,8 +106,8 @@ export default function LeasesPage() {
             : undefined,
         startDate: form.startDate,
         endDate: form.endDate,
-        rentAmount: { amountMinor: rent ?? 0, currency: 'ETB' },
-        depositAmount: deposit === null ? undefined : { amountMinor: deposit, currency: 'ETB' },
+        rentAmount: { amountMinor: rent ?? 0, currency },
+        depositAmount: deposit === null ? undefined : { amountMinor: deposit, currency },
         depositType: deposit === null ? 'none' : 'fixed_amount',
       });
       setOpen(false);

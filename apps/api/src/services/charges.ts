@@ -23,9 +23,10 @@ import {
   civilToUtcDate,
   clampDayOfMonth,
   compareCivil,
-  daysInMonth,
+  periodEnd,
   periodForDate,
   periodStart,
+  shiftPeriod,
   utcDateToCivil,
   type BillingPeriod,
   type CalendarKind,
@@ -57,6 +58,9 @@ export interface LeaseForCharging {
   startDate: Date;
   endDate: Date | null;
   status: string;
+  gracePeriodDays: number;
+  lateFeePercent: number | null;
+  lateFeeFixedMinor: bigint | null;
 }
 
 export interface ChargeGenerationResult {
@@ -94,13 +98,14 @@ export function isChargingPeriod(
 /**
  * Amount to charge for a period.
  *
- * A lease that starts part-way through a period is charged pro-rata for its first
- * period (whole months are charged in full), rounded once with `half-up`.
+ * A lease that starts part-way through a period — or ends part-way through one —
+ * is charged pro-rata for the days it actually covers; whole months covered end
+ * to end are charged in full. Rounded once with `half-up`.
  */
 export function amountForPeriod(
   lease: Pick<
     LeaseForCharging,
-    'billingCalendar' | 'billingFrequency' | 'rentAmountMinor' | 'currency' | 'startDate'
+    'billingCalendar' | 'billingFrequency' | 'rentAmountMinor' | 'currency' | 'startDate' | 'endDate'
   >,
   period: BillingPeriod,
 ): bigint {
@@ -111,17 +116,28 @@ export function amountForPeriod(
       : (MONTHS_PER_CHARGE[lease.billingFrequency as Exclude<BillingFrequency, 'custom'>] ?? 1);
   const full = lease.rentAmountMinor * BigInt(months);
 
-  const startCivil = utcDateToCivil(lease.startDate, calendar);
+  const dayMs = 86_400_000;
   const periodFirst: CivilDate = periodStart(period);
-  if (compareCivil(startCivil, periodFirst) <= 0) return full;
+  // A quarterly/annual charge spans several months; prorate against the whole
+  // span, not just the first month of it.
+  const periodLast: CivilDate = periodEnd(shiftPeriod(period, months - 1));
+  const totalDays =
+    Math.round((civilToUtcDate(periodLast).getTime() - civilToUtcDate(periodFirst).getTime()) / dayMs) + 1;
 
-  // First (partial) period: charge for the days actually covered.
-  const totalDays = daysInMonth(periodFirst);
-  const lastDay: CivilDate = { ...periodFirst, day: totalDays };
-  if (compareCivil(startCivil, lastDay) > 0) return 0n; // starts after this period ends
-  const coveredDays = totalDays - startCivil.day + 1;
-  const fraction = coveredDays / totalDays;
-  const prorated = prorateMoney(money(Number(full), lease.currency), fraction);
+  // The billable window is the part of the period inside [startDate, endDate].
+  const startCivil = utcDateToCivil(lease.startDate, calendar);
+  const fromCivil = compareCivil(startCivil, periodFirst) > 0 ? startCivil : periodFirst;
+  let toCivil = periodLast;
+  if (lease.endDate) {
+    const endCivil = utcDateToCivil(lease.endDate, calendar);
+    if (compareCivil(endCivil, toCivil) < 0) toCivil = endCivil;
+  }
+  if (compareCivil(fromCivil, toCivil) > 0) return 0n; // lease does not cover this period
+  if (compareCivil(fromCivil, periodFirst) <= 0 && compareCivil(toCivil, periodLast) >= 0) return full;
+
+  const coveredDays =
+    Math.round((civilToUtcDate(toCivil).getTime() - civilToUtcDate(fromCivil).getTime()) / dayMs) + 1;
+  const prorated = prorateMoney(money(Number(full), lease.currency), coveredDays / totalDays);
   return BigInt(prorated.amountMinor);
 }
 
@@ -166,8 +182,12 @@ export async function generateCharges(
     for (const periodKey of options.periodKeys) {
       const period: BillingPeriod = { calendar, ...parsePeriodKeyFor(periodKey, calendar) };
 
+      const months =
+        lease.billingFrequency === 'custom'
+          ? 1
+          : (MONTHS_PER_CHARGE[lease.billingFrequency as Exclude<BillingFrequency, 'custom'>] ?? 1);
       const periodFirst = periodStart(period);
-      const periodLast: CivilDate = { ...periodFirst, day: daysInMonth(periodFirst) };
+      const periodLast = periodEnd(shiftPeriod(period, months - 1));
 
       // Out of the lease's term?
       if (leaseEnd && compareCivil(periodFirst, leaseEnd) > 0) {
@@ -281,73 +301,88 @@ function periodLabelFor(period: BillingPeriod): string {
  * The deposit is tracked as a charge so that it shows up in the ledger and can be
  * refunded through a reversing entry, instead of living outside the books.
  */
-export async function createDepositCharge(
-  prisma: PrismaClient,
-  params: {
-    organizationId: string;
-    leaseId: string;
-    amountMinor: bigint;
-    currency: string;
-    actorUserId?: string | null;
-    dueDate: Date;
-  },
-) {
-  if (params.amountMinor <= 0n) throw businessRule('Deposit amount must be greater than zero');
+export interface DepositChargeParams {
+  organizationId: string;
+  leaseId: string;
+  amountMinor: bigint;
+  currency: string;
+  actorUserId?: string | null;
+  dueDate: Date;
+}
 
-  return prisma.$transaction(async (tx) => {
-    const lease = await tx.lease.findFirst({
-      where: { id: params.leaseId, organizationId: params.organizationId, deletedAt: null },
-    });
-    // A lease from another organization must look like a missing lease (404),
-    // never a 403 — see the note in `lib/errors.ts`.
-    if (!lease) throw notFound('Lease not found in this organization');
+/**
+ * Deposit charge creation inside a caller-owned transaction. Refuses to create a
+ * second live deposit charge for the same lease, so lease activation and the
+ * manual endpoint share one idempotent path.
+ */
+export async function createDepositChargeInTx(tx: PrismaLike, params: DepositChargeParams) {
+  const lease = await tx.lease.findFirst({
+    where: { id: params.leaseId, organizationId: params.organizationId, deletedAt: null },
+  });
+  // A lease from another organization must look like a missing lease (404),
+  // never a 403 — see the note in `lib/errors.ts`.
+  if (!lease) throw notFound('Lease not found in this organization');
 
-    const calendar: CalendarKind = lease.billingCalendar === 'gregorian' ? 'gregorian' : 'ethiopian';
-    const startCivil = utcDateToCivil(lease.startDate, calendar);
+  const existing = await tx.charge.findFirst({
+    where: {
+      leaseId: lease.id,
+      type: 'deposit',
+      status: { in: ['open', 'partial', 'paid'] },
+    },
+    select: { id: true },
+  });
+  if (existing) throw conflict('This lease already has a deposit charge');
 
-    const charge = await tx.charge.create({
-      data: {
-        organizationId: params.organizationId,
-        leaseId: lease.id,
-        tenantId: lease.tenantId,
-        unitId: lease.unitId,
-        type: 'deposit',
-        description: 'Security deposit',
-        periodKey: `${startCivil.year}-${String(startCivil.month).padStart(2, '0')}`,
-        periodCalendar: calendar,
-        periodStart: params.dueDate,
-        periodEnd: params.dueDate,
-        dueDate: params.dueDate,
-        amountMinor: params.amountMinor,
-        currency: params.currency,
-        status: 'open',
-        createdById: params.actorUserId ?? null,
-      },
-    });
+  const calendar: CalendarKind = lease.billingCalendar === 'gregorian' ? 'gregorian' : 'ethiopian';
+  const startCivil = utcDateToCivil(lease.startDate, calendar);
 
-    await postLedgerEntry(tx, {
+  const charge = await tx.charge.create({
+    data: {
       organizationId: params.organizationId,
       leaseId: lease.id,
-      chargeId: charge.id,
-      kind: 'charge',
+      tenantId: lease.tenantId,
+      unitId: lease.unitId,
+      type: 'deposit',
+      description: 'Security deposit',
+      periodKey: `${startCivil.year}-${String(startCivil.month).padStart(2, '0')}`,
+      periodCalendar: calendar,
+      periodStart: params.dueDate,
+      periodEnd: params.dueDate,
+      dueDate: params.dueDate,
       amountMinor: params.amountMinor,
       currency: params.currency,
-      occurredAt: params.dueDate,
-      memo: 'Security deposit',
+      status: 'open',
       createdById: params.actorUserId ?? null,
-    });
-
-    await recordAudit(tx, {
-      organizationId: params.organizationId,
-      actorUserId: params.actorUserId ?? null,
-      action: 'create',
-      entityType: 'Charge',
-      entityId: charge.id,
-      after: { type: 'deposit', amountMinor: params.amountMinor.toString() },
-    });
-
-    return charge;
+    },
   });
+
+  await postLedgerEntry(tx, {
+    organizationId: params.organizationId,
+    leaseId: lease.id,
+    chargeId: charge.id,
+    kind: 'charge',
+    amountMinor: params.amountMinor,
+    currency: params.currency,
+    occurredAt: params.dueDate,
+    memo: 'Security deposit',
+    createdById: params.actorUserId ?? null,
+  });
+
+  await recordAudit(tx, {
+    organizationId: params.organizationId,
+    actorUserId: params.actorUserId ?? null,
+    action: 'create',
+    entityType: 'Charge',
+    entityId: charge.id,
+    after: { type: 'deposit', amountMinor: params.amountMinor.toString() },
+  });
+
+  return charge;
+}
+
+export async function createDepositCharge(prisma: PrismaClient, params: DepositChargeParams) {
+  if (params.amountMinor <= 0n) throw businessRule('Deposit amount must be greater than zero');
+  return prisma.$transaction((tx) => createDepositChargeInTx(tx, params));
 }
 
 /**
@@ -386,7 +421,10 @@ export async function waiveCharge(
     const updated = await tx.charge.update({
       where: { id: charge.id },
       data: {
-        status: outstanding === charge.amountMinor ? 'waived' : 'partial',
+        // The remainder is forgiven either way; keeping a partially paid charge
+        // as 'partial' would leave it collectible and it would keep appearing in
+        // overdue reminders, payment allocation and arrears reports.
+        status: 'waived',
         waiverReason: params.reason,
       },
     });
@@ -403,6 +441,128 @@ export async function waiveCharge(
 
     return updated;
   });
+}
+
+export interface LateFeeSettings {
+  lateFeeEnabled: boolean;
+  lateFeeType: 'percent' | 'fixed';
+  lateFeePercent: number;
+  lateFeeFixedMinor: number | bigint;
+  gracePeriodDays: number;
+}
+
+/**
+ * Apply configured late fees, exactly once per overdue rent charge.
+ *
+ * A charge becomes eligible once its due date plus the lease's grace period (or
+ * the organization default) is in the past. The fee is billed as its own
+ * `late_fee` charge so it shows up in the ledger, can be paid like rent, and can
+ * be waived on its own. `lateFeeAppliedAt` on the rent charge is the applied-once
+ * marker; the (leaseId, periodKey, type) unique index is the second safety net.
+ */
+export async function applyLateFees(
+  prisma: PrismaClient,
+  organizationId: string,
+  settings: LateFeeSettings,
+  now: Date = new Date(),
+): Promise<{ applied: number }> {
+  if (!settings.lateFeeEnabled) return { applied: 0 };
+  const dayMs = 86_400_000;
+
+  const overdue = await prisma.charge.findMany({
+    where: {
+      organizationId,
+      type: 'rent',
+      status: { in: ['open', 'partial'] },
+      lateFeeAppliedAt: null,
+      dueDate: { lt: now },
+    },
+    include: { lease: true },
+    take: 500,
+  });
+
+  let applied = 0;
+  for (const charge of overdue) {
+    const graceDays = charge.lease?.gracePeriodDays ?? settings.gracePeriodDays ?? 0;
+    if (now.getTime() < charge.dueDate.getTime() + graceDays * dayMs) continue;
+
+    const outstanding = charge.amountMinor - charge.paidMinor;
+    if (outstanding <= 0n) {
+      await prisma.charge.update({ where: { id: charge.id }, data: { lateFeeAppliedAt: now } });
+      continue;
+    }
+
+    // Lease-level rule wins; organization defaults are the fallback.
+    const percent = charge.lease?.lateFeePercent ?? null;
+    const fixed = charge.lease?.lateFeeFixedMinor ?? null;
+    let feeMinor = 0n;
+    if (percent !== null && percent > 0) {
+      feeMinor = (outstanding * BigInt(Math.round(percent * 100))) / 10_000n;
+    } else if (fixed !== null && fixed > 0n) {
+      feeMinor = fixed;
+    } else if (settings.lateFeeType === 'fixed' && BigInt(settings.lateFeeFixedMinor) > 0n) {
+      feeMinor = BigInt(settings.lateFeeFixedMinor);
+    } else if (settings.lateFeePercent > 0) {
+      feeMinor = (outstanding * BigInt(Math.round(settings.lateFeePercent * 100))) / 10_000n;
+    }
+    if (feeMinor <= 0n) {
+      await prisma.charge.update({ where: { id: charge.id }, data: { lateFeeAppliedAt: now } });
+      continue;
+    }
+
+    try {
+      await prisma.$transaction(async (tx) => {
+        const fee = await tx.charge.create({
+          data: {
+            organizationId,
+            leaseId: charge.leaseId,
+            tenantId: charge.tenantId,
+            unitId: charge.unitId,
+            type: 'late_fee',
+            description: `Late fee for ${charge.description ?? charge.periodKey ?? 'rent'}`,
+            periodKey: charge.periodKey,
+            periodCalendar: charge.periodCalendar,
+            periodStart: charge.periodStart,
+            periodEnd: charge.periodEnd,
+            dueDate: now,
+            amountMinor: feeMinor,
+            currency: charge.currency,
+            status: 'open',
+          },
+        });
+        await postLedgerEntry(tx, {
+          organizationId,
+          leaseId: charge.leaseId,
+          chargeId: fee.id,
+          kind: 'charge',
+          amountMinor: feeMinor,
+          currency: charge.currency,
+          occurredAt: now,
+          memo: `Late fee for period ${charge.periodKey ?? 'n/a'}`,
+        });
+        await tx.charge.update({ where: { id: charge.id }, data: { lateFeeAppliedAt: now } });
+        await recordAudit(tx, {
+          organizationId,
+          actorUserId: null,
+          action: 'update',
+          entityType: 'Charge',
+          entityId: charge.id,
+          after: { lateFeeMinor: feeMinor.toString(), lateFeeChargeId: fee.id },
+        });
+      });
+      applied += 1;
+    } catch (error) {
+      // The unique index says this period already carries a late fee for the
+      // lease; keep the marker so we do not retry forever.
+      if (error instanceof PrismaNamespace.PrismaClientKnownRequestError && error.code === 'P2002') {
+        await prisma.charge.update({ where: { id: charge.id }, data: { lateFeeAppliedAt: now } });
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  return { applied };
 }
 
 /** Ethiopian month label for a period, e.g. `Pagume 2015 E.C.`. */
