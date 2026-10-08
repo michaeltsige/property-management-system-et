@@ -140,12 +140,19 @@ export default function PortalPage() {
           <Alert tone="danger">{me.error}</Alert>
         ) : me.data ? (
           <>
+            {/* The one number a tenant cares about, with the one primary
+                action on this screen underneath it. */}
             <Card>
-              <CardContent className="space-y-3">
-                <div className="flex items-center justify-between">
+              <CardContent className="space-y-3 py-5">
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="text-xs text-slate-500">{t('portal.due_balance')}</p>
-                    <p className="mt-1 text-2xl font-semibold tabular text-slate-900">
+                    <p className="text-xs font-medium text-slate-500">{t('portal.due_balance')}</p>
+                    <p
+                      className={cn(
+                        'tabular mt-1 text-3xl font-semibold tracking-tight',
+                        Number(me.data.dueMinor) > 0 ? 'text-slate-900' : 'text-brand-700',
+                      )}
+                    >
                       {formatAmount(me.data.dueMinor, session.organization.currency, language)}
                     </p>
                   </div>
@@ -153,7 +160,7 @@ export default function PortalPage() {
                 </div>
                 {me.data.dueMinor !== '0' ? (
                   <div className="space-y-1">
-                    <Button onClick={payNow} disabled={paying}>
+                    <Button onClick={payNow} disabled={paying} className="w-full sm:w-auto">
                       {paying ? t('portal.pay_starting') : t('portal.pay_now')}
                     </Button>
                     <p className="text-xs text-slate-500">{t('portal.pay_hint')}</p>
@@ -165,7 +172,7 @@ export default function PortalPage() {
 
             <Card>
               <CardContent className="p-0">
-                <div className="border-b border-slate-200 px-4 py-3 text-sm font-medium text-slate-900">
+                <div className="border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-900">
                   {t('portal.maintenance_title')}
                 </div>
 
@@ -259,7 +266,7 @@ export default function PortalPage() {
 
             <Card>
               <CardContent className="p-0">
-                <div className="border-b border-slate-200 px-4 py-3 text-sm font-medium text-slate-900">
+                <div className="border-b border-slate-100 px-4 py-3 text-sm font-semibold text-slate-900">
                   {t('portal.my_leases')}
                 </div>
                 {me.data.leases.length === 0 ? (

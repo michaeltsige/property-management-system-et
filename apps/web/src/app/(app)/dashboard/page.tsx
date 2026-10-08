@@ -28,13 +28,14 @@ import {
 /**
  * The four things a landlord does most often. Each link opens the screen with
  * its create form already open (`?new=1`), so the dashboard is a place to start
- * work, not just a place to read numbers.
+ * work, not just a place to read numbers. Recording money is the daily action
+ * and gets the one primary button on this screen; the rest stay quiet.
  */
 const QUICK_ACTIONS = [
-  { href: '/leases?new=1', labelKey: 'dashboard.quick.lease', icon: CalendarPlus },
-  { href: '/payments?new=1', labelKey: 'money.record_payment', icon: Wallet },
-  { href: '/tenants?new=1', labelKey: 'dashboard.quick.tenant', icon: UserPlus },
-  { href: '/properties?new=1', labelKey: 'dashboard.onboarding_cta', icon: Building2 },
+  { href: '/payments?new=1', labelKey: 'money.record_payment', icon: Wallet, primary: true },
+  { href: '/leases?new=1', labelKey: 'dashboard.quick.lease', icon: CalendarPlus, primary: false },
+  { href: '/tenants?new=1', labelKey: 'dashboard.quick.tenant', icon: UserPlus, primary: false },
+  { href: '/properties?new=1', labelKey: 'dashboard.onboarding_cta', icon: Building2, primary: false },
 ] as const;
 
 export default function DashboardPage() {
@@ -103,14 +104,17 @@ export default function DashboardPage() {
       />
 
       <section aria-labelledby="quick-actions" className="mb-4">
-        <h2 id="quick-actions" className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
-          {t('dashboard.quick_actions')}
-        </h2>
+        <h2 id="quick-actions" className="sr-only">{t('dashboard.quick_actions')}</h2>
         <div className="flex flex-wrap gap-2">
           {QUICK_ACTIONS.map((action) => {
             const Icon = action.icon;
             return (
-              <Button key={action.href} variant="secondary" size="sm" asChild>
+              <Button
+                key={action.href}
+                variant={action.primary ? 'default' : 'ghost'}
+                size="sm"
+                asChild
+              >
                 <Link href={action.href}>
                   <Icon className="h-4 w-4" aria-hidden="true" />
                   {t(action.labelKey)}
@@ -156,9 +160,20 @@ export default function DashboardPage() {
         <StatCard
           label={t('dashboard.collected')}
           value={formatAmount(money?.collectedMinor ?? '0', currency, language)}
-          tone="gold"
+          tone="brand"
+          // A rate above 100% is real (a tenant paid ahead) but must not read
+          // as a broken gauge: the bar clamps at 100 and the hint explains it.
+          progress={
+            money === undefined || money.collectionRate === null
+              ? undefined
+              : Math.max(0, Math.min(100, Number(money.collectionRate)))
+          }
           hint={
-            money?.collectionRate === null || money === undefined ? undefined : `${money.collectionRate}%`
+            money === undefined || money.collectionRate === null
+              ? undefined
+              : Number(money.collectionRate) > 100
+                ? t('dashboard.advance_payments')
+                : t('dashboard.collection_rate', { rate: money.collectionRate })
           }
           loading={summary.loading}
         />
@@ -176,38 +191,49 @@ export default function DashboardPage() {
         />
       </div>
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard
-          label={t('nav.tenants')}
-          value={String(summary.data?.portfolio.tenants ?? 0)}
-          loading={summary.loading}
-        />
-        <StatCard
-          label={t('nav.leases')}
-          value={String(summary.data?.portfolio.activeLeases ?? 0)}
-          loading={summary.loading}
-        />
-        <StatCard
-          label={t('dashboard.open_work_orders')}
-          value={String(summary.data?.portfolio.openWorkOrders ?? 0)}
-          tone={Number(summary.data?.portfolio.openWorkOrders ?? 0) > 0 ? 'warning' : 'default'}
-          loading={summary.loading}
-        />
-        <StatCard
-          label={t('dashboard.vacant_units')}
-          value={String(occupancy.data?.totals?.vacantUnits ?? 0)}
-          tone={Number(occupancy.data?.totals?.vacantUnits ?? 0) > 0 ? 'warning' : 'default'}
-          hint={t('dashboard.view_units')}
-          loading={occupancy.loading}
-        />
-        <StatCard
-          label={t('money.rent_due')}
-          // Over-collected periods are real (a tenant pays ahead), but "rent due"
-          // can never be negative: the arrears card carries the balance picture.
-          value={formatAmount(String(Math.max(0, rentDueMinor)), currency, language)}
-          loading={summary.loading}
-        />
-      </div>
+      {/* The counts a landlord checks in passing — one quiet strip, not five
+          more shouty cards competing with the money row above. */}
+      <Card className="mt-3">
+        <CardContent className="grid grid-cols-2 gap-y-4 py-3.5 sm:grid-cols-3 lg:grid-cols-5">
+          {(
+            [
+              { label: t('nav.tenants'), value: summary.data?.portfolio.tenants, loading: summary.loading },
+              { label: t('nav.leases'), value: summary.data?.portfolio.activeLeases, loading: summary.loading },
+              {
+                label: t('dashboard.open_work_orders'),
+                value: summary.data?.portfolio.openWorkOrders,
+                tone: Number(summary.data?.portfolio.openWorkOrders ?? 0) > 0 ? 'text-amber-600' : undefined,
+                loading: summary.loading,
+              },
+              {
+                label: t('dashboard.vacant_units'),
+                value: occupancy.data?.totals?.vacantUnits,
+                tone: Number(occupancy.data?.totals?.vacantUnits ?? 0) > 0 ? 'text-amber-600' : undefined,
+                loading: occupancy.loading,
+              },
+              {
+                label: t('money.rent_due'),
+                // Over-collected periods are real (a tenant pays ahead), but
+                // "rent due" can never be negative: the arrears picture above
+                // carries the balance.
+                value: formatAmount(String(Math.max(0, rentDueMinor)), currency, language),
+                loading: summary.loading,
+              },
+            ] as { label: string; value?: string | number; tone?: string; loading: boolean }[]
+          ).map((item) => (
+            <div key={item.label} className="px-4 text-left lg:border-l lg:border-slate-100 lg:first:border-l-0">
+              <p className="text-xs text-slate-500">{item.label}</p>
+              {item.loading ? (
+                <Skeleton className="mt-1 h-6 w-14" />
+              ) : (
+                <p className={`tabular mt-0.5 text-lg font-semibold text-slate-900 ${item.tone ?? ''}`}>
+                  {item.value ?? '—'}
+                </p>
+              )}
+            </div>
+          ))}
+        </CardContent>
+      </Card>
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         <Card>

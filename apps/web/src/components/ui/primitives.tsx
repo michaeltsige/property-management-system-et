@@ -23,7 +23,7 @@ import type {
 import { cn } from '@/lib/utils';
 
 export function Label({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
-  return <LabelPrimitive.Root className={cn('text-sm font-medium text-slate-700', className)} {...props} />;
+  return <LabelPrimitive.Root className={cn('text-xs font-medium text-slate-600', className)} {...props} />;
 }
 
 export function Input({
@@ -97,19 +97,24 @@ export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivEleme
   return <div className={cn('p-4', className)} {...props} />;
 }
 
-const badgeVariants = cva('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', {
-  variants: {
-    tone: {
-      neutral: 'bg-slate-100 text-slate-700',
-      brand: 'bg-brand-100 text-brand-800',
-      warning: 'bg-amber-100 text-amber-800',
-      danger: 'bg-red-100 text-red-800',
-      info: 'bg-sky-100 text-sky-800',
-      gold: 'bg-gold-400/20 text-gold-600',
+const badgeVariants = cva(
+  // Compact rectangle, not a pill: statuses read as data in a dense table,
+  // not as decorative chips (java110/Element convention).
+  'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4',
+  {
+    variants: {
+      tone: {
+        neutral: 'bg-slate-100 text-slate-700',
+        brand: 'bg-brand-100 text-brand-800',
+        warning: 'bg-amber-100 text-amber-800',
+        danger: 'bg-red-100 text-red-800',
+        info: 'bg-sky-100 text-sky-800',
+        gold: 'bg-gold-400/20 text-gold-600',
+      },
     },
+    defaultVariants: { tone: 'neutral' },
   },
-  defaultVariants: { tone: 'neutral' },
-});
+);
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement>, VariantProps<typeof badgeVariants> {}
 
@@ -173,7 +178,9 @@ export function Th({ className, scope = 'col', ...props }: ThHTMLAttributes<HTML
     <th
       scope={scope}
       className={cn(
-        'border-b border-slate-200 px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-500',
+        // Normal-case column headers (the operations-console convention):
+        // shouting uppercase on every screen was one of the "vibecoded" tells.
+        'border-b border-slate-200 bg-slate-50/60 px-3 py-2 text-left text-xs font-semibold text-slate-600',
         className,
       )}
       {...props}
@@ -184,7 +191,7 @@ export function Th({ className, scope = 'col', ...props }: ThHTMLAttributes<HTML
 export function Td({ className, ...props }: HTMLAttributes<HTMLTableCellElement>) {
   return (
     <td
-      className={cn('border-b border-slate-100 px-3 py-2 align-middle text-slate-700', className)}
+      className={cn('border-b border-slate-100 px-3 py-2.5 align-middle text-slate-700', className)}
       {...props}
     />
   );
@@ -192,7 +199,7 @@ export function Td({ className, ...props }: HTMLAttributes<HTMLTableCellElement>
 
 export function EmptyState({ title, description }: { title: string; description?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-1 px-4 py-10 text-center">
+    <div className="flex flex-col items-center justify-center gap-1 px-4 py-12 text-center">
       <p className="text-sm font-medium text-slate-700">{title}</p>
       {description ? <p className="max-w-md text-xs text-slate-500">{description}</p> : null}
     </div>

@@ -58,22 +58,23 @@ export default function PortalLoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center px-4">
-      {/* Addis Ababa at golden hour; the overlay keeps text readable (WCAG). */}
+      {/* Same hero treatment as the staff sign-in: one photograph, one flat
+          overlay, one card — no decorative chrome. */}
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/images/login-hero.jpg')" }}
       />
-      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/55 to-slate-900/30" />
+      <div aria-hidden="true" className="absolute inset-0 bg-ink-950/60" />
       <div className="relative w-full max-w-sm">
         <div className="mb-6 text-center">
-          <Logo size={52} className="mx-auto mb-3 drop-shadow-md" />
+          <Logo size={52} className="mx-auto mb-3" />
           <h1 className="text-lg font-semibold text-white">{t('portal.title')}</h1>
           <p className="mt-1 text-xs text-white/70">{t('portal.login_hint')}</p>
         </div>
 
-        <Card>
-          <CardContent>
+        <Card className="shadow-xl">
+          <CardContent className="py-2">
             {step === 'phone' ? (
               <form className="space-y-4" onSubmit={requestCode}>
                 <div className="space-y-1">
@@ -99,6 +100,8 @@ export default function PortalLoginPage() {
                 <Alert tone="info">{t('portal.code_sent')}</Alert>
                 <div className="space-y-1">
                   <Label htmlFor="portal-code">{t('portal.code')}</Label>
+                  {/* Six digits, centred and letter-spaced: the input should
+                      look like the code that just arrived by SMS. */}
                   <Input
                     id="portal-code"
                     inputMode="numeric"
@@ -106,6 +109,7 @@ export default function PortalLoginPage() {
                     pattern="[0-9]*"
                     maxLength={6}
                     required
+                    className="tabular text-center text-lg tracking-[0.4em]"
                     value={code}
                     onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
                   />

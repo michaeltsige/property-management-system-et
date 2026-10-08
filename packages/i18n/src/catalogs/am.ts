@@ -432,6 +432,8 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'dashboard.open_work_orders': 'ክፍት ጥገናዎች',
   'dashboard.collections_trend': 'የመጨረሻ ወራት ገቢ',
   'dashboard.rent_this_period': 'የሚጠበቅ እና የተሰበሰበ',
+  'dashboard.collection_rate': 'ከዚህ ወቅት የሚጠበቀው {rate}%',
+  'dashboard.advance_payments': 'ቅድመ ክፍያዎችን ያካትታል',
   'reports.title': 'ሪፖርቶች',
   'reports.rent_roll': 'የኪራይ ዝርዝር',
   'reports.arrears': 'የቀረ ክፍያ ዕድሜ',

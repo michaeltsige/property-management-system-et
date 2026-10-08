@@ -28,6 +28,17 @@
   --color-gold-600: #8a5f0c;
   --color-gold-700: #6f4c09;
 
+  /*
+   * Navigation "ink": the dark, brand-tinted surface the sidebar is drawn on
+   * (the java110/MicroCommunity shell convention — see docs/REFERENCES.md).
+   * Dark enough for WCAG AA with slate-300 text; green undertone keeps it part
+   * of the brand instead of generic admin grey.
+   */
+  --color-ink-950: #0b1713;
+  --color-ink-900: #12211b;
+  --color-ink-800: #1a2d25;
+  --color-ink-700: #243a30;
+
   --font-sans:
     'Noto Sans Ethiopic', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
     Arial, sans-serif;
@@ -61,6 +72,19 @@ body {
 :focus-visible {
   outline: 2px solid var(--color-brand-600);
   outline-offset: 2px;
+}
+
+/*
+ * Data tables read densest when a hovered row answers the pointer. Kept here
+ * (not per-component) so every table in the product behaves identically; the
+ * portal's read-only tables get the same affordance for free.
+ */
+tbody tr {
+  transition: background-color 120ms ease;
+}
+
+tbody tr:hover {
+  background-color: var(--color-slate-50);
 }
 
 /* A user who asked the system for less motion gets less motion. */

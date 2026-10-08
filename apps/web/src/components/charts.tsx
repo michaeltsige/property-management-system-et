@@ -7,6 +7,11 @@
  * effect and disposed on unmount. Charts receive plain numbers and pre-formatted
  * labels: no calendar or money logic lives in a chart.
  *
+ * One palette everywhere (the previous mix of arbitrary per-series colors was
+ * a big part of why the dashboards read as "vibecoded"): brand green for the
+ * primary series, neutral slate for comparators, semantic amber/red only for
+ * arrears aging. Grid lines and axis text stay quiet so the data leads.
+ *
  * Accessibility (ADR-0024): a canvas is opaque to assistive technology, so every
  * chart requires an `aria-label` and should pass a `summary`. `EChart` then
  * exposes the drawing as `role="img"` with that label, and renders the same data
@@ -18,6 +23,20 @@ import * as echarts from 'echarts';
 import { useEffect, useRef } from 'react';
 
 export type EChartsOption = echarts.EChartsOption;
+
+/** The one chart palette. Semantics: brand = ours/primary, slate = comparator. */
+export const CHART_COLORS = {
+  brand: '#1d6753',
+  brandSoft: 'rgba(29, 103, 83, 0.10)',
+  neutral: '#94a3b8',
+  gold: '#e8b22b',
+  warning: '#f59e0b',
+  danger: '#dc2626',
+  grid: '#e2e8f0',
+  axisLabel: '#64748b',
+} as const;
+
+const AXIS_LABEL = { fontSize: 11, color: CHART_COLORS.axisLabel };
 
 /** The same numbers the chart draws, as a table a screen reader can read. */
 export interface ChartSummary {
@@ -101,19 +120,27 @@ export function MoneyComparisonChart({
           trigger: 'axis',
           valueFormatter: (value) => `${currencyLabel} ${Number(value).toLocaleString()}`,
         },
-        xAxis: { type: 'category', data: [expectedLabel, collectedLabel] },
-        yAxis: { type: 'value', axisLabel: { formatter: (value: number) => value.toLocaleString() } },
+        xAxis: { type: 'category', data: [expectedLabel, collectedLabel], axisLabel: AXIS_LABEL },
+        yAxis: {
+          type: 'value',
+          axisLabel: { ...AXIS_LABEL, formatter: (value: number) => value.toLocaleString() },
+          splitLine: { lineStyle: { color: CHART_COLORS.grid } },
+        },
         series: [
           {
             type: 'bar',
             data: [
-              { value: expected, itemStyle: { color: '#1d6753' } },
-              { value: collected, itemStyle: { color: '#e8b22b' } },
+              // Expected is the benchmark (neutral); collected is the money in
+              // (brand) — one hue pair, no decorative second color.
+              { value: expected, itemStyle: { color: CHART_COLORS.neutral } },
+              { value: collected, itemStyle: { color: CHART_COLORS.brand } },
             ],
-            barWidth: '45%',
+            barWidth: '38%',
             label: {
               show: true,
               position: 'top',
+              fontSize: 11,
+              color: CHART_COLORS.axisLabel,
               formatter: (params: { value?: unknown }) => Number(params.value ?? 0).toLocaleString(),
             },
           },
@@ -158,18 +185,22 @@ export function CollectionsChart({
           data: labels,
           // 13 Ethiopian months do not fit across a phone; drop labels rather
           // than draw them on top of each other.
-          axisLabel: { fontSize: 10, hideOverlap: true },
+          axisLabel: { ...AXIS_LABEL, hideOverlap: true },
         },
-        yAxis: { type: 'value', axisLabel: { formatter: (value: number) => value.toLocaleString() } },
+        yAxis: {
+          type: 'value',
+          axisLabel: { ...AXIS_LABEL, formatter: (value: number) => value.toLocaleString() },
+          splitLine: { lineStyle: { color: CHART_COLORS.grid } },
+        },
         series: [
           {
             type: 'line',
             smooth: true,
-            symbolSize: 6,
+            symbolSize: 5,
             data: values,
-            areaStyle: { color: 'rgba(29, 103, 83, 0.12)' },
-            lineStyle: { color: '#1d6753', width: 2 },
-            itemStyle: { color: '#1d6753' },
+            areaStyle: { color: CHART_COLORS.brandSoft },
+            lineStyle: { color: CHART_COLORS.brand, width: 2 },
+            itemStyle: { color: CHART_COLORS.brand },
           },
         ],
       }}
@@ -209,24 +240,26 @@ export function OccupancyChart({
           right: 0,
           itemWidth: 10,
           itemHeight: 10,
-          textStyle: { fontSize: 10 },
+          textStyle: { fontSize: 11, color: CHART_COLORS.axisLabel },
         },
-        xAxis: { type: 'value', minInterval: 1 },
-        yAxis: { type: 'category', data: rows.map((row) => row.name) },
+        xAxis: { type: 'value', minInterval: 1, axisLabel: AXIS_LABEL, splitLine: { lineStyle: { color: CHART_COLORS.grid } } },
+        yAxis: { type: 'category', data: rows.map((row) => row.name), axisLabel: AXIS_LABEL },
         series: [
           {
             name: occupiedLabel,
             type: 'bar',
             stack: 'units',
+            barWidth: 14,
             data: rows.map((row) => row.occupied),
-            itemStyle: { color: '#1d6753' },
+            itemStyle: { color: CHART_COLORS.brand },
           },
           {
             name: vacantLabel,
             type: 'bar',
             stack: 'units',
+            barWidth: 14,
             data: rows.map((row) => row.vacant),
-            itemStyle: { color: '#cbd5e1' },
+            itemStyle: { color: '#e2e8f0' },
           },
         ],
       }}
@@ -262,16 +295,29 @@ export function ArrearsChart({
         xAxis: {
           type: 'category',
           data: buckets.map((bucket) => bucket.label),
-          axisLabel: { fontSize: 10, hideOverlap: true },
+          axisLabel: { ...AXIS_LABEL, hideOverlap: true },
         },
-        yAxis: { type: 'value', axisLabel: { formatter: (value: number) => value.toLocaleString() } },
+        yAxis: {
+          type: 'value',
+          axisLabel: { ...AXIS_LABEL, formatter: (value: number) => value.toLocaleString() },
+          splitLine: { lineStyle: { color: CHART_COLORS.grid } },
+        },
         series: [
           {
             type: 'bar',
             barWidth: '50%',
             data: buckets.map((bucket, index) => ({
               value: bucket.value,
-              itemStyle: { color: index === 0 ? '#e8b22b' : index >= 3 ? '#dc2626' : '#f59e0b' },
+              // The only place color carries meaning: the older the debt, the
+              // hotter the bar (gold → amber → red).
+              itemStyle: {
+                color:
+                  index === 0
+                    ? CHART_COLORS.gold
+                    : index >= 3
+                      ? CHART_COLORS.danger
+                      : CHART_COLORS.warning,
+              },
             })),
           },
         ],

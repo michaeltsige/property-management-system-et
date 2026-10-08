@@ -80,13 +80,13 @@ export default function UnitDetailPage() {
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardContent>
-            <p className="text-[11px] uppercase tracking-wide text-slate-500">{t('unit.status')}</p>
+            <p className="text-xs font-medium text-slate-500">{t('unit.status')}</p>
             <Badge className={cn(statusTone[unit.status])}>{t(`unit.status.${unit.status}` as never)}</Badge>
           </CardContent>
         </Card>
         <Card>
           <CardContent>
-            <p className="text-[11px] uppercase tracking-wide text-slate-500">{t('unit.market_rent')}</p>
+            <p className="text-xs font-medium text-slate-500">{t('unit.market_rent')}</p>
             <p className="text-lg font-semibold text-slate-900">
               {unit.marketRentMinor === null
                 ? '—'
@@ -96,13 +96,13 @@ export default function UnitDetailPage() {
         </Card>
         <Card>
           <CardContent>
-            <p className="text-[11px] uppercase tracking-wide text-slate-500">{t('unit.bedrooms')}</p>
+            <p className="text-xs font-medium text-slate-500">{t('unit.bedrooms')}</p>
             <p className="text-lg font-semibold text-slate-900">{unit.bedrooms ?? '—'}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent>
-            <p className="text-[11px] uppercase tracking-wide text-slate-500">{t('unit.area_sqm')}</p>
+            <p className="text-xs font-medium text-slate-500">{t('unit.area_sqm')}</p>
             <p className="text-lg font-semibold text-slate-900">{unit.areaSqm ?? '—'}</p>
           </CardContent>
         </Card>

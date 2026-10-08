@@ -6,7 +6,10 @@
  *
  * Navigation follows the information architecture used by established property
  * management products (see docs/REFERENCES.md): portfolio first, then people,
- * leasing, money, operations, then administration.
+ * leasing, money, operations, then administration. The shell itself follows
+ * the operations-console convention that reference (java110/MicroCommunity)
+ * popularised: a dark, grouped navigation rail against a light content area,
+ * a quiet top bar, and dense tables doing the work — no decorative surfaces.
  *
  * Layout rules:
  * - `lg` and up: a permanent sidebar.
@@ -26,7 +29,6 @@ import {
   BarChart3,
   Building2,
   CalendarDays,
-  ChevronDown,
   FileText,
   Home,
   Languages,
@@ -47,7 +49,7 @@ import { CALENDARS, LANGUAGES, usePreferences } from '@/lib/preferences';
 import { ROLE_LABEL_FALLBACK } from '@/lib/roles';
 import { cn } from '@/lib/utils';
 
-import { Badge, Button } from './ui';
+import { Button } from './ui';
 import { GlobalSearch } from './global-search';
 import { PropertySwitcher } from './property-switcher';
 import { TaskPanel } from './task-panel';
@@ -114,14 +116,14 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   const activeHref = activeHrefFor(pathname);
 
   return (
-    <nav aria-label={t('nav.menu')} className="flex-1 space-y-4 overflow-y-auto">
+    <nav aria-label={t('nav.menu')} className="flex-1 space-y-4 overflow-y-auto py-3">
       <TaskPanel />
       {NAV_GROUPS.map((group) => (
         <div key={group.labelKey}>
-          <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+          <p className="px-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
             {t(group.labelKey as never)}
           </p>
-          <ul className="space-y-0.5">
+          <ul className="space-y-0.5 px-2">
             {group.items.map((item) => {
               const active = item.href === activeHref;
               const Icon = item.icon;
@@ -132,12 +134,16 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                     aria-current={active ? 'page' : undefined}
                     onClick={onNavigate}
                     className={cn(
-                      'flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors',
-                      active ? 'bg-brand-50 font-medium text-brand-800' : 'text-slate-600 hover:bg-slate-100',
+                      'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors',
+                      active
+                        ? // The inset bar stands in for a left border so text
+                          // never shifts when the selection moves.
+                          'bg-white/10 font-medium text-white shadow-[inset_2px_0_0_var(--color-brand-400)]'
+                        : 'text-slate-300 hover:bg-white/5 hover:text-white',
                     )}
                   >
-                    <Icon className="h-4 w-4" />
-                    {t(item.labelKey as never)}
+                    <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-brand-300' : 'text-slate-400')} />
+                    <span className="truncate">{t(item.labelKey as never)}</span>
                   </Link>
                 </li>
               );
@@ -155,7 +161,7 @@ function PreferenceSwitchers({ idPrefix }: { idPrefix: string }) {
     'h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500';
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-end gap-2">
       <div className="space-y-1">
         <label className="block text-[11px] font-medium text-slate-500" htmlFor={`${idPrefix}-language`}>
           {t('preferences.language')}
@@ -193,6 +199,15 @@ function PreferenceSwitchers({ idPrefix }: { idPrefix: string }) {
       </div>
     </div>
   );
+}
+
+function initialsOf(fullName: string): string {
+  return fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('');
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -239,11 +254,26 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const brand = (
-    <div className="flex min-w-0 items-center gap-2">
-      <Logo size={34} className="shrink-0" />
+    <div className="flex min-w-0 items-center gap-2.5">
+      <Logo size={32} className="shrink-0" />
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-slate-900">{t('app.name')}</p>
-        <p className="truncate text-xs text-slate-500">{session.organization.name}</p>
+        <p className="truncate text-sm font-semibold text-white">{t('app.name')}</p>
+        <p className="truncate text-xs text-slate-400">{session.organization.name}</p>
+      </div>
+    </div>
+  );
+
+  const userBlock = (
+    <div className="flex min-w-0 items-center gap-2">
+      <span
+        aria-hidden="true"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-800"
+      >
+        {initialsOf(session.user.fullName)}
+      </span>
+      <div className="min-w-0 text-right">
+        <p className="truncate text-xs font-medium text-slate-800">{session.user.fullName}</p>
+        <p className="truncate text-[11px] text-slate-500">{roleLabel}</p>
       </div>
     </div>
   );
@@ -257,22 +287,29 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {t('a11y.skip_to_content')}
       </a>
 
-      {/* Permanent sidebar on lg and up. */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-slate-200 bg-white lg:flex">
-        <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-4">{brand}</div>
+      {/* Permanent sidebar on lg and up: the dark navigation rail. Identity
+          and sign-out live in the top bar, so the rail stays pure navigation
+          (the java110/MicroCommunity convention). */}
+      <aside className="hidden w-64 shrink-0 flex-col bg-ink-900 lg:flex">
+        <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-3.5">{brand}</div>
         <NavLinks pathname={pathname} />
       </aside>
 
       {/* The same navigation on small screens, in a drawer (ADR-0023). */}
       <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
         <Dialog.Portal>
-          <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-900/40 lg:hidden" />
-          <Dialog.Content className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-white shadow-xl lg:hidden">
-            <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-4">
+          <Dialog.Overlay className="fixed inset-0 z-40 bg-ink-950/60 lg:hidden" />
+          <Dialog.Content className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-ink-900 shadow-xl lg:hidden">
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4">
               <Dialog.Title className="min-w-0">{brand}</Dialog.Title>
               <Dialog.Description className="sr-only">{t('nav.menu')}</Dialog.Description>
               <Dialog.Close asChild>
-                <Button variant="ghost" size="icon" aria-label={t('common.close')}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-slate-400 hover:bg-white/10 hover:text-white"
+                  aria-label={t('common.close')}
+                >
                   <X className="h-4 w-4" />
                 </Button>
               </Dialog.Close>
@@ -280,16 +317,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
 
-            <div className="space-y-3 border-t border-slate-100 px-4 py-4">
+            <div className="space-y-3 border-t border-white/10 px-4 py-4">
               <PreferenceSwitchers idPrefix="drawer" />
               <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-medium text-slate-800">{session.user.fullName}</p>
-                  <p className="truncate text-[11px] text-slate-500">{roleLabel}</p>
-                </div>
+                <div className="min-w-0 text-slate-300">{userBlock}</div>
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="text-slate-400 hover:bg-white/10 hover:text-white"
                   aria-label={t('auth.sign_out')}
                   title={t('auth.sign_out')}
                   onClick={handleSignOut}
@@ -303,7 +338,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Dialog.Root>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3">
+        <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5">
           <div className="flex min-w-0 items-center gap-2">
             <Button
               variant="ghost"
@@ -317,9 +352,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Menu className="h-5 w-5" />
             </Button>
             <span className="truncate text-sm font-semibold text-slate-900 lg:hidden">{t('app.name')}</span>
-            <Badge tone="gold" className="hidden sm:inline-flex">
+            {/* Today in the active calendar: quiet context, not a badge. */}
+            <span className="hidden shrink-0 rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 sm:inline-flex">
               {formatPeriodKey(`${today.year}-${String(today.month).padStart(2, '0')}`, calendar, language)}
-            </Badge>
+            </span>
             <div className="hidden min-w-0 flex-1 justify-center px-2 md:flex">
               <GlobalSearch />
             </div>
@@ -333,10 +369,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <PropertySwitcher id="header-property-context" />
             </div>
             <div className="hidden items-center gap-2 border-l border-slate-200 pl-3 sm:flex">
-              <div className="text-right">
-                <p className="text-xs font-medium text-slate-800">{session.user.fullName}</p>
-                <p className="text-[11px] text-slate-500">{roleLabel}</p>
-              </div>
+              {userBlock}
               <Button
                 variant="ghost"
                 size="icon"
@@ -361,8 +394,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="truncate">
             {t('app.name')} · {session.organization.slug}
           </span>
-          <span className="flex shrink-0 items-center gap-1">
-            <ChevronDown className="h-3 w-3 rotate-90" aria-hidden="true" />
+          <span className="tabular shrink-0">
             {today.year}-{String(today.month).padStart(2, '0')}-{String(today.day).padStart(2, '0')}
             {calendar === 'ethiopian' ? ' E.C.' : ' G.C.'}
           </span>
@@ -389,10 +421,10 @@ export function PageHeader({
   useDocumentTitle(`${title} · ${t('app.name')}`);
 
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
-        {description ? <p className="mt-0.5 text-sm text-slate-600">{description}</p> : null}
+        <h1 className="text-lg font-semibold tracking-tight text-slate-900">{title}</h1>
+        {description ? <p className="mt-0.5 text-sm text-slate-500">{description}</p> : null}
       </div>
       {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
     </div>
