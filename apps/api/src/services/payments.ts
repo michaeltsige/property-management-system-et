@@ -18,7 +18,7 @@ import { Prisma as PrismaNamespace } from '@prisma/client';
 import { MANUAL_PAYMENT_METHODS, type Money, type PaymentMethod } from '@pms/shared';
 
 import { businessRule, conflict, notFound, providerError } from '../lib/errors.js';
-import { getPaymentProvider } from '../providers/payments/index.js';
+import { resolveOrgPaymentProvider } from '../providers/payments/index.js';
 import { ProviderNotConfiguredError, type ProviderName } from '../providers/payments/types.js';
 import { postLedgerEntry } from './ledger.js';
 import { recordAudit } from './audit.js';
@@ -442,7 +442,9 @@ export async function initiatePortalPayment(
     data: { status: 'failed', notes: 'Superseded by a newer payment attempt' },
   });
 
-  const provider = getPaymentProvider();
+  // The org's configured gateway decides who runs this payment — the mock demo
+  // until real credentials exist, the licensed provider afterwards.
+  const { adapter: provider } = await resolveOrgPaymentProvider(prisma, input.organizationId);
   const reference = `portal-${input.tenantId.slice(0, 8)}`;
 
   let initiation;
@@ -551,7 +553,18 @@ export async function completePortalPayment(
     throw businessRule('This payment attempt is no longer pending; start a new payment');
   }
 
-  const provider = getPaymentProvider(intent.provider as ProviderName);
+  // The intent remembers which provider started it; the adapter resolves with
+  // that provider's credentials so a gateway switch can't mix credential sets.
+  const { adapter: provider } = await resolveOrgPaymentProvider(
+    prisma,
+    params.organizationId,
+    intent.provider as ProviderName,
+  ).catch((error: unknown) => {
+    if (error instanceof ProviderNotConfiguredError) {
+      throw providerError(error.message, { provider: intent.provider });
+    }
+    throw error;
+  });
   const verification = await provider.verify(intent.providerRef).catch((error: unknown) => {
     throw providerError('Could not verify the payment with the provider', { provider: provider.name }, error);
   });

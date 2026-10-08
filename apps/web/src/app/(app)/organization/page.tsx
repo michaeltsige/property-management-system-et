@@ -10,6 +10,7 @@ import { useAction, useAsync } from '@/lib/hooks';
 import { CALENDARS, LANGUAGES, usePreferences } from '@/lib/preferences';
 
 import { PageHeader } from '@/components/app-shell';
+import { PaymentGatewaySettings } from '@/components/payment-gateway-settings';
 import {
   Alert,
   Badge,
@@ -221,6 +222,8 @@ export default function OrganizationPage() {
               )}
             </CardContent>
           </Card>
+
+          <PaymentGatewaySettings />
         </div>
 
         <Card className="self-start">

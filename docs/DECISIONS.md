@@ -765,3 +765,54 @@ files with attribution in `THIRD_PARTY_NOTICES.md`.
   Noto family following the same pattern.
 - The fonts add ~730 KB to the repository and pdfkit ~1 MB to `node_modules`;
   PDFs themselves are small (~12 KB) because pdfkit subsets the font.
+
+---
+
+## ADR-0039 — Per-organization payment gateway: encrypted org settings, org-aware adapters, mock demo
+
+Accepted 2026-10-08 (completes the last item of roadmap payments; the owner's
+brief: the business license is a prerequisite for real payment API access, so
+build the structure now with a mock demo that is replaced by a settings edit
+later, never a code change).
+
+**Decision.** Each organization configures its own gateway — provider, mode
+(`test`/`live`) and merchant credentials — in a dedicated
+`OrganizationSetting` row (key `payment_gateway`). Credential values are
+AES-256-GCM encrypted with the existing `FIELD_ENCRYPTION_KEY`
+(`v1:<iv>:<tag>:<ciphertext>`, same scheme as tenant ID numbers); every read
+path (settings list, status endpoint, audit rows) exposes only "configured"
+state and a `••••last4` hint. Provider selection is resolved per payment:
+org configuration first, platform environment (`PAYMENT_PROVIDER` + provider
+env vars) as fallback for orgs that never configured one. Adapters receive
+credentials via constructor injection; Telebirr/Chapa remain deliberately
+unimplemented until their official documentation and sandbox are confirmed,
+and refuse calls with `ProviderNotConfiguredError` (HTTP 502) even when
+credentials exist. The `mock` provider stays the demo: a full simulated
+checkout (initiate → `/portal/pay/mock` → complete) that moves no money.
+Organization → Payment gateway UI section (`org.settings.manage` permission)
+saves partial configurations; omitted credential fields keep their stored
+value; reset deletes the row and returns to the platform default.
+
+**Why.** Ethiopian payment APIs (Telebirr merchant onboarding, Chapa live keys)
+require a business license, so real credentials do not exist yet — but waiting
+for them to design the plumbing would repeat the receipt lesson (structure and
+content must be separable). Storing config per organization (not per deploy)
+keeps the multi-organization model honest (ADR-0004): each org pays through its
+own licensed gateway. Reusing `OrganizationSetting` gives the audit trail for
+free, and reusing the field-encryption key material avoids a second secret to
+rotate. Constructor-injected adapters make the docs-driven refusal explicit:
+the code never "fills in the blanks" of an unverified API contract, so the
+switch to production is implementing `initiate/verify/webhook/refund` against
+confirmed documentation — no schema, route, or UI changes remain.
+
+**Consequences.**
+- Completion of a pending intent verifies against the provider that started it
+  (the intent records `provider`); if the org has since switched gateways, the
+  platform fallback or a clear 502 applies — credential sets are never mixed.
+- The generic settings endpoints exclude the `payment_gateway` row; reading or
+  writing it is only possible through the masked/dedicated endpoints.
+- `/ready` and `listPaymentProviders` keep reporting the platform environment;
+  organization readiness is surfaced by `GET /organizations/payment-gateway`.
+- Adding a provider = one adapter folder + its credential descriptor in
+  `@pms/shared` + registry entry; the Organization UI renders it from the
+  descriptor without further changes.

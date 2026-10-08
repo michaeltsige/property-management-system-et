@@ -12,9 +12,14 @@
  * https://developer.chapa.co (or the current docs) before any code exists that
  * talks to a live endpoint.
  *
+ * The structure around it is finished, though: an organization can already save
+ * its Chapa credentials (encrypted at rest) and the adapter resolves from them.
+ * Completing this adapter is then a pure code change inside `initiate/verify/...`
+ * — no schema, route or UI work remains.
+ *
  * WHAT IS NEEDED TO FINISH THIS ADAPTER
- * 1. Secret key + webhook secret from the Chapa dashboard (sandbox first:
- *    CHAPA_SECRET_KEY, CHAPA_WEBHOOK_SECRET).
+ * 1. Secret key + webhook secret from the Chapa dashboard (sandbox first) —
+ *    saveable today via PUT /organizations/payment-gateway.
  * 2. Confirmation of the initialise endpoint, required fields and the exact
  *    callback/return URL parameters.
  * 3. Confirmation of the verify endpoint and its response fields (status values,
@@ -27,7 +32,6 @@
  * integration test and note the documentation revision in docs/REFERENCES.md.
  */
 
-import { getConfig } from '../../config.js';
 import {
   ProviderNotConfiguredError,
   type InitiatePaymentInput,
@@ -41,18 +45,35 @@ import {
   type WebhookEvent,
 } from './types.js';
 
+/** Credential names match `PAYMENT_GATEWAY_CREDENTIAL_FIELDS.chapa` in @pms/shared. */
+export interface ChapaCredentials {
+  secretKey?: string;
+  webhookSecret?: string;
+}
+
 export class ChapaPaymentProvider implements PaymentProviderAdapter {
   readonly name = 'chapa' as const;
 
+  constructor(private readonly credentials: ChapaCredentials = {}) {}
+
   isConfigured(): boolean {
-    const config = getConfig();
-    return Boolean(config.CHAPA_SECRET_KEY && config.CHAPA_WEBHOOK_SECRET);
+    return Boolean(this.credentials.secretKey && this.credentials.webhookSecret);
+  }
+
+  /** Field names an organization still has to save, for clear error messages. */
+  missingCredentials(): string[] {
+    const missing: string[] = [];
+    if (!this.credentials.secretKey) missing.push('secretKey');
+    if (!this.credentials.webhookSecret) missing.push('webhookSecret');
+    return missing;
   }
 
   private assertConfigured(): never {
     if (!this.isConfigured()) {
-      throw new ProviderNotConfiguredError('chapa', 'CHAPA_SECRET_KEY and CHAPA_WEBHOOK_SECRET');
+      throw new ProviderNotConfiguredError('chapa', this.missingCredentials().join(', '));
     }
+    // Credentials alone are not enough: the request envelope must come from the
+    // official documentation. This guard exists so that nobody "fills in the blanks".
     throw new ProviderNotConfiguredError(
       'chapa',
       'confirmation of the initialise/verify/webhook/refund contracts from the official documentation',

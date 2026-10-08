@@ -17,7 +17,7 @@
  *    caller with `@pms/shared` helpers, never with `Number()` arithmetic.
  */
 
-import type { ImportKind, ImportReport } from '@pms/shared';
+import type { ImportKind, ImportReport, PaymentGatewayStatus } from '@pms/shared';
 import type { LanguageCode } from '@pms/calendar';
 
 import type {
@@ -407,6 +407,11 @@ export const api = {
   settings: () => apiFetch<{ settings: Record<string, unknown> }>('/organizations/settings'),
   updateSettings: (body: unknown) =>
     apiFetch<{ settings: Record<string, unknown> }>('/organizations/settings', { method: 'PATCH', body }),
+  paymentGateway: () => apiFetch<{ gateway: PaymentGatewayStatus }>('/organizations/payment-gateway'),
+  updatePaymentGateway: (body: unknown) =>
+    apiFetch<{ gateway: PaymentGatewayStatus }>('/organizations/payment-gateway', { method: 'PUT', body }),
+  resetPaymentGateway: () =>
+    apiFetch<{ gateway: PaymentGatewayStatus }>('/organizations/payment-gateway', { method: 'DELETE' }),
   members: () => apiFetch<{ members: Member[] }>('/organizations/members'),
   updateMembership: (membershipId: string, body: { role?: string; status?: 'active' | 'disabled' }) =>
     apiFetch<{ membership: Member }>(`/organizations/members/${membershipId}`, { method: 'PATCH', body }),

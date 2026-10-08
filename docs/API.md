@@ -48,6 +48,27 @@ Codes used across the API: `VALIDATION_FAILED` (400), `UNAUTHENTICATED` (401),
 | PATCH     | `/organizations/members/:membershipId` | `members.write` (role change, deactivate) |
 | GET/POST  | `/organizations/id-types`              | `settings.read` / `settings.write`        |
 
+### Payment gateway (per organization)
+
+Which provider runs tenant online payments, with the organization's own
+merchant credentials (encrypted at rest; responses never contain credential
+values — only configured state and a `••••last4` hint). See ADR-0039.
+The `mock` provider is the demo: a simulated checkout that moves no money and
+is replaced by saving real Telebirr/Chapa credentials — no code change.
+
+| Method | Path                         | Permission            | Body                                                                                                                              |
+| ------ | ---------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/organizations/payment-gateway` | `org.read`            | — effective provider, source (`organization`/`platform`), mode, per-field configured/hints.                                       |
+| PUT    | `/organizations/payment-gateway` | `org.settings.manage` | `{ provider: 'mock' \| 'telebirr' \| 'chapa', mode: 'test' \| 'live', credentials: { [field]: value } }` — omitted fields keep their saved value. |
+| DELETE | `/organizations/payment-gateway` | `org.settings.manage` | — removes the configuration; the platform default (`PAYMENT_PROVIDER` env) applies again.                                         |
+
+Credential fields per provider (see `PAYMENT_GATEWAY_CREDENTIAL_FIELDS` in
+`@pms/shared`): `chapa` → `secretKey`, `webhookSecret`; `telebirr` → `appId`,
+`shortCode`, `appKey`, `publicKey`, `privateKey`; `mock` → none. Real
+providers refuse calls with `502 PROVIDER_ERROR` until their adapter is
+implemented against the official documentation and sandbox (business license
+first).
+
 ## Portfolio
 
 | Method   | Path                              | Permission                                                                    |
