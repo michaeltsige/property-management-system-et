@@ -16,9 +16,11 @@ import {
   DEPOSIT_TYPES,
   DOCUMENT_CATEGORIES,
   LEASE_STATUSES,
+  MANUAL_PAYMENT_METHODS,
   NOTIFICATION_CHANNELS,
   NOTIFICATION_TEMPLATE_KEYS,
   PAYMENT_METHODS,
+  PAYMENT_PROOF_STATUSES,
   PROPERTY_TYPES,
   RENT_DUE_DAY_MAX,
   ROLES,
@@ -425,6 +427,34 @@ export const portalPaymentInitiateSchema = z
 
 /** The completion body is empty on purpose: everything is derived from the URL reference. */
 export const portalPaymentCompleteSchema = z.object({}).strict();
+
+/**
+ * Proof of payment: the tenant uploads a bank slip or cheque photo from the
+ * portal; staff review it and approving it records the real payment. Files are
+ * base64 in JSON (the API has no multipart), sized by the storage layer.
+ */
+export const portalPaymentProofUploadSchema = z.object({
+  amount: moneySchema,
+  method: z.enum(MANUAL_PAYMENT_METHODS as unknown as [string, ...string[]]),
+  /** Bank slip / cheque number, when the bank issued one. */
+  reference: z.string().trim().max(80).optional(),
+  notes: z.string().trim().max(1000).optional(),
+  filename: z.string().trim().min(1).max(200),
+  mimeType: z.string().trim().min(3).max(120),
+  dataBase64: z.string().min(1).max(20_000_000),
+});
+
+export const paymentProofListQuerySchema = paginationSchema.partial().extend({
+  status: z.enum(PAYMENT_PROOF_STATUSES).optional(),
+});
+
+export const paymentProofApprovalSchema = z.object({
+  notes: z.string().trim().max(1000).optional(),
+});
+
+export const paymentProofRejectionSchema = z.object({
+  reason: z.string().trim().min(3).max(500),
+});
 
 // ---------------------------------------------------------------------------
 // Maintenance

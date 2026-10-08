@@ -57,6 +57,7 @@ model Organization {
   leases        Lease[]
   charges       Charge[]
   payments      Payment[]
+  paymentProofs PaymentProof[]
   ledger        LedgerEntry[]
   workOrders    WorkOrder[]
   vendors       Vendor[]
@@ -328,6 +329,7 @@ model Tenant {
   workOrders   WorkOrder[]
   documents    Document[]
   otps         TenantOtp[]
+  paymentProofs PaymentProof[]
 
   @@index([organizationId, fullName])
   @@index([organizationId, phone])
@@ -403,6 +405,7 @@ model Lease {
   payments     Payment[]
   ledger       LedgerEntry[]
   documents    Document[]
+  paymentProofs PaymentProof[]
 
   @@index([organizationId, status])
   @@index([organizationId, billingCalendar, nextEscalationDate])
@@ -490,6 +493,7 @@ model Payment {
   tenant       Tenant?             @relation(fields: [tenantId], references: [id])
   allocations  PaymentAllocation[]
   ledger       LedgerEntry[]
+  paymentProof PaymentProof?
 
   @@index([organizationId, paidAt])
   @@index([organizationId, status])
@@ -628,9 +632,44 @@ model Document {
   lease        Lease?       @relation(fields: [leaseId], references: [id])
   charge       Charge?      @relation(fields: [chargeId], references: [id])
   workOrder    WorkOrder?   @relation(fields: [workOrderId], references: [id])
+  paymentProofs PaymentProof[]
 
   @@index([organizationId, category])
   @@index([organizationId, tenantId])
+}
+
+/// A tenant-submitted proof of payment (bank slip, cheque photo) awaiting staff
+/// review. Approving it records the actual `Payment`; the file itself lives in
+/// `Document` (category `payment_proof`) through the normal storage driver.
+model PaymentProof {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @db.Uuid
+  tenantId       String    @db.Uuid
+  leaseId        String?   @db.Uuid
+  documentId     String    @db.Uuid
+  amountMinor    BigInt
+  currency       String    @default("ETB")
+  method         String    // MANUAL_PAYMENT_METHODS
+  reference      String?
+  notes          String?
+  status         String    @default("pending") // PAYMENT_PROOF_STATUSES
+  reviewedById   String?   @db.Uuid
+  reviewedAt     DateTime?
+  reviewNotes    String?
+  // Set when the approval recorded the payment; rejects keep the reason in reviewNotes.
+  // Unique: a recorded payment can be linked from at most one proof.
+  paymentId      String?   @unique @db.Uuid
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  tenant       Tenant       @relation(fields: [tenantId], references: [id])
+  lease        Lease?       @relation(fields: [leaseId], references: [id])
+  document     Document     @relation(fields: [documentId], references: [id])
+  payment      Payment?     @relation(fields: [paymentId], references: [id])
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
 }
 
 // ---------------------------------------------------------------------------

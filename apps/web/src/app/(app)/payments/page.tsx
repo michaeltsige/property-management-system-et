@@ -13,6 +13,7 @@ import { usePreferences } from '@/lib/preferences';
 import { PageHeader } from '@/components/app-shell';
 import { MoneyInput } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
+import { PaymentProofsReview } from '@/components/payment-proofs-review';
 import {
   Alert,
   Badge,
@@ -122,6 +123,10 @@ export default function PaymentsPage() {
           {message}
         </Alert>
       ) : null}
+
+      <div className="mb-4">
+        <PaymentProofsReview onChanged={() => payments.reload()} />
+      </div>
 
       <Card>
         <CardContent className="p-0">
