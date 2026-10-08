@@ -45,6 +45,17 @@ export default function PortalPage() {
   }, [ready, session, router]);
 
   const me = useAsync(() => (isTenant ? api.portalMe() : Promise.resolve(null)), [isTenant, ready]);
+  const { pending: paying, error: payError, run: runPay } = useAction();
+
+  /** Start a provider payment for the full outstanding balance, then follow the redirect. */
+  async function payNow() {
+    await runPay(async () => {
+      const intent = await api.portalInitiatePayment({});
+      if (!intent.redirectUrl) throw new Error('The payment provider did not return a checkout page');
+      window.location.assign(intent.redirectUrl);
+    }).catch(() => undefined);
+  }
+
   const [maintenanceVersion, setMaintenanceVersion] = useState(0);
   const requests = useAsync(
     () => (isTenant && ready ? api.portalMaintenanceRequests() : Promise.resolve(null)),
@@ -129,14 +140,25 @@ export default function PortalPage() {
         ) : me.data ? (
           <>
             <Card>
-              <CardContent className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-slate-500">{t('portal.due_balance')}</p>
-                  <p className="mt-1 text-2xl font-semibold tabular text-slate-900">
-                    {formatAmount(me.data.dueMinor, session.organization.currency, language)}
-                  </p>
+              <CardContent className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-slate-500">{t('portal.due_balance')}</p>
+                    <p className="mt-1 text-2xl font-semibold tabular text-slate-900">
+                      {formatAmount(me.data.dueMinor, session.organization.currency, language)}
+                    </p>
+                  </div>
+                  {me.data.dueMinor === '0' ? <Badge tone="brand">{t('portal.up_to_date')}</Badge> : null}
                 </div>
-                {me.data.dueMinor === '0' ? <Badge tone="brand">{t('portal.up_to_date')}</Badge> : null}
+                {me.data.dueMinor !== '0' ? (
+                  <div className="space-y-1">
+                    <Button onClick={payNow} disabled={paying}>
+                      {paying ? t('portal.pay_starting') : t('portal.pay_now')}
+                    </Button>
+                    <p className="text-xs text-slate-500">{t('portal.pay_hint')}</p>
+                    {payError ? <Alert tone="danger">{payError}</Alert> : null}
+                  </div>
+                ) : null}
               </CardContent>
             </Card>
 

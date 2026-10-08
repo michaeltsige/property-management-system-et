@@ -2,10 +2,12 @@ import { Router } from 'express';
 import { z } from 'zod';
 import {
   portalMaintenanceRequestSchema,
+  portalPaymentInitiateSchema,
   portalRequestSchema,
   portalVerifySchema,
   uuidSchema,
 } from '@pms/shared';
+import { getConfig } from '../config.js';
 import { organizationIdOf, requireAuth } from '../middleware/context.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
@@ -14,6 +16,11 @@ import { badRequest, businessRule, notFound } from '../lib/errors.js';
 import { nextTicketNumber } from './operations.js';
 import { authRateLimiter } from './auth.js';
 import { issueTokens } from '../services/auth.service.js';
+import {
+  completePortalPayment,
+  getPortalPaymentIntent,
+  initiatePortalPayment,
+} from '../services/payments.js';
 import {
   disableTenantPortal,
   enrollTenantPortal,
@@ -183,6 +190,89 @@ portalRouter.get('/portal/me', requireAuth, requirePermission('portal.use'), asy
     next(error);
   }
 });
+
+// --- payments (tenant-initiated, provider-confirmed) ------------------------
+
+/**
+ * The browser origin the provider sends the payer back to. The stack is one web
+ * app on one origin (CORS_ORIGINS[0]), so the first entry is that origin.
+ */
+function portalReturnUrl(): string {
+  const origin = getConfig().CORS_ORIGINS[0] ?? 'http://localhost:3000';
+  return `${origin.replace(/\/$/, '')}/portal/pay/mock`;
+}
+
+portalRouter.post(
+  '/portal/payments/initiate',
+  requireAuth,
+  requirePermission('portal.pay'),
+  validate({ body: portalPaymentInitiateSchema }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      const intent = await initiatePortalPayment(prisma, {
+        organizationId: tenant.organizationId,
+        tenantId: tenant.id,
+        actorUserId: req.auth?.userId ?? null,
+        amountMinor: req.body.amountMinor ? BigInt(req.body.amountMinor) : undefined,
+        returnUrl: portalReturnUrl(),
+      });
+      res.status(201).json(intent);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+portalRouter.get(
+  '/portal/payments/:providerRef',
+  requireAuth,
+  requirePermission('portal.pay'),
+  validate({ params: z.object({ providerRef: z.string().min(6).max(120) }) }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      const intent = await getPortalPaymentIntent(prisma, {
+        organizationId: tenant.organizationId,
+        tenantId: tenant.id,
+        providerRef: String(req.params.providerRef ?? ''),
+      });
+      res.json(intent);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+portalRouter.post(
+  '/portal/payments/:providerRef/complete',
+  requireAuth,
+  requirePermission('portal.pay'),
+  validate({ params: z.object({ providerRef: z.string().min(6).max(120) }) }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      const result = await completePortalPayment(prisma, {
+        organizationId: tenant.organizationId,
+        tenantId: tenant.id,
+        providerRef: String(req.params.providerRef ?? ''),
+        actorUserId: req.auth?.userId ?? null,
+      });
+      res.json({
+        ...result,
+        amountMinor: result.amountMinor.toString(),
+        allocatedMinor: result.allocatedMinor.toString(),
+        unallocatedMinor: result.unallocatedMinor.toString(),
+        allocations: result.allocations.map((a) => ({ ...a, amountMinor: a.amountMinor.toString() })),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 // --- maintenance requests (tenant-initiated, staff-managed) -----------------
 

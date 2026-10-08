@@ -17,7 +17,9 @@ import { Prisma as PrismaNamespace } from '@prisma/client';
 
 import { MANUAL_PAYMENT_METHODS, type Money, type PaymentMethod } from '@pms/shared';
 
-import { businessRule, conflict, notFound } from '../lib/errors.js';
+import { businessRule, conflict, notFound, providerError } from '../lib/errors.js';
+import { getPaymentProvider } from '../providers/payments/index.js';
+import { ProviderNotConfiguredError, type ProviderName } from '../providers/payments/types.js';
 import { postLedgerEntry } from './ledger.js';
 import { recordAudit } from './audit.js';
 
@@ -352,4 +354,331 @@ export async function reversePayment(
 
     return updated;
   });
+}
+
+// ---------------------------------------------------------------------------
+// Tenant portal payments
+// ---------------------------------------------------------------------------
+
+/**
+ * The tenant-facing flow: initiate a provider payment for outstanding charges,
+ * then complete it once the provider confirms. Money only enters the books at
+ * completion, after the provider has verified the payment — an abandoned or
+ * failed attempt leaves nothing but a `pending` row that never touched a charge.
+ */
+export interface PortalPaymentIntent {
+  paymentId: string;
+  provider: string;
+  providerRef: string;
+  redirectUrl?: string;
+  amountMinor: string;
+  currency: string;
+  status: string;
+}
+
+/** Outstanding balance for a tenant in the organization currency, in minor units. */
+export async function tenantDueMinor(
+  prisma: PrismaClient,
+  params: { organizationId: string; tenantId: string; currency: string },
+): Promise<bigint> {
+  const open = await prisma.charge.findMany({
+    where: {
+      organizationId: params.organizationId,
+      tenantId: params.tenantId,
+      currency: params.currency,
+      status: { in: ['open', 'partial'] },
+    },
+    select: { amountMinor: true, paidMinor: true },
+  });
+  return open.reduce((sum, charge) => sum + (charge.amountMinor - charge.paidMinor), BigInt(0));
+}
+
+export async function initiatePortalPayment(
+  prisma: PrismaClient,
+  input: {
+    organizationId: string;
+    tenantId: string;
+    actorUserId?: string | null;
+    /** Requested amount in minor units; omit to pay the full outstanding balance. */
+    amountMinor?: bigint;
+    /** Web-side return URL the provider sends the payer back to. */
+    returnUrl?: string;
+  },
+): Promise<PortalPaymentIntent> {
+  const tenant = await prisma.tenant.findFirst({
+    where: { id: input.tenantId, organizationId: input.organizationId, deletedAt: null },
+    include: { organization: { select: { currency: true } } },
+  });
+  if (!tenant) throw notFound('Tenant not found in this organization');
+  const currency = tenant.organization.currency;
+
+  const due = await tenantDueMinor(prisma, {
+    organizationId: input.organizationId,
+    tenantId: input.tenantId,
+    currency,
+  });
+  if (due <= 0n) throw businessRule('Nothing is due on this account right now');
+
+  const amountMinor = input.amountMinor ?? due;
+  if (amountMinor <= 0n) throw businessRule('Payment amount must be greater than zero');
+  if (amountMinor > due) {
+    throw businessRule('The payment cannot exceed the outstanding balance');
+  }
+
+  // One live attempt at a time: starting a new payment supersedes any previous
+  // still-pending attempt, so a tapped button twice cannot create two intents.
+  await prisma.payment.updateMany({
+    where: {
+      organizationId: input.organizationId,
+      tenantId: input.tenantId,
+      status: 'pending',
+    },
+    data: { status: 'failed', notes: 'Superseded by a newer payment attempt' },
+  });
+
+  const provider = getPaymentProvider();
+  const reference = `portal-${input.tenantId.slice(0, 8)}`;
+
+  let initiation;
+  try {
+    initiation = await provider.initiate({
+      organizationId: input.organizationId,
+      reference,
+      amount: { amountMinor: Number(amountMinor), currency },
+      description: `Rent payment for ${tenant.fullName}`,
+      returnUrl: input.returnUrl,
+      customer: { fullName: tenant.fullName, phone: tenant.phone ?? undefined },
+    });
+  } catch (error) {
+    if (error instanceof ProviderNotConfiguredError) {
+      throw providerError(error.message, { provider: provider.name });
+    }
+    throw error;
+  }
+
+  const activeLease = await prisma.lease.findFirst({
+    where: { tenantId: input.tenantId, organizationId: input.organizationId, status: 'active' },
+    select: { id: true },
+    orderBy: { startDate: 'desc' },
+  });
+
+  const payment = await prisma.payment.create({
+    data: {
+      organizationId: input.organizationId,
+      leaseId: activeLease?.id ?? null,
+      tenantId: input.tenantId,
+      amountMinor,
+      currency,
+      // The method mirrors how the money arrived; for the demo adapter that is
+      // the mock method, which the payments list labels clearly.
+      method: provider.name as PaymentMethod,
+      status: 'pending',
+      paidAt: new Date(),
+      reference,
+      provider: provider.name,
+      providerRef: initiation.providerRef,
+      providerPayload: (initiation.raw ?? undefined) as Prisma.InputJsonValue | undefined,
+      recordedById: input.actorUserId ?? null,
+    },
+  });
+
+  await recordAudit(prisma, {
+    organizationId: input.organizationId,
+    actorUserId: input.actorUserId ?? null,
+    action: 'initiate',
+    entityType: 'Payment',
+    entityId: payment.id,
+    after: {
+      amountMinor: amountMinor.toString(),
+      currency,
+      provider: provider.name,
+      providerRef: initiation.providerRef,
+    },
+  });
+
+  return {
+    paymentId: payment.id,
+    provider: provider.name,
+    providerRef: initiation.providerRef,
+    redirectUrl: initiation.redirectUrl,
+    amountMinor: amountMinor.toString(),
+    currency,
+    status: payment.status,
+  };
+}
+
+export async function getPortalPaymentIntent(
+  prisma: PrismaClient,
+  params: { organizationId: string; tenantId: string; providerRef: string },
+): Promise<PortalPaymentIntent> {
+  const payment = await prisma.payment.findFirst({
+    where: {
+      organizationId: params.organizationId,
+      tenantId: params.tenantId,
+      providerRef: params.providerRef,
+    },
+  });
+  // Another tenant's reference must look exactly like one that does not exist.
+  if (!payment || !payment.providerRef) throw notFound('Payment not found');
+  return {
+    paymentId: payment.id,
+    provider: payment.provider ?? '',
+    providerRef: payment.providerRef,
+    amountMinor: payment.amountMinor.toString(),
+    currency: payment.currency,
+    status: payment.status,
+  };
+}
+
+/**
+ * Complete a portal payment: re-verify with the provider, then record the money
+ * (allocations oldest-first, ledger entry, receipt number) in one transaction.
+ * Safe to retry — a second completion is rejected as a conflict.
+ */
+export async function completePortalPayment(
+  prisma: PrismaClient,
+  params: { organizationId: string; tenantId: string; providerRef: string; actorUserId?: string | null },
+): Promise<RecordedPayment & { status: string }> {
+  const intent = await getPortalPaymentIntent(prisma, params);
+  if (intent.status === 'succeeded') throw conflict('This payment has already been completed');
+  if (intent.status !== 'pending') {
+    throw businessRule('This payment attempt is no longer pending; start a new payment');
+  }
+
+  const provider = getPaymentProvider(intent.provider as ProviderName);
+  const verification = await provider.verify(intent.providerRef).catch((error: unknown) => {
+    throw providerError('Could not verify the payment with the provider', { provider: provider.name }, error);
+  });
+  if (verification.status !== 'succeeded') {
+    throw businessRule('The provider has not confirmed this payment yet');
+  }
+  const verifiedMinor = verification.amountMinor ? BigInt(verification.amountMinor) : BigInt(intent.amountMinor);
+  if (verifiedMinor !== BigInt(intent.amountMinor) || (verification.currency && verification.currency !== intent.currency)) {
+    throw businessRule('The verified amount does not match the payment attempt');
+  }
+
+  for (let attempt = 0; attempt <= MAX_SERIALIZATION_RETRIES; attempt += 1) {
+    try {
+      return await prisma.$transaction(runCompletion(params, verification), {
+        isolationLevel: 'Serializable',
+      });
+    } catch (error) {
+      const isSerializationFailure =
+        error instanceof PrismaNamespace.PrismaClientKnownRequestError && error.code === 'P2034';
+      if (isSerializationFailure && attempt < MAX_SERIALIZATION_RETRIES) continue;
+      throw error;
+    }
+  }
+  throw conflict('Could not complete the payment after several attempts; please retry');
+}
+
+function runCompletion(
+  params: { organizationId: string; tenantId: string; providerRef: string; actorUserId?: string | null },
+  verification: { paidAt?: Date; raw?: unknown },
+) {
+  return async (tx: Prisma.TransactionClient): Promise<RecordedPayment & { status: string }> => {
+    const payment = await tx.payment.findFirst({
+      where: {
+        organizationId: params.organizationId,
+        tenantId: params.tenantId,
+        providerRef: params.providerRef,
+      },
+    });
+    if (!payment) throw notFound('Payment not found');
+    if (payment.status === 'succeeded') throw conflict('This payment has already been completed');
+    if (payment.status !== 'pending') {
+      throw businessRule('This payment attempt is no longer pending; start a new payment');
+    }
+
+    // Oldest open charges first, same rule a cashier's unallocated payment follows.
+    const openCharges = await tx.charge.findMany({
+      where: {
+        organizationId: payment.organizationId,
+        tenantId: payment.tenantId,
+        currency: payment.currency,
+        status: { in: ['open', 'partial'] },
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    let remaining = payment.amountMinor;
+    const planned: { chargeId: string; amountMinor: bigint }[] = [];
+    for (const charge of openCharges) {
+      if (remaining <= 0n) break;
+      const outstanding = charge.amountMinor - charge.paidMinor;
+      if (outstanding <= 0n) continue;
+      const amount = outstanding < remaining ? outstanding : remaining;
+      planned.push({ chargeId: charge.id, amountMinor: amount });
+      remaining -= amount;
+    }
+    const allocated = planned.reduce((sum, item) => sum + item.amountMinor, 0n);
+
+    const paidAt = verification.paidAt ?? new Date();
+    const receiptNumber = await nextReceiptNumber(tx, payment.organizationId, paidAt);
+
+    await tx.payment.update({
+      where: { id: payment.id },
+      data: {
+        status: 'succeeded',
+        paidAt,
+        receiptNumber,
+        providerPayload: {
+          initiate: (payment.providerPayload ?? undefined) as Prisma.InputJsonValue | undefined,
+          verification: (verification.raw ?? undefined) as Prisma.InputJsonValue | undefined,
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    for (const item of planned) {
+      await tx.paymentAllocation.create({
+        data: { paymentId: payment.id, chargeId: item.chargeId, amountMinor: item.amountMinor },
+      });
+      const charge = openCharges.find((c) => c.id === item.chargeId);
+      if (!charge) continue;
+      const newPaid = charge.paidMinor + item.amountMinor;
+      await tx.charge.update({
+        where: { id: charge.id },
+        data: { paidMinor: newPaid, status: newPaid >= charge.amountMinor ? 'paid' : 'partial' },
+      });
+    }
+
+    await postLedgerEntry(tx, {
+      organizationId: payment.organizationId,
+      leaseId: payment.leaseId,
+      paymentId: payment.id,
+      kind: 'payment',
+      amountMinor: -payment.amountMinor,
+      currency: payment.currency,
+      occurredAt: paidAt,
+      memo: payment.reference
+        ? `Payment (${payment.method}) ref ${payment.reference}`
+        : `Payment (${payment.method})`,
+      createdById: params.actorUserId ?? null,
+    });
+
+    await recordAudit(tx, {
+      organizationId: payment.organizationId,
+      actorUserId: params.actorUserId ?? null,
+      action: 'complete',
+      entityType: 'Payment',
+      entityId: payment.id,
+      after: {
+        amountMinor: payment.amountMinor.toString(),
+        method: payment.method,
+        receiptNumber,
+        allocations: planned.map((p) => ({ chargeId: p.chargeId, amountMinor: p.amountMinor.toString() })),
+      },
+    });
+
+    return {
+      paymentId: payment.id,
+      receiptNumber,
+      amountMinor: payment.amountMinor,
+      currency: payment.currency,
+      allocatedMinor: allocated,
+      unallocatedMinor: payment.amountMinor - allocated,
+      allocations: planned,
+      status: 'succeeded',
+    };
+  };
 }

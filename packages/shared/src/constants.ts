@@ -97,7 +97,8 @@ export type ChargeStatus = (typeof CHARGE_STATUSES)[number];
 
 /**
  * Payment methods. `manual` methods are recorded by staff; the others run through
- * a payment provider adapter (see apps/api/src/payments).
+ * a payment provider adapter (see apps/api/src/payments). `mock` is the
+ * development/demo adapter: it marks payments that were simulated end to end.
  */
 export const PAYMENT_METHODS = [
   'cash',
@@ -107,6 +108,7 @@ export const PAYMENT_METHODS = [
   'chapa',
   'cbe_birr',
   'amole',
+  'mock',
   'other',
 ] as const;
 export type PaymentMethod = (typeof PAYMENT_METHODS)[number];

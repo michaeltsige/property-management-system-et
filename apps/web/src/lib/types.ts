@@ -364,3 +364,25 @@ export interface PortalMe {
   /** Sum of pending + overdue charges, minor units as a decimal string. */
   dueMinor: string;
 }
+
+/** A portal payment attempt: pending until the provider confirms it. */
+export interface PortalPaymentIntent {
+  paymentId: string;
+  provider: string;
+  providerRef: string;
+  redirectUrl?: string;
+  amountMinor: string;
+  currency: string;
+  status: string;
+}
+
+export interface PortalCompletedPayment {
+  paymentId: string;
+  receiptNumber: string;
+  amountMinor: string;
+  currency: string;
+  allocatedMinor: string;
+  unallocatedMinor: string;
+  allocations: { chargeId: string; amountMinor: string }[];
+  status: string;
+}
