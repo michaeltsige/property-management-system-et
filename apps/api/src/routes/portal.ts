@@ -22,6 +22,8 @@ import {
   getPortalPaymentIntent,
   initiatePortalPayment,
 } from '../services/payments.js';
+import { buildPaymentReceipt } from '../services/receipts.js';
+import { renderReceiptPdf } from '../lib/pdf.js';
 import {
   getPortalProofDocument,
   listPortalPaymentProofs,
@@ -275,6 +277,33 @@ portalRouter.post(
         unallocatedMinor: result.unallocatedMinor.toString(),
         allocations: result.allocations.map((a) => ({ ...a, amountMinor: a.amountMinor.toString() })),
       });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+portalRouter.get(
+  '/portal/payments/:providerRef/receipt.pdf',
+  requireAuth,
+  requirePermission('portal.pay'),
+  validate({ params: z.object({ providerRef: z.string().min(6).max(120) }) }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      const intent = await getPortalPaymentIntent(prisma, {
+        organizationId: tenant.organizationId,
+        tenantId: tenant.id,
+        providerRef: String(req.params.providerRef ?? ''),
+      });
+      const receipt = await buildPaymentReceipt(getPrisma(), {
+        organizationId: tenant.organizationId,
+        paymentId: intent.paymentId,
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${receipt.filename}"`);
+      await renderReceiptPdf(receipt.data, res);
     } catch (error) {
       next(error);
     }

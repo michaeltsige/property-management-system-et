@@ -309,6 +309,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'payment.proof_approved': 'ማረጋገጫ ጸድቋል · ደረሰኝ {receipt}',
   'payment.proof_rejected': 'ማረጋገጫ ተቀንጥሷል።',
   'payment.proof_download': 'ማረጋገጫ አውርድ',
+  'payment.receipt_download': 'ደረሰኝ PDF',
 
   'maintenance.title': 'ጥገና',
   'maintenance.new_request': 'አዲስ ጥያቄ',

@@ -80,9 +80,32 @@ responses are `{ items, page, pageSize, total }`.
 | POST   | `/ledger/entries/:entryId/reverse` | `ledger.reverse`   | Exact negation; the original entry is never modified.                                                                                           |
 | POST   | `/payments`                        | `payments.write`   | Manual payment (cash, bank transfer, cheque) or provider-confirmed. Allocates oldest charge first.                                              |
 | GET    | `/payments`                        | `payments.read`    | Filters: `leaseId`, `method`, `status`, `from`, `to`.                                                                                           |
+| GET    | `/payments/proofs`                 | `payments.read`    | Tenant-submitted proofs of payment. Filter: `status=pending\|approved\|rejected`.                                                               |
+| POST   | `/payments/proofs/:id/approve`     | `payments.write`   | Records the payment through the same transactional core as manual recording, links the receipt, marks the proof approved. Double review → 409.  |
+| POST   | `/payments/proofs/:id/reject`      | `payments.write`   | `{ reason }` — the reason is visible to the tenant. No money is recorded.                                                                       |
+| GET    | `/payments/:paymentId/receipt.pdf` | `payments.read`    | Renders the receipt as a one-page PDF (pdfkit + embedded Noto Sans Ethiopic, ADR-0028). Only `succeeded` payments; others → 404.                |
 | POST   | `/payments/:paymentId/reverse`     | `payments.reverse` | Reason required. Double reversal → 409.                                                                                                         |
 
 Receipt numbers are sequential per organization and calendar year: `RCT-2026-000042`.
+
+### Tenant portal
+
+| Method | Path                                         | Permission   | Notes                                                                                                                        |
+| ------ | -------------------------------------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/tenants/:tenantId/portal`                  | `tenants.write` | Enrolls the tenant (OTP-only account); idempotent.                                                                        |
+| DELETE | `/tenants/:tenantId/portal`                  | `tenants.write` | Disables portal access.                                                                                                   |
+| POST   | `/portal/request-code`                       | (rate-limited) | `{ phone }` — identical answer for known and unknown numbers.                                                               |
+| POST   | `/portal/verify`                             | (rate-limited) | `{ phone, code }` → tenant-scoped session tokens.                                                                           |
+| GET    | `/portal/me`                                 | `portal.use` | Leases, outstanding balance and profile of the signed-in tenant.                                                              |
+| POST   | `/portal/payments/initiate`                  | `portal.pay` | `{ amountMinor? }` — creates a pending payment through the active provider and returns its checkout redirect. One live attempt per tenant: a new attempt supersedes the previous pending one. |
+| GET    | `/portal/payments/:providerRef`              | `portal.pay` | The payment attempt (amount, status). Other tenants' references are 404.                                                      |
+| POST   | `/portal/payments/:providerRef/complete`     | `portal.pay` | Re-verifies with the provider, then records the payment (oldest-first allocation, ledger, receipt). Double completion → 409.  |
+| GET    | `/portal/payments/:providerRef/receipt.pdf`  | `portal.pay` | The tenant's own receipt PDF; others' → 404.                                                                                  |
+| POST   | `/portal/payment-proofs`                     | `portal.pay` | `{ amount, method (manual only), reference?, notes?, filename, mimeType, dataBase64 }` — stores the slip as a pending proof.   |
+| GET    | `/portal/payment-proofs`                     | `portal.pay` | The tenant's own proofs with review status.                                                                                   |
+| GET    | `/portal/payment-proofs/:id/document`        | `portal.pay` | Downloads the tenant's own slip.                                                                                              |
+| POST   | `/portal/maintenance-requests`               | `portal.request_maintenance` | Files a work order against the tenant's active lease.                                                         |
+| GET    | `/portal/maintenance-requests`               | `portal.use` | The tenant's own requests.                                                                                                    |
 
 ## Operations
 

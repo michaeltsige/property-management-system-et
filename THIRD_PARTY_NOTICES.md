@@ -51,3 +51,11 @@ derivation of the upstream source, this file is the attribution.
 in `apps/web/src/app/globals.css` for development convenience. Production
 deployments should self-host the font and include the OFL license text — see
 `docs/DECISIONS.md` (ADR-0012).
+
+**Noto Sans Ethiopic** static instances (Regular and Bold, Google Fonts cut with
+Basic Latin coverage) are bundled at `apps/api/assets/fonts/` under the SIL Open
+Font License 1.1 (`apps/api/assets/fonts/OFL.txt`) and embedded into generated
+receipt PDFs — see `docs/DECISIONS.md` (ADR-0028).
+
+**pdfkit** (MIT) renders the server-side receipt PDFs in `apps/api`. Upstream:
+https://github.com/foliojs/pdfkit

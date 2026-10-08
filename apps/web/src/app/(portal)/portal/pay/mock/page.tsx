@@ -104,9 +104,19 @@ function MockCheckout() {
                     ) : null}
                   </div>
                   <p className="text-xs text-slate-500">{t('portal.payment_success_hint')}</p>
-                  <Link href="/portal">
-                    <Button className="w-full">{t('portal.back_to_portal')}</Button>
-                  </Link>
+                  <div className="space-y-2">
+                    <a
+                      href={`/api/v1/portal/payments/${encodeURIComponent(providerRef)}/receipt.pdf`}
+                      className="block"
+                    >
+                      <Button variant="secondary" className="w-full">
+                        {t('payment.receipt_download')}
+                      </Button>
+                    </a>
+                    <Link href="/portal">
+                      <Button className="w-full">{t('portal.back_to_portal')}</Button>
+                    </Link>
+                  </div>
                 </>
               ) : (
                 <>
