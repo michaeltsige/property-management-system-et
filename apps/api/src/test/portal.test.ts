@@ -2,6 +2,7 @@ import request from 'supertest';
 import { describe, expect, it } from 'vitest';
 import { createApp } from '../app.js';
 import { getPrisma } from '../lib/prisma.js';
+import { mockSmsProvider } from '../providers/sms/index.js';
 import { authHeader, createOrganizationFixture } from './helpers.js';
 const app = createApp();
 
@@ -69,6 +70,25 @@ describe('portal OTP login', () => {
       .expect(200);
     expect(known.body).toEqual({ ok: true });
     expect(await getPrisma().notification.count({ where: { organizationId: f.organizationId } })).toBe(0);
+  });
+  it('dispatches the code through the SMS provider and records the send', async () => {
+    // Regression: the OTP notification used to be created `queued` and never
+    // dispatched, so the code never appeared anywhere and login was impossible.
+    const f = await setupTenant();
+    await request(app).post(`/api/v1/tenants/${f.tenantId}/portal`).set(f.h).expect(201);
+    await request(app).post('/api/v1/portal/request-code').send({ phone: '0911234567' }).expect(200);
+    const notification = await getPrisma().notification.findFirstOrThrow({
+      where: { organizationId: f.organizationId, templateKey: 'notification.portal_otp' },
+      orderBy: { createdAt: 'desc' },
+    });
+    expect(notification.status).toBe('sent');
+    expect(notification.sentAt).not.toBeNull();
+    expect(notification.providerRef).toMatch(/^MOCK-SMS-/);
+    const code = (notification.payload as { code: string }).code;
+    expect(mockSmsProvider.outbox.at(-1)).toMatchObject({
+      to: '+251911234567',
+      body: expect.stringContaining(code),
+    });
   });
   it('verifies a fresh code exactly once and issues a tenant-scoped session', async () => {
     const f = await setupTenant();

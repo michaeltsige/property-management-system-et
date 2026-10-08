@@ -366,13 +366,19 @@ async function main(): Promise<void> {
   }
 
   if (shopCharge) {
+    // recordPayment requires a lease, a tenant or an explicit allocation to know
+    // whose debt this settles (see services/payments.ts) — name the charge.
+    const partialMinor = Math.round(Number(shopCharge.amountMinor) / 2);
     await recordPayment(prisma, {
       organizationId: organization.id,
-      amount: { amountMinor: Math.round(Number(shopCharge.amountMinor) / 2), currency: 'ETB' },
+      amount: { amountMinor: partialMinor, currency: 'ETB' },
       method: 'cash',
       paidAt: new Date(),
       reference: 'DEMO-CASH-0001',
       notes: 'Demo: partial cash payment',
+      allocations: [
+        { chargeId: shopCharge.id, amount: { amountMinor: partialMinor, currency: 'ETB' } },
+      ],
     });
   }
 

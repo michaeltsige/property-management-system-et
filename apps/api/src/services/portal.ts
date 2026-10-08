@@ -19,8 +19,11 @@ import type { PrismaClient } from '@prisma/client';
 
 import { badRequest, unauthenticated } from '../lib/errors.js';
 import { hashPassword } from '../lib/crypto.js';
+import { logger } from '../lib/logger.js';
+import { getSmsProvider } from '../providers/sms/index.js';
 import { recordAudit } from './audit.js';
 import type { PrismaLike } from './audit.js';
+import type { LanguageCode } from '@pms/calendar';
 
 export const OTP_TTL_MINUTES = 10;
 export const OTP_MAX_ATTEMPTS = 5;
@@ -77,8 +80,8 @@ export async function requestPortalCode(
     },
   });
 
-  const language = tenant.language ?? tenant.organization.language ?? 'en';
-  await prisma.notification.create({
+  const language = (tenant.language ?? tenant.organization.language ?? 'en') as LanguageCode;
+  const notification = await prisma.notification.create({
     data: {
       organizationId: tenant.organizationId,
       templateKey: 'notification.portal_otp',
@@ -90,6 +93,35 @@ export async function requestPortalCode(
       status: 'queued',
     },
   });
+
+  // Dispatch now, like every other SMS path (manual send, overdue sweep): the
+  // queued row alone used to sit forever because nothing drained the outbox,
+  // so the code never reached the tenant. A provider failure is recorded on the
+  // row and swallowed here — the response must stay `ok: true` either way, or
+  // the error would reveal that the number is enrolled.
+  try {
+    const result = await getSmsProvider().send({
+      to: phone,
+      templateKey: 'notification.portal_otp',
+      values: { code },
+      language,
+    });
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: {
+        status: result.status === 'sent' ? 'sent' : 'failed',
+        providerRef: result.providerRef ?? null,
+        sentAt: new Date(),
+        error: result.status === 'sent' ? null : (result.detail ?? null),
+      },
+    });
+  } catch (error) {
+    await prisma.notification.update({
+      where: { id: notification.id },
+      data: { status: 'failed', error: String(error) },
+    });
+    logger.warn({ err: error, notificationId: notification.id }, 'portal OTP SMS failed');
+  }
 
   await recordAudit(prisma, {
     organizationId: tenant.organizationId,
