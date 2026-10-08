@@ -16,7 +16,7 @@ Ethiopian property management system. Single pnpm + Turborepo monorepo.
 
 ## 2. Current State
 
-- **Last verified:** 2026-10-08, `main` = `ab6bff7`
+- **Last verified:** 2026-10-08, `main` = `5da6f27`
 - **Open PRs:** none
 - **Latest merges:** #38 UI polish (flat cards, stronger titles) · #37 Organization section (profile/team/translations, audited `PATCH /organizations/profile`) · #36 UX fixes (no staff-created maintenance requests, single-language region options, floor label) · #35 brand (real Addis Ababa photo login hero CC BY-SA 4.0, vector SVG logo) · #34 FEATURES.md
 - **Resolved owner questions:** tenant-portal login works only for enrolled tenants; demo seed = Almaz Bekele `+251911000001` (dial `0911000001`), OTP prints in worker log (mock SMS).
@@ -63,4 +63,4 @@ Ethiopian property management system. Single pnpm + Turborepo monorepo.
 
 | Date (local, EAT) | Prompt / action | Outcome |
 | --- | --- | --- |
-| 2026-10-08 | Owner: add this handoff doc and keep it updated after every prompt/action | Created `docs/AGENT_HANDOFF.md`; merged to `main` |
+| 2026-10-08 | Owner: add this handoff doc and keep it updated after every prompt/action | Created `docs/AGENT_HANDOFF.md`, merged to `main` via PR #39 (`5da6f27`) |
