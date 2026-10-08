@@ -7,13 +7,20 @@
  * Ethio Telecom to issue merchant credentials and the current public
  * documentation/SDK, including its RSA-signed request/response envelope.
  *
- * Until those are supplied, this adapter refuses to run rather than sending a
- * made-up request to a live payment endpoint. Every method that must talk to
- * Telebirr throws `ProviderNotConfiguredError` with the missing pieces listed.
+ * The structure around it is finished, though: an organization can already save
+ * its Telebirr merchant credentials (encrypted at rest) and the adapter resolves
+ * from them. Completing this adapter is then a pure code change inside
+ * `initiate/verify/...` — no schema, route or UI work remains.
+ *
+ * Until the official guide is supplied, this adapter refuses to run rather than
+ * sending a made-up request to a live payment endpoint. Every method that must
+ * talk to Telebirr throws `ProviderNotConfiguredError` with the missing pieces
+ * listed.
  *
  * WHAT IS NEEDED TO FINISH THIS ADAPTER
  * 1. Official integration guide + sandbox base URL and API version.
- * 2. Merchant credentials: app id, short code, app key, public/private key pair.
+ * 2. Merchant credentials: app id, short code, app key, public/private key pair —
+ *    saveable today via PUT /organizations/payment-gateway.
  * 3. The exact request envelope (field names, ordering and payload signature rules).
  * 4. The async notification (webhook) contract and its signature/verification rules.
  * 5. Refund/reversal API and its rules (partial refunds? deadlines?).
@@ -24,7 +31,6 @@
  * against the sandbox and record the doc revision in docs/REFERENCES.md.
  */
 
-import { getConfig } from '../../config.js';
 import {
   ProviderNotConfiguredError,
   type InitiatePaymentInput,
@@ -38,26 +44,44 @@ import {
   type WebhookEvent,
 } from './types.js';
 
+/** Credential names match `PAYMENT_GATEWAY_CREDENTIAL_FIELDS.telebirr` in @pms/shared. */
+export interface TelebirrCredentials {
+  appId?: string;
+  appKey?: string;
+  shortCode?: string;
+  publicKey?: string;
+  privateKey?: string;
+}
+
 export class TelebirrPaymentProvider implements PaymentProviderAdapter {
   readonly name = 'telebirr' as const;
 
+  constructor(private readonly credentials: TelebirrCredentials = {}) {}
+
   isConfigured(): boolean {
-    const config = getConfig();
     return Boolean(
-      config.TELEBIRR_APP_ID &&
-      config.TELEBIRR_APP_KEY &&
-      config.TELEBIRR_SHORT_CODE &&
-      config.TELEBIRR_PUBLIC_KEY &&
-      config.TELEBIRR_PRIVATE_KEY,
+      this.credentials.appId &&
+        this.credentials.appKey &&
+        this.credentials.shortCode &&
+        this.credentials.publicKey &&
+        this.credentials.privateKey,
     );
+  }
+
+  /** Field names an organization still has to save, for clear error messages. */
+  missingCredentials(): string[] {
+    const missing: string[] = [];
+    if (!this.credentials.appId) missing.push('appId');
+    if (!this.credentials.appKey) missing.push('appKey');
+    if (!this.credentials.shortCode) missing.push('shortCode');
+    if (!this.credentials.publicKey) missing.push('publicKey');
+    if (!this.credentials.privateKey) missing.push('privateKey');
+    return missing;
   }
 
   private assertConfigured(): void {
     if (!this.isConfigured()) {
-      throw new ProviderNotConfiguredError(
-        'telebirr',
-        'TELEBIRR_APP_ID, TELEBIRR_APP_KEY, TELEBIRR_SHORT_CODE, TELEBIRR_PUBLIC_KEY, TELEBIRR_PRIVATE_KEY',
-      );
+      throw new ProviderNotConfiguredError('telebirr', this.missingCredentials().join(', '));
     }
     // Credentials alone are not enough: the request envelope must come from the
     // official guide. This guard exists so that nobody "fills in the blanks".

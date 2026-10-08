@@ -8,7 +8,7 @@
 
 import type { PrismaClient } from '@prisma/client';
 
-import { DEFAULT_ORG_SETTINGS, type Role, type UpdateOrganizationSettings } from '@pms/shared';
+import { DEFAULT_ORG_SETTINGS, PAYMENT_GATEWAY_SETTING_KEY, type Role, type UpdateOrganizationSettings } from '@pms/shared';
 
 import { conflict, notFound } from '../lib/errors.js';
 import { hashPassword } from '../lib/crypto.js';
@@ -31,7 +31,12 @@ export async function getSettings(prisma: PrismaClient, organizationId: string):
   ]);
 
   const fromRows: Record<string, unknown> = {};
-  for (const row of rows) fromRows[row.key] = row.value;
+  for (const row of rows) {
+    // The payment gateway row holds encrypted merchant credentials and has its
+    // own masked endpoints — it must never ride along with generic settings.
+    if (row.key === PAYMENT_GATEWAY_SETTING_KEY) continue;
+    fromRows[row.key] = row.value;
+  }
 
   return {
     ...DEFAULT_ORG_SETTINGS,

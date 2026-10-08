@@ -9,6 +9,7 @@ import {
   inviteUserSchema,
   organizationSettingsSchema,
   paginationSchema,
+  paymentGatewayConfigSchema,
   updateMembershipSchema,
   updateOrganizationProfileSchema,
 } from '@pms/shared';
@@ -28,6 +29,7 @@ import {
   updateMembership,
   updateSettings,
 } from '../services/organizations.service.js';
+import { getGatewayStatus, resetGatewayConfig, saveGatewayConfig } from '../services/gateway.js';
 import type { Role } from '@pms/shared';
 
 export const organizationsRouter = Router();
@@ -192,6 +194,56 @@ organizationsRouter.post(
         },
       });
       res.status(201).json({ idType: created });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// --- payment gateway (per-organization provider configuration) ---------------
+// Responses never contain credential values — only set/missing state and a
+// `••••last4` hint. See services/gateway.ts for the secret-handling rules.
+
+organizationsRouter.get(
+  '/payment-gateway',
+  requirePermission('org.read'),
+  async (req, res, next) => {
+    try {
+      res.json({ gateway: await getGatewayStatus(getPrisma(), organizationIdOf(req)) });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+organizationsRouter.put(
+  '/payment-gateway',
+  requirePermission('org.settings.manage'),
+  validate({ body: paymentGatewayConfigSchema }),
+  async (req, res, next) => {
+    try {
+      const gateway = await saveGatewayConfig(getPrisma(), {
+        organizationId: organizationIdOf(req),
+        actorUserId: req.auth?.userId ?? '',
+        input: req.body,
+      });
+      res.json({ gateway });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+organizationsRouter.delete(
+  '/payment-gateway',
+  requirePermission('org.settings.manage'),
+  async (req, res, next) => {
+    try {
+      const gateway = await resetGatewayConfig(getPrisma(), {
+        organizationId: organizationIdOf(req),
+        actorUserId: req.auth?.userId ?? '',
+      });
+      res.json({ gateway });
     } catch (error) {
       next(error);
     }

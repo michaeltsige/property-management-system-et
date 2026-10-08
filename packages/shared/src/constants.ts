@@ -118,6 +118,54 @@ export const MANUAL_PAYMENT_METHODS: readonly PaymentMethod[] = ['cash', 'bank_t
 export const PAYMENT_STATUSES = ['pending', 'succeeded', 'failed', 'reversed', 'refunded'] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
+/**
+ * Payment gateway providers an organization can configure (Organization →
+ * Payment gateway). `mock` is the demo: a simulated checkout that moves no real
+ * money, used until the organization's business license + merchant credentials
+ * for a real gateway (Telebirr, Chapa) exist. The structure never changes —
+ * switching provider later is a settings edit, not a code change.
+ */
+export const PAYMENT_GATEWAY_PROVIDERS = ['mock', 'telebirr', 'chapa'] as const;
+export type PaymentGatewayProvider = (typeof PAYMENT_GATEWAY_PROVIDERS)[number];
+
+export const PAYMENT_GATEWAY_MODES = ['test', 'live'] as const;
+export type PaymentGatewayMode = (typeof PAYMENT_GATEWAY_MODES)[number];
+
+/**
+ * Credential fields per provider. Shared so the API validates exactly what the
+ * web form renders. `secret` fields are masked in every API response (only a
+ * `••••last4` hint comes back); `i18nKey` is the catalog key for the label.
+ * Real adapters stay unimplemented until the official integration is confirmed —
+ * storing credentials is safe, calling the provider is refused until then.
+ */
+export interface GatewayCredentialField {
+  key: string;
+  i18nKey: string;
+  secret: boolean;
+  required: boolean;
+}
+
+export const PAYMENT_GATEWAY_CREDENTIAL_FIELDS: Record<
+  PaymentGatewayProvider,
+  readonly GatewayCredentialField[]
+> = {
+  mock: [],
+  telebirr: [
+    { key: 'appId', i18nKey: 'org.gateway_field_app_id', secret: false, required: true },
+    { key: 'shortCode', i18nKey: 'org.gateway_field_short_code', secret: false, required: true },
+    { key: 'appKey', i18nKey: 'org.gateway_field_app_key', secret: true, required: true },
+    { key: 'publicKey', i18nKey: 'org.gateway_field_public_key', secret: true, required: true },
+    { key: 'privateKey', i18nKey: 'org.gateway_field_private_key', secret: true, required: true },
+  ],
+  chapa: [
+    { key: 'secretKey', i18nKey: 'org.gateway_field_secret_key', secret: true, required: true },
+    { key: 'webhookSecret', i18nKey: 'org.gateway_field_webhook_secret', secret: true, required: true },
+  ],
+};
+
+/** The setting row (OrganizationSetting key `payment_gateway`) is excluded from generic settings reads. */
+export const PAYMENT_GATEWAY_SETTING_KEY = 'payment_gateway';
+
 /** Review states of a tenant-submitted proof of payment. */
 export const PAYMENT_PROOF_STATUSES = ['pending', 'approved', 'rejected'] as const;
 export type PaymentProofStatus = (typeof PAYMENT_PROOF_STATUSES)[number];

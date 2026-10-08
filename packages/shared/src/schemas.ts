@@ -19,6 +19,8 @@ import {
   MANUAL_PAYMENT_METHODS,
   NOTIFICATION_CHANNELS,
   NOTIFICATION_TEMPLATE_KEYS,
+  PAYMENT_GATEWAY_MODES,
+  PAYMENT_GATEWAY_PROVIDERS,
   PAYMENT_METHODS,
   PAYMENT_PROOF_STATUSES,
   PROPERTY_TYPES,
@@ -29,6 +31,7 @@ import {
   WORK_ORDER_PRIORITIES,
   WORK_ORDER_STATUSES,
 } from './constants.js';
+import type { PaymentGatewayMode, PaymentGatewayProvider } from './constants.js';
 import { CURRENCIES } from './money.js';
 
 // ---------------------------------------------------------------------------
@@ -246,6 +249,44 @@ export const organizationSettingsSchema = z.object({
 });
 
 export type UpdateOrganizationSettings = z.infer<typeof organizationSettingsSchema>;
+
+// ---------------------------------------------------------------------------
+// Organization payment gateway (per-org provider configuration)
+// ---------------------------------------------------------------------------
+
+/**
+ * Body of `PUT /organizations/payment-gateway`. Credential values arrive in
+ * plaintext over TLS and are AES-256-GCM encrypted before they touch the
+ * database; only fields the user typed are sent — omitted fields keep their
+ * saved value (or stay unset). Key names are validated server-side against
+ * `PAYMENT_GATEWAY_CREDENTIAL_FIELDS` for the chosen provider.
+ */
+export const paymentGatewayConfigSchema = z
+  .object({
+    provider: z.enum(PAYMENT_GATEWAY_PROVIDERS),
+    mode: z.enum(PAYMENT_GATEWAY_MODES).default('test'),
+    credentials: z.record(z.string(), z.string().min(1).max(2000)).default({}),
+  })
+  .strict();
+
+export type PaymentGatewayConfigInput = z.infer<typeof paymentGatewayConfigSchema>;
+
+/**
+ * What `GET /organizations/payment-gateway` returns. Never contains a
+ * credential value — only whether each field is set and a `••••last4` hint.
+ * `source` says whether the effective provider comes from the organization's
+ * own configuration or the platform-wide environment default.
+ */
+export interface PaymentGatewayStatus {
+  provider: PaymentGatewayProvider;
+  source: 'organization' | 'platform';
+  mode: PaymentGatewayMode | null;
+  /** True when the effective provider has every credential it requires (always true for mock). */
+  configured: boolean;
+  /** Credential fields still missing for the effective provider. */
+  missing: string[];
+  credentials: Record<string, { configured: boolean; hint: string | null }>;
+}
 
 // ---------------------------------------------------------------------------
 // Portfolio
