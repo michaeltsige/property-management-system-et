@@ -33,6 +33,7 @@ import type {
   Notification,
   OccupancyRow,
   Payment,
+  PaymentProof,
   PortalCompletedPayment,
   PortalMe,
   PortalPaymentIntent,
@@ -322,6 +323,9 @@ export const api = {
       method: 'POST',
       body: {},
     }),
+  uploadPortalPaymentProof: (body: unknown) =>
+    apiFetch<{ proof: PaymentProof }>('/portal/payment-proofs', { method: 'POST', body }),
+  portalPaymentProofs: () => apiFetch<{ items: PaymentProof[] }>('/portal/payment-proofs'),
 
   leases: () => apiFetch<{ leases: LeaseSummary[] }>('/leases'),
   lease: (id: string) => apiFetch<{ lease: LeaseDetail; balanceMinor: string }>(`/leases/${id}`),
@@ -341,6 +345,18 @@ export const api = {
   payments: (query = '') => apiFetch<{ items: Payment[]; total: number }>(`/payments${query}`),
   recordPayment: (body: unknown) =>
     apiFetch<{ paymentId: string; receiptNumber: string }>('/payments', { method: 'POST', body }),
+  paymentProofs: (query = '') =>
+    apiFetch<{ items: PaymentProof[]; total: number }>(`/payments/proofs${query}`),
+  approvePaymentProof: (proofId: string, notes?: string) =>
+    apiFetch<{ proof: PaymentProof; payment: { paymentId: string; receiptNumber: string } }>(
+      `/payments/proofs/${proofId}/approve`,
+      { method: 'POST', body: { notes } },
+    ),
+  rejectPaymentProof: (proofId: string, reason: string) =>
+    apiFetch<{ proof: PaymentProof }>(`/payments/proofs/${proofId}/reject`, {
+      method: 'POST',
+      body: { reason },
+    }),
   reversePayment: (paymentId: string, reason: string) =>
     apiFetch<{ payment: Payment }>(`/payments/${paymentId}/reverse`, { method: 'POST', body: { reason } }),
   statement: (leaseId: string) =>

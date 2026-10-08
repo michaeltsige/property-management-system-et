@@ -79,7 +79,7 @@ export async function recordPayment(
 
   for (let attempt = 0; attempt <= MAX_SERIALIZATION_RETRIES; attempt += 1) {
     try {
-      return await prisma.$transaction(runRecording(input), { isolationLevel: 'Serializable' });
+      return await prisma.$transaction(recordPaymentInTx(input), { isolationLevel: 'Serializable' });
     } catch (error) {
       const isSerializationFailure =
         error instanceof PrismaNamespace.PrismaClientKnownRequestError && error.code === 'P2034';
@@ -90,7 +90,13 @@ export async function recordPayment(
   throw conflict('Could not record the payment after several attempts; please retry');
 }
 
-function runRecording(input: RecordPaymentInput) {
+/**
+ * The transactional core of recording a payment. Exposed so other flows that
+ * must record a payment **inside their own transaction** (approving a proof of
+ * payment) share exactly one implementation — two code paths that create
+ * payments is how the books drift.
+ */
+export function recordPaymentInTx(input: RecordPaymentInput) {
   return async (tx: Prisma.TransactionClient): Promise<RecordedPayment> => {
     let lease = input.leaseId
       ? await tx.lease.findFirst({

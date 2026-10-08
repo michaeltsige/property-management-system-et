@@ -118,6 +118,10 @@ export const MANUAL_PAYMENT_METHODS: readonly PaymentMethod[] = ['cash', 'bank_t
 export const PAYMENT_STATUSES = ['pending', 'succeeded', 'failed', 'reversed', 'refunded'] as const;
 export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
 
+/** Review states of a tenant-submitted proof of payment. */
+export const PAYMENT_PROOF_STATUSES = ['pending', 'approved', 'rejected'] as const;
+export type PaymentProofStatus = (typeof PAYMENT_PROOF_STATUSES)[number];
+
 /** Ledger entry kinds. The ledger is append-only; corrections are reversals. */
 export const LEDGER_ENTRY_KINDS = [
   'charge',
@@ -168,6 +172,7 @@ export const DOCUMENT_CATEGORIES = [
   'lease_agreement',
   'id_document',
   'payment_receipt',
+  'payment_proof',
   'invoice',
   'inspection_report',
   'maintenance_photo',

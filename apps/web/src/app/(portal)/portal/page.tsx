@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { Logo } from '@/components/logo';
+import { PortalPaymentProofs } from '@/components/portal-proofs';
 import { api } from '@/lib/api';
 import { formatAmount, formatDate, statusTone } from '@/lib/format';
 import { useAction, useAsync } from '@/lib/hooks';
@@ -253,6 +254,8 @@ export default function PortalPage() {
                 </form>
               </CardContent>
             </Card>
+
+            <PortalPaymentProofs currency={session.organization.currency} />
 
             <Card>
               <CardContent className="p-0">

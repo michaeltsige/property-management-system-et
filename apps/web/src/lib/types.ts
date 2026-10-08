@@ -386,3 +386,24 @@ export interface PortalCompletedPayment {
   allocations: { chargeId: string; amountMinor: string }[];
   status: string;
 }
+
+/** A tenant-submitted proof of payment awaiting staff review. */
+export interface PaymentProof {
+  id: string;
+  organizationId: string;
+  tenantId: string;
+  leaseId: string | null;
+  documentId: string;
+  amountMinor: string;
+  currency: string;
+  method: string;
+  reference: string | null;
+  notes: string | null;
+  status: string;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
+  paymentId: string | null;
+  createdAt: string;
+  tenant?: { id: string; fullName: string; phone: string | null };
+  document?: { id: string; filename: string; mimeType: string; sizeBytes: number };
+}

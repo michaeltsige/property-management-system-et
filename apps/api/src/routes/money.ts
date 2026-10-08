@@ -9,6 +9,9 @@ import {
   generateChargesSchema,
   moneySchema,
   paginationSchema,
+  paymentProofApprovalSchema,
+  paymentProofListQuerySchema,
+  paymentProofRejectionSchema,
   recordManualPaymentSchema,
   reverseLedgerEntrySchema,
   uuidSchema,
@@ -23,6 +26,11 @@ import { num, pstr, str } from '../lib/query.js';
 import { balanceMinor, leaseStatement, reverseEntry } from '../services/ledger.js';
 import { createDepositCharge, generateCharges, waiveCharge } from '../services/charges.js';
 import { recordPayment, reversePayment } from '../services/payments.js';
+import {
+  approvePaymentProof,
+  listPaymentProofs,
+  rejectPaymentProof,
+} from '../services/payment-proofs.js';
 
 export const moneyRouter = Router();
 moneyRouter.use(requireAuth);
@@ -315,6 +323,81 @@ moneyRouter.post(
         actorUserId: req.auth?.userId ?? null,
       });
       res.json({ payment });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
+// Proofs of payment (uploaded by tenants, reviewed by staff)
+// ---------------------------------------------------------------------------
+
+moneyRouter.get(
+  '/payments/proofs',
+  requirePermission('payments.read'),
+  validate({ query: paymentProofListQuerySchema }),
+  async (req, res, next) => {
+    try {
+      const result = await listPaymentProofs(getPrisma(), {
+        organizationId: organizationIdOf(req),
+        status: str(req.query.status) || undefined,
+        page: num(req.query.page, 1),
+        pageSize: num(req.query.pageSize, 25),
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+moneyRouter.post(
+  '/payments/proofs/:proofId/approve',
+  requirePermission('payments.record'),
+  validate({
+    params: z.object({ proofId: uuidSchema }),
+    body: paymentProofApprovalSchema,
+  }),
+  async (req, res, next) => {
+    try {
+      const result = await approvePaymentProof(getPrisma(), {
+        organizationId: organizationIdOf(req),
+        proofId: pstr(req, 'proofId'),
+        actorUserId: req.auth?.userId ?? null,
+        notes: req.body.notes ?? null,
+      });
+      res.json({
+        proof: result.proof,
+        payment: {
+          paymentId: result.payment.paymentId,
+          receiptNumber: result.payment.receiptNumber,
+          allocatedMinor: result.payment.allocatedMinor.toString(),
+          unallocatedMinor: result.payment.unallocatedMinor.toString(),
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+moneyRouter.post(
+  '/payments/proofs/:proofId/reject',
+  requirePermission('payments.record'),
+  validate({
+    params: z.object({ proofId: uuidSchema }),
+    body: paymentProofRejectionSchema,
+  }),
+  async (req, res, next) => {
+    try {
+      const result = await rejectPaymentProof(getPrisma(), {
+        organizationId: organizationIdOf(req),
+        proofId: pstr(req, 'proofId'),
+        actorUserId: req.auth?.userId ?? null,
+        reason: req.body.reason,
+      });
+      res.json(result);
     } catch (error) {
       next(error);
     }

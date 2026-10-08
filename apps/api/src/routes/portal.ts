@@ -3,6 +3,7 @@ import { z } from 'zod';
 import {
   portalMaintenanceRequestSchema,
   portalPaymentInitiateSchema,
+  portalPaymentProofUploadSchema,
   portalRequestSchema,
   portalVerifySchema,
   uuidSchema,
@@ -21,6 +22,12 @@ import {
   getPortalPaymentIntent,
   initiatePortalPayment,
 } from '../services/payments.js';
+import {
+  getPortalProofDocument,
+  listPortalPaymentProofs,
+  uploadPaymentProof,
+} from '../services/payment-proofs.js';
+import { getStorageDriver } from '../storage/index.js';
 import {
   disableTenantPortal,
   enrollTenantPortal,
@@ -268,6 +275,80 @@ portalRouter.post(
         unallocatedMinor: result.unallocatedMinor.toString(),
         allocations: result.allocations.map((a) => ({ ...a, amountMinor: a.amountMinor.toString() })),
       });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// --- proofs of payment (tenant uploads, staff review) -----------------------
+
+portalRouter.post(
+  '/portal/payment-proofs',
+  requireAuth,
+  requirePermission('portal.pay'),
+  validate({ body: portalPaymentProofUploadSchema }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      const proof = await uploadPaymentProof(prisma, {
+        organizationId: tenant.organizationId,
+        tenantId: tenant.id,
+        actorUserId: req.auth?.userId ?? null,
+        amount: req.body.amount,
+        method: req.body.method,
+        reference: req.body.reference ?? null,
+        notes: req.body.notes ?? null,
+        filename: req.body.filename,
+        mimeType: req.body.mimeType,
+        data: Buffer.from(req.body.dataBase64, 'base64'),
+        requestId: req.requestId,
+      });
+      res.status(201).json({ proof });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+portalRouter.get(
+  '/portal/payment-proofs',
+  requireAuth,
+  requirePermission('portal.pay'),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      const items = await listPortalPaymentProofs(prisma, {
+        organizationId: tenant.organizationId,
+        tenantId: tenant.id,
+      });
+      res.json({ items });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+portalRouter.get(
+  '/portal/payment-proofs/:proofId/document',
+  requireAuth,
+  requirePermission('portal.pay'),
+  validate({ params: z.object({ proofId: uuidSchema }) }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      const document = await getPortalProofDocument(prisma, {
+        organizationId: tenant.organizationId,
+        tenantId: tenant.id,
+        proofId: String(req.params.proofId ?? ''),
+      });
+      const stream = await getStorageDriver().stream(document.storageKey);
+      res.setHeader('Content-Type', document.mimeType);
+      res.setHeader('Content-Disposition', `attachment; filename="${document.id}"`);
+      stream.pipe(res);
     } catch (error) {
       next(error);
     }
