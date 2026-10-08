@@ -49,10 +49,6 @@ describe('portal payment proofs section', () => {
         createdAt: new Date().toISOString(),
       },
     });
-    const reload = vi.fn();
-    vi.mocked(api.portalPaymentProofs).mockReturnValue(
-      Promise.resolve({ items: [] }) as never,
-    );
     const user = userEvent.setup();
     render(<PortalPaymentProofs currency="ETB" />);
 
