@@ -41,22 +41,23 @@ export default function LoginPage() {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center px-4">
-      {/* Addis Ababa at golden hour; the overlay keeps text readable (WCAG). */}
+      {/* Addis Ababa at golden hour; the flat dark overlay keeps text readable
+          (WCAG) without decorative gradients. */}
       <div
         aria-hidden="true"
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/images/login-hero.jpg')" }}
       />
-      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-900/55 to-slate-900/30" />
+      <div aria-hidden="true" className="absolute inset-0 bg-ink-950/60" />
       <div className="relative w-full max-w-sm">
         <div className="mb-6 text-center">
-          <Logo size={52} className="mx-auto mb-3 drop-shadow-md" />
+          <Logo size={52} className="mx-auto mb-3" />
           <h1 className="text-lg font-semibold text-white">{t('app.name')}</h1>
-          <p className="text-xs text-white/70">{t('app.tagline')}</p>
+          <p className="mt-1 text-xs text-white/70">{t('app.tagline')}</p>
         </div>
 
-        <Card>
-          <CardContent>
+        <Card className="shadow-xl">
+          <CardContent className="py-2">
             <form className="space-y-4" onSubmit={onSubmit}>
               <div className="space-y-1">
                 <Label htmlFor="email">{t('auth.email')}</Label>

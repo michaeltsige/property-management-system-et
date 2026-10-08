@@ -438,6 +438,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'dashboard.open_work_orders': 'Suphaa banaa',
   'dashboard.collections_trend': 'Galii ji’oota darbanii',
   'dashboard.rent_this_period': 'Yaalamu fi waliigale',
+  'dashboard.collection_rate': 'Kana yaalamu kiraa irraa {rate}%',
+  'dashboard.advance_payments': 'Kaffalaa duraa dabalata',
   'reports.title': 'Gabaasa',
   'reports.rent_roll': 'Tarreeffama kiraa',
   'reports.arrears': 'Umurii idaa',

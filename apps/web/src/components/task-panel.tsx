@@ -62,11 +62,8 @@ export function TaskPanel() {
   if (tasks.length === 0) return null;
 
   return (
-    <section aria-labelledby="task-panel" className="border-b border-slate-200 px-3 py-3">
-      <p
-        id="task-panel"
-        className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-500"
-      >
+    <section aria-labelledby="task-panel" className="border-b border-white/10 px-3 py-3">
+      <p id="task-panel" className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
         {t('tasks.title')}
       </p>
       <ul className="space-y-0.5">
@@ -76,14 +73,14 @@ export function TaskPanel() {
             <li key={task.href}>
               <Link
                 href={task.href}
-                className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm text-slate-600 hover:bg-slate-100"
+                className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
               >
                 <span className="flex items-center gap-2">
-                  <Icon className="h-4 w-4" aria-hidden="true" />
+                  <Icon className="h-4 w-4 text-slate-400" aria-hidden="true" />
                   {task.label}
                 </span>
                 {task.count > 0 && (
-                  <span className="rounded-full bg-amber-100 px-2 text-xs font-semibold text-amber-800">
+                  <span className="rounded-md bg-amber-400/15 px-1.5 text-xs font-semibold text-amber-300">
                     {task.count}
                   </span>
                 )}
