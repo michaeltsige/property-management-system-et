@@ -314,6 +314,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'payment.proof_approved': 'Rasiifiin mirkanaa\'e · rasiifii {receipt}',
   'payment.proof_rejected': 'Rasiifiin dhabame.',
   'payment.proof_download': 'Rasiifii buufi',
+  'payment.receipt_download': 'Rasiifii PDF',
 
   'maintenance.title': 'Suphaa',
   'maintenance.new_request': 'Gaaffii haaraa',

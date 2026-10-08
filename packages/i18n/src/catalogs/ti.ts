@@ -308,6 +308,7 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'payment.proof_approved': 'ሪሲት ተረጋጊጡ · ሪሲት {receipt}',
   'payment.proof_rejected': 'ሪሲት ተሰሪዙ።',
   'payment.proof_download': 'ሪሲት ኣውርድ',
+  'payment.receipt_download': 'ሪሲት PDF',
 
   'maintenance.title': 'ጽገና',
   'maintenance.new_request': 'ሓድሽ ሕቶ',

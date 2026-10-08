@@ -555,7 +555,9 @@ next step is not more guessing but a report of exactly what the browser saw.
 - **Mobile app** (`apps/mobile`, Expo): the API already supports it; deliberately not
   started in Phase 1.
 - **S3 storage driver**: interface exists, driver deferred (ADR-0013).
-- **PDF receipts/statements**: needs a font-embedding decision for Ethiopic script.
+- **PDF receipts/statements**: ~~needs a font-embedding decision for Ethiopic
+  script~~ **decided — see ADR-0028** (pdfkit + embedded Noto Sans Ethiopic;
+  receipts shipped, statements can follow the same pattern).
 - **Multi-currency**: the model has one currency per organization this phase; a
   lease whose currency differs from the organization's is rejected. Real multi-currency
   would need exchange-rate history and a decision on which rate a payment uses.
@@ -733,3 +735,33 @@ each read writes an `read_id` audit row carrying actor, type and last four —
 never the number. Staff review toggles `verifiedAt` via a `tenants.write`
 endpoint with `verify` audit rows. Cross-organization access returns 404 so
 other organizations' documents are not even acknowledged.
+
+---
+
+## ADR-0028 — PDF receipts: pdfkit with embedded Noto Sans Ethiopic
+
+Accepted 2026-10-08 (implements the deferred "PDF receipts/statements" decision;
+the roadmap's payments item explicitly asked for PDFs).
+
+**Decision.** Server-side PDF generation uses **pdfkit** (MIT, pure JS — no
+native dependencies, no headless browser) with the **Noto Sans Ethiopic** static
+instances (Regular + Bold) bundled at `apps/api/assets/fonts/` and embedded
+(subsetted) into every generated file. The fonts are the Google Fonts cut,
+which carries Basic Latin in addition to Ethiopic, so a receipt renders
+"አልማዝ በቀለ (Almaz Bekele)" in one typeface without per-run font switching.
+
+**Why.** A receipt is a legal record; names arrive in Amharic and the standing
+rule forbids transliteration or placeholder glyphs. Embedding the same family the
+web app uses (ADR-0012) keeps rendering consistent and resolves the font-embedding
+question that deferred this feature: no system fonts are relied on, so the PDF
+renders identically everywhere, and the OFL 1.1 license text ships next to the
+files with attribution in `THIRD_PARTY_NOTICES.md`.
+
+**Consequences.**
+- Receipts are the first document type; lease statements and reports can reuse
+  `apps/api/src/lib/pdf.ts` + the bundled fonts.
+- Only Latin + Ethiopic are covered today; other scripts (Arabic, Tigrigna
+  Geʽez punctuation is covered by Ethiopic blocks) would need an additional
+  Noto family following the same pattern.
+- The fonts add ~730 KB to the repository and pdfkit ~1 MB to `node_modules`;
+  PDFs themselves are small (~12 KB) because pdfkit subsets the font.

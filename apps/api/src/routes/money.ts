@@ -31,6 +31,8 @@ import {
   listPaymentProofs,
   rejectPaymentProof,
 } from '../services/payment-proofs.js';
+import { buildPaymentReceipt } from '../services/receipts.js';
+import { renderReceiptPdf } from '../lib/pdf.js';
 
 export const moneyRouter = Router();
 moneyRouter.use(requireAuth);
@@ -346,6 +348,25 @@ moneyRouter.get(
         pageSize: num(req.query.pageSize, 25),
       });
       res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+moneyRouter.get(
+  '/payments/:paymentId/receipt.pdf',
+  requirePermission('payments.read'),
+  validate({ params: z.object({ paymentId: uuidSchema }) }),
+  async (req, res, next) => {
+    try {
+      const receipt = await buildPaymentReceipt(getPrisma(), {
+        organizationId: organizationIdOf(req),
+        paymentId: pstr(req, 'paymentId'),
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${receipt.filename}"`);
+      await renderReceiptPdf(receipt.data, res);
     } catch (error) {
       next(error);
     }

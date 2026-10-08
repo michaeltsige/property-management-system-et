@@ -473,6 +473,7 @@ export const EN_CATALOG = {
   'payment.proof_approved': 'Proof approved · receipt {receipt}',
   'payment.proof_rejected': 'Proof rejected.',
   'payment.proof_download': 'Download slip',
+  'payment.receipt_download': 'Receipt PDF',
   'offline.title': 'You are offline',
   'offline.body':
     'The connection dropped. Pages you loaded earlier are still here; reconnect for fresh figures.',

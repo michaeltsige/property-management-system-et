@@ -89,6 +89,20 @@ export default function PaymentsPage() {
     }).catch(() => undefined);
   }
 
+  async function downloadReceipt(paymentId: string) {
+    const response = await fetch(`/api/v1/payments/${paymentId}/receipt.pdf`, {
+      credentials: 'same-origin',
+    });
+    if (!response.ok) return;
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'receipt.pdf';
+    anchor.click();
+    URL.revokeObjectURL(url);
+  }
+
   const rows = payments.data?.items ?? [];
 
   return (
@@ -176,11 +190,26 @@ export default function PaymentsPage() {
                       </Badge>
                     </Td>
                     <Td>
-                      {payment.status === 'succeeded' ? (
-                        <Button variant="ghost" size="sm" onClick={() => setReverseTarget(payment.id)}>
-                          {t('payment.reverse')}
-                        </Button>
-                      ) : null}
+                      <div className="flex justify-end gap-1">
+                        {payment.status === 'succeeded' ? (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void downloadReceipt(payment.id)}
+                            >
+                              {t('payment.receipt_download')}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setReverseTarget(payment.id)}
+                            >
+                              {t('payment.reverse')}
+                            </Button>
+                          </>
+                        ) : null}
+                      </div>
                     </Td>
                   </tr>
                 ))}
