@@ -182,6 +182,18 @@ export const EN_CATALOG = {
   'portal.maintenance_hint': 'Report an issue in your home and your landlord will follow up here.',
   'portal.new_maintenance_request': 'Report an issue',
   'portal.maintenance_submitted': 'Request sent — your landlord will follow up here.',
+  // Tenant portal online payment; non-English entries are unreviewed machine drafts.
+  'portal.pay_now': 'Pay now',
+  'portal.pay_hint': 'Pay your outstanding balance online.',
+  'portal.pay_starting': 'Starting payment…',
+  'portal.mock_title': 'Mock checkout',
+  'portal.mock_hint': 'This is a simulated payment provider page for development. No real money moves.',
+  'portal.mock_confirm': 'Confirm payment',
+  'portal.mock_cancel': 'Cancel and go back',
+  'portal.payment_success': 'Payment received',
+  'portal.payment_receipt': 'Receipt {receipt}',
+  'portal.payment_success_hint': 'Your payment is recorded with your landlord immediately.',
+  'portal.back_to_portal': 'Back to portal',
   'tenant.portal': 'Portal',
   'tenant.portal_enable': 'Enable portal',
   'tenant.portal_disable': 'Disable portal',
@@ -288,6 +300,7 @@ export const EN_CATALOG = {
   'payment.method.telebirr': 'Telebirr',
   'payment.method.chapa': 'Chapa',
   'payment.method.cbe_birr': 'CBE Birr',
+  'payment.method.mock': 'Mock (demo)',
   'payment.method.other': 'Other',
 
   // --- maintenance --------------------------------------------------------

@@ -407,12 +407,24 @@ export const reverseLedgerEntrySchema = z.object({
   reason: z.string().trim().min(3).max(500),
 });
 
-export const initiateOnlinePaymentSchema = z.object({
-  chargeId: uuidSchema,
-  amount: moneySchema,
-  provider: z.enum(['mock', 'telebirr', 'chapa']),
-  returnUrl: z.string().url().optional(),
-});
+/**
+ * Tenant portal payments. The tenant starts a provider payment for their
+ * outstanding balance; completing it re-verifies with the provider before any
+ * money is recorded (see services/payments.ts in the API).
+ */
+export const portalPaymentInitiateSchema = z
+  .object({
+    /** Amount in minor units. Omitted means "the full outstanding balance". */
+    amountMinor: z
+      .string()
+      .regex(/^\d{1,12}$/, 'Enter a whole amount in minor units')
+      .refine((v) => BigInt(v) > 0n, { message: 'Amount must be greater than zero' })
+      .optional(),
+  })
+  .strict();
+
+/** The completion body is empty on purpose: everything is derived from the URL reference. */
+export const portalPaymentCompleteSchema = z.object({}).strict();
 
 // ---------------------------------------------------------------------------
 // Maintenance

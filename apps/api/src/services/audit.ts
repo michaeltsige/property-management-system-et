@@ -25,6 +25,8 @@ export interface AuditEvent {
     | 'reversal'
     | 'generate'
     | 'verify'
+    | 'initiate'
+    | 'complete'
     | 'read_id';
   entityType: string;
   entityId?: string | null;

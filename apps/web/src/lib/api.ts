@@ -33,7 +33,9 @@ import type {
   Notification,
   OccupancyRow,
   Payment,
+  PortalCompletedPayment,
   PortalMe,
+  PortalPaymentIntent,
   Property,
   RentRoll,
   StatementLine,
@@ -308,6 +310,19 @@ export const api = {
     apiFetch<{ enrolled: boolean }>(`/tenants/${tenantId}/portal`, { method: 'DELETE' }),
   /** What a signed-in tenant sees on their portal page. */
   portalMe: () => apiFetch<PortalMe>('/portal/me'),
+
+  // --- tenant portal payments -----------------------------------------------
+  // The intent lives server-side; the browser only ever sees the reference.
+  portalInitiatePayment: (body: { amountMinor?: string } = {}) =>
+    apiFetch<PortalPaymentIntent>('/portal/payments/initiate', { method: 'POST', body }),
+  portalPaymentIntent: (providerRef: string) =>
+    apiFetch<PortalPaymentIntent>(`/portal/payments/${encodeURIComponent(providerRef)}`),
+  portalCompletePayment: (providerRef: string) =>
+    apiFetch<PortalCompletedPayment>(`/portal/payments/${encodeURIComponent(providerRef)}/complete`, {
+      method: 'POST',
+      body: {},
+    }),
+
   leases: () => apiFetch<{ leases: LeaseSummary[] }>('/leases'),
   lease: (id: string) => apiFetch<{ lease: LeaseDetail; balanceMinor: string }>(`/leases/${id}`),
   createLease: (body: unknown) => apiFetch<{ lease: LeaseDetail }>('/leases', { method: 'POST', body }),
