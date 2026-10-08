@@ -62,6 +62,12 @@ export async function recordPayment(
   input: RecordPaymentInput,
 ): Promise<RecordedPayment> {
   if (input.amount.amountMinor <= 0) throw businessRule('Payment amount must be greater than zero');
+  // Without a lease, a tenant, or explicit allocations there is no way to know
+  // whose debt this settles — silently picking "the newest active lease" would
+  // credit the wrong tenant.
+  if (!input.leaseId && !input.tenantId && !input.allocations?.length) {
+    throw businessRule('A payment needs a lease, a tenant, or an explicit allocation');
+  }
 
   if (!input.provider && !MANUAL_PAYMENT_METHODS.includes(input.method) && input.method !== 'other') {
     throw businessRule(
@@ -84,20 +90,37 @@ export async function recordPayment(
 
 function runRecording(input: RecordPaymentInput) {
   return async (tx: Prisma.TransactionClient): Promise<RecordedPayment> => {
-    const lease = input.leaseId
+    let lease = input.leaseId
       ? await tx.lease.findFirst({
           where: { id: input.leaseId, organizationId: input.organizationId, deletedAt: null },
         })
-      : await tx.lease.findFirst({
-          where: {
-            organizationId: input.organizationId,
-            tenantId: input.tenantId ?? undefined,
-            status: 'active',
-          },
-          orderBy: { startDate: 'desc' },
-        });
+      : input.tenantId
+        ? await tx.lease.findFirst({
+            where: {
+              organizationId: input.organizationId,
+              tenantId: input.tenantId,
+              status: 'active',
+            },
+            orderBy: { startDate: 'desc' },
+          })
+        : null;
 
     if (input.leaseId && !lease) throw notFound('Lease not found in this organization');
+
+    // Allocations identify their own lease when no lease/tenant was stated.
+    if (!lease && input.allocations?.length) {
+      const firstAllocation = input.allocations[0];
+      if (!firstAllocation) throw notFound('Charge not found in this organization');
+      const anchor = await tx.charge.findFirst({
+        where: { id: firstAllocation.chargeId, organizationId: input.organizationId },
+        select: { leaseId: true },
+      });
+      if (anchor?.leaseId) {
+        lease = await tx.lease.findFirst({
+          where: { id: anchor.leaseId, organizationId: input.organizationId, deletedAt: null },
+        });
+      }
+    }
 
     const target = input.allocations?.length
       ? await loadChargesByIds(
@@ -126,6 +149,9 @@ function runRecording(input: RecordPaymentInput) {
         }
         const charge = target.find((c) => c.id === requested.chargeId);
         if (!charge) throw notFound('Charge not found in this organization');
+        if (charge.status === 'waived' || charge.status === 'written_off') {
+          throw conflict('A waived or written-off charge cannot be paid');
+        }
         const outstanding = charge.amountMinor - charge.paidMinor;
         if (outstanding <= 0n) throw conflict('That charge is already fully paid');
         const amount = BigInt(requested.amount.amountMinor);

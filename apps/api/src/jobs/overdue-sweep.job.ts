@@ -14,6 +14,7 @@ import { formatCivilDate, utcDateToCivil, type CalendarKind, type LanguageCode }
 
 import { logger } from '../lib/logger.js';
 import { getSmsProvider } from '../providers/sms/index.js';
+import { applyLateFees } from '../services/charges.js';
 
 export interface OverdueSweepPayload {
   organizationId?: string;
@@ -24,6 +25,7 @@ export interface OverdueSweepResult {
   notificationsQueued: number;
   smsSent: number;
   smsFailed: number;
+  lateFeesApplied: number;
 }
 
 export async function runOverdueSweep(
@@ -31,7 +33,13 @@ export async function runOverdueSweep(
   payload: OverdueSweepPayload = {},
   now: Date = new Date(),
 ): Promise<OverdueSweepResult> {
-  const result: OverdueSweepResult = { chargesScanned: 0, notificationsQueued: 0, smsSent: 0, smsFailed: 0 };
+  const result: OverdueSweepResult = {
+    chargesScanned: 0,
+    notificationsQueued: 0,
+    smsSent: 0,
+    smsFailed: 0,
+    lateFeesApplied: 0,
+  };
   const sms = getSmsProvider();
 
   const organizations = await prisma.organization.findMany({
@@ -48,6 +56,23 @@ export async function runOverdueSweep(
     });
     const settings: Record<string, unknown> = { ...DEFAULT_ORG_SETTINGS };
     for (const row of settingsRows) settings[row.key] = row.value;
+
+    // Late fees run even when reminders are switched off: one is about money
+    // the lease agreed to, the other is about messaging.
+    const lateFeeResult = await applyLateFees(
+      prisma,
+      organization.id,
+      {
+        lateFeeEnabled: settings.lateFeeEnabled !== false && settings.lateFeeEnabled !== undefined,
+        lateFeeType: settings.lateFeeType === 'fixed' ? 'fixed' : 'percent',
+        lateFeePercent: Number(settings.lateFeePercent ?? 0),
+        lateFeeFixedMinor: Number(settings.lateFeeFixedMinor ?? 0),
+        gracePeriodDays: Number(settings.gracePeriodDays ?? 0),
+      },
+      now,
+    );
+    result.lateFeesApplied += lateFeeResult.applied;
+
     if (settings.overdueRemindersEnabled === false) continue;
 
     const everyDays = Number(

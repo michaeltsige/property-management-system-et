@@ -34,6 +34,7 @@ import { decryptField, encryptField, lastFour } from '../lib/crypto.js';
 import { pstr, str } from '../lib/query.js';
 import { getPrisma } from '../lib/prisma.js';
 import { balanceMinor, postLedgerEntry } from '../services/ledger.js';
+import { createDepositChargeInTx } from '../services/charges.js';
 import { getSettings } from '../services/organizations.service.js';
 import { resolveOwner, checkBuilding } from '../services/hierarchy.js';
 import { recordAudit } from '../services/audit.js';
@@ -698,6 +699,20 @@ portfolioRouter.post(
           await tx.unit.update({ where: { id: unit.id }, data: { status: 'occupied' } });
         }
 
+        // Deposit becomes a real charge on the same transaction so it cannot be
+        // forgotten: the UI already collects it, but without a charge it never
+        // appeared in the ledger or arrears.
+        if (depositAmountMinor !== null && BigInt(depositAmountMinor) > 0n) {
+          await createDepositChargeInTx(tx, {
+            organizationId,
+            leaseId: created.id,
+            amountMinor: BigInt(depositAmountMinor),
+            currency: req.body.rentAmount.currency,
+            actorUserId: req.auth?.userId ?? null,
+            dueDate: startDate,
+          });
+        }
+
         await recordAudit(tx, {
           organizationId,
           actorUserId: req.auth?.userId,
@@ -737,13 +752,17 @@ portfolioRouter.get('/leases', requirePermission('leases.read'), async (req, res
       orderBy: { createdAt: 'desc' },
     });
 
-    // Attach the ledger balance so the list screen does not need N extra calls.
-    const withBalances = await Promise.all(
-      leases.map(async (lease) => ({
-        ...lease,
-        balanceMinor: (await balanceMinor(prisma, { organizationId, leaseId: lease.id })).toString(),
-      })),
-    );
+    // One aggregate for all leases beats N round-trips; the list can have hundreds.
+    const balances = await prisma.ledgerEntry.groupBy({
+      by: ['leaseId'],
+      where: { organizationId, leaseId: { in: leases.map((l) => l.id) } },
+      _sum: { amountMinor: true },
+    });
+    const balanceByLease = new Map(balances.map((b) => [b.leaseId, b._sum.amountMinor ?? 0n]));
+    const withBalances = leases.map((lease) => ({
+      ...lease,
+      balanceMinor: (balanceByLease.get(lease.id) ?? 0n).toString(),
+    }));
 
     res.json({ leases: withBalances });
   } catch (error) {
@@ -882,6 +901,34 @@ portfolioRouter.patch(
             ...(req.body.endDate ? { endDate: civilToUtcDate(req.body.endDate) } : {}),
           },
         });
+
+        // Activating a pending lease must also materialise its deposit; creating
+        // the lease as pending is the only path that skipped it.
+        const activating = existing.status !== 'active' && lease.status === 'active';
+        if (activating && lease.depositAmountMinor !== null && lease.depositAmountMinor > 0n) {
+          try {
+            await createDepositChargeInTx(tx, {
+              organizationId,
+              leaseId: lease.id,
+              amountMinor: lease.depositAmountMinor,
+              currency: lease.currency,
+              actorUserId: req.auth?.userId ?? null,
+              dueDate: lease.startDate,
+            });
+          } catch (error) {
+            // Already has a deposit (e.g. retried activation) — not a failure.
+            const isConflict =
+              typeof error === 'object' &&
+              error !== null &&
+              'statusCode' in error &&
+              (error as { statusCode?: number }).statusCode === 409;
+            if (!isConflict) throw error;
+          }
+          await tx.unit.update({ where: { id: lease.unitId }, data: { status: 'occupied' } });
+        } else if (lease.status === 'active' && existing.status !== 'active') {
+          // No deposit to create but the unit still becomes occupied.
+          await tx.unit.update({ where: { id: lease.unitId }, data: { status: 'occupied' } });
+        }
 
         await recordAudit(tx, {
           organizationId,

@@ -59,9 +59,11 @@ export default function PaymentsPage() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     await run(async () => {
+      const lease = leases.data?.leases.find((l) => l.id === form.leaseId);
+      const currency = (lease?.currency as string | undefined) ?? 'ETB';
       const result = await api.recordPayment({
         leaseId: form.leaseId,
-        amount: { amountMinor: amount ?? 0, currency: 'ETB' },
+        amount: { amountMinor: amount ?? 0, currency },
         method: form.method,
         paidAt: new Date(`${form.paidAt}T12:00:00.000Z`).toISOString(),
         reference: form.reference || undefined,

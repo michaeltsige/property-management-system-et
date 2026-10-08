@@ -36,10 +36,13 @@ function hashCode(code: string): string {
 }
 
 export async function findEnrolledTenantByPhone(prisma: PrismaLike, phone: string) {
+  // `user.isActive` matters: disabling a tenant's portal access sets it to false,
+  // and a disabled account must not be able to request or verify codes.
   return prisma.tenant.findFirst({
     where: {
       deletedAt: null,
       userId: { not: null },
+      user: { isActive: true },
       OR: [{ phone }, { altPhone: phone }],
     },
     include: { organization: true, user: true },
@@ -142,7 +145,17 @@ export async function enrollTenantPortal(
   return prisma.$transaction(async (tx) => {
     const tenant = await tx.tenant.findFirst({ where: { id: tenantId, organizationId, deletedAt: null } });
     if (!tenant) throw badRequest('Tenant not found in this organization');
-    if (tenant.userId) return { enrolled: true, replayed: true };
+    if (tenant.userId) {
+      // Re-enrolling a previously disabled account must actually re-enable it,
+      // otherwise "enable" silently does nothing.
+      await tx.user.updateMany({ where: { id: tenant.userId, isActive: false }, data: { isActive: true } });
+      await tx.membership.updateMany({
+        where: { organizationId, userId: tenant.userId, status: 'inactive' },
+        data: { status: 'active' },
+      });
+      await tx.tenant.update({ where: { id: tenant.id }, data: { portalEnabledAt: new Date() } });
+      return { enrolled: true, replayed: true };
+    }
 
     const email = `portal-${tenant.id}@tenants.invalid`;
     const user = await tx.user.create({
