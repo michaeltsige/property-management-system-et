@@ -238,6 +238,8 @@ export const EN_CATALOG = {
   'org.billing_calendar': 'Billing calendar',
   'org.billing_calendar_hint': 'Every new lease is billed in this calendar. Existing leases keep theirs.',
   'org.default_language': 'Default language',
+  'org.display_language': 'Display language (yours)',
+  'org.display_language_hint': 'The language of menus, labels and screens for you.',
   'org.rent_due_day': 'Rent due day',
   'org.grace_period_days': 'Grace period (days)',
   'org.saved': 'Settings saved',
@@ -421,6 +423,8 @@ export const EN_CATALOG = {
   'dashboard.open_work_orders': 'Open maintenance',
   'dashboard.collections_trend': 'Collections over the last periods',
   'dashboard.rent_this_period': 'Expected vs collected',
+  'dashboard.charges_by_status': 'Charges by status',
+  'dashboard.charges_this_period': 'charges this period',
   // Non-English entries are unreviewed machine drafts.
   'dashboard.collection_rate': '{rate}% of expected this period',
   'dashboard.delta_completed_periods': 'vs previous full period',

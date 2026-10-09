@@ -35,7 +35,7 @@ import {
  * is stored as data and is never hardcoded.
  */
 export default function OrganizationPage() {
-  const { t, session, calendar, setCalendar } = usePreferences();
+  const { t, session, calendar, setCalendar, language, setLanguage } = usePreferences();
   const settings = useAsync(() => api.settings(), []);
   const idTypes = useAsync(() => api.idTypes(), []);
   const { pending, error, message, setMessage, run } = useAction();
@@ -146,6 +146,25 @@ export default function OrganizationPage() {
                   ))}
                 </Select>
                 <p className="text-[11px] text-slate-500">{t('org.display_calendar_hint')}</p>
+              </div>
+
+              {/* The personal language preference moved here from the top bar:
+                  it is a set-once presentation choice like the display
+                  calendar, not a control to flip while scanning a dashboard. */}
+              <div className="space-y-1">
+                <Label htmlFor="displayLanguage">{t('org.display_language')}</Label>
+                <Select
+                  id="displayLanguage"
+                  value={language}
+                  onChange={(event) => setLanguage(event.target.value as typeof language)}
+                >
+                  {LANGUAGES.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {option.label}
+                    </option>
+                  ))}
+                </Select>
+                <p className="text-[11px] text-slate-500">{t('org.display_language_hint')}</p>
               </div>
             </CardContent>
           </Card>

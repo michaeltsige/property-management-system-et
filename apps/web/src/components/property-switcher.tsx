@@ -9,8 +9,10 @@ import { roleHasPermission, type Role } from '@pms/shared';
 import { Select } from './ui';
 
 /**
- * Header control that scopes list screens to one property. It is a filter on
- * data the role can already read — never an authorization boundary.
+ * Sidebar workspace card that scopes list screens to one property. It is a
+ * filter on data the role can already read — never an authorization boundary.
+ * It lives at the TOP of the navigation rail (above the nav groups) because it
+ * reframes every list below it: the workspace-switcher spot.
  */
 export function PropertySwitcher({ id }: { id: string }) {
   const { t, session } = usePreferences();
@@ -31,12 +33,15 @@ export function PropertySwitcher({ id }: { id: string }) {
 
   return (
     <div className="space-y-1">
-      <label className="block text-[11px] font-medium text-slate-500" htmlFor={id}>
+      <label
+        className="block text-[10px] font-semibold uppercase tracking-wider text-slate-400"
+        htmlFor={id}
+      >
         {t('property.context')}
       </label>
       <Select
         id={id}
-        className="h-8 w-44 text-xs"
+        className="w-full border-white/10 bg-white/5 text-slate-100 data-[state=open]:border-brand-400 data-[state=open]:ring-brand-400"
         value={propertyId ?? ''}
         onChange={(event) => setPropertyId(event.target.value || null)}
       >

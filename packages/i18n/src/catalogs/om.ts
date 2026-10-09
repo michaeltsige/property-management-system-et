@@ -234,6 +234,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'org.billing_calendar_hint':
     'Kiraayaa haaraan hundi kaalandarii kanaan herregama; kan duraanii kan isaanii tikfatu.',
   'org.default_language': 'Afaan durtii',
+  'org.display_language': 'Afaan agarsiisaa (kan kee)',
+  'org.display_language_hint': 'Afaan burtukaanaafi rabbeetaa siif agarsiifamu.',
   'org.rent_due_day': 'Guyyaa kiree kaffalamu',
   'org.grace_period_days': 'Yeroo dhiifamaa (guyyaa)',
   'org.saved': "Qindaa'inni olkaa'ameera",
@@ -464,6 +466,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'dashboard.open_work_orders': 'Suphaa banaa',
   'dashboard.collections_trend': 'Galii ji’oota darbanii',
   'dashboard.rent_this_period': 'Yaalamu fi waliigale',
+  'dashboard.charges_by_status': 'Kaffaltiin haalaan',
+  'dashboard.charges_this_period': 'kaffaltii yeroon kanaa',
   'dashboard.collection_rate': 'Kana yaalamu kiraa irraa {rate}%',
   'dashboard.delta_completed_periods': 'Yaalamu guutuu duraatti waliin',
   'dashboard.advance_payments': 'Kaffalaa duraa dabalata',

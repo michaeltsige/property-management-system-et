@@ -16,7 +16,7 @@ vi.mock('@/components/charts', () => ({
   CollectionsChart: ({ labels }: { labels: string[] }) => (
     <div data-testid="collections">{labels.join(' | ')}</div>
   ),
-  MoneyComparisonChart: () => null,
+  ChargesByStatusChart: () => null,
   OccupancyChart: () => null,
   ArrearsChart: () => null,
 }));

@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ArrearsChart, CollectionsChart, MoneyComparisonChart, OccupancyChart } from '@/components/charts';
+import { ArrearsChart, ChargesByStatusChart, CollectionsChart, OccupancyChart } from '@/components/charts';
 
 // ECharts draws to a canvas that jsdom does not implement; the accessibility
 // contract (label + text table) is exactly the part that does not depend on it.
@@ -10,16 +10,20 @@ vi.mock('echarts', () => ({
 }));
 
 describe('chart accessibility', () => {
-  it('exposes the money comparison as a labelled image, with data in the label', () => {
+  it('exposes the by-status donut as a labelled image, with data in the label', () => {
     render(
-      <MoneyComparisonChart
-        expected={30000}
-        collected={21500}
+      <ChargesByStatusChart
+        openMinor="850000"
+        partialMinor="1500000"
+        paidMinor="2000000"
+        count={7}
         currencyLabel="ETB"
-        ariaLabel="Rent this period"
-        expectedLabel="Expected rent"
-        collectedLabel="Collected"
+        ariaLabel="Charges by status"
         chartDataLabel="Chart data as a table"
+        openLabel="Open"
+        partialLabel="Partial"
+        paidLabel="Paid"
+        countLabel="charges this period"
       />,
     );
 
@@ -27,9 +31,31 @@ describe('chart accessibility', () => {
     // accessible name of the image itself.
     expect(screen.queryByRole('table')).toBeNull();
     const image = screen.getByRole('img');
-    expect(image.getAttribute('aria-label')).toContain('Rent this period');
-    expect(image.getAttribute('aria-label')).toContain('30,000');
-    expect(image.getAttribute('aria-label')).toContain('21,500');
+    expect(image.getAttribute('aria-label')).toContain('Charges by status');
+    expect(image.getAttribute('aria-label')).toContain('8,500');
+    expect(image.getAttribute('aria-label')).toContain('20,000');
+  });
+
+  it('renders a quiet placeholder ring for an empty period instead of a bare card', () => {
+    render(
+      <ChargesByStatusChart
+        openMinor="0"
+        partialMinor="0"
+        paidMinor="0"
+        count={0}
+        currencyLabel="ETB"
+        ariaLabel="Charges by status"
+        chartDataLabel="Chart data as a table"
+        openLabel="Open"
+        partialLabel="Partial"
+        paidLabel="Paid"
+        countLabel="charges this period"
+      />,
+    );
+
+    // The setOption call still happens; nothing can assert canvas pixels here,
+    // but the labelled image contract must hold on the empty path too.
+    expect(screen.getByRole('img').getAttribute('aria-label')).toContain('Charges by status');
   });
 
   it('carries every collection period in the image label', () => {

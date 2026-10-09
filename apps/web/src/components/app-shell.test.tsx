@@ -110,7 +110,8 @@ describe('AppShell', () => {
     expect(within(drawer).getByRole('link', { name: 'Tenants' })).toBeInTheDocument();
     expect(within(drawer).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page');
     expect(within(drawer).getByRole('button', { name: 'Close' })).toBeInTheDocument();
-    expect(within(drawer).getByLabelText('Language')).toBeInTheDocument();
+    // The property scope now lives in the rail (desktop) and the drawer (phone).
+    expect(within(drawer).getByLabelText('Property scope')).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
     expect(screen.queryByRole('dialog')).toBeNull();
@@ -134,15 +135,22 @@ describe('AppShell', () => {
   });
 });
 
-it('uses Amharic script for the top-bar month when language is Amharic', async () => {
-  const { todayIn, monthName } = await import('@pms/calendar');
-  window.localStorage.setItem(
-    'pms.session.v1',
-    JSON.stringify({ ...SESSION, user: { ...SESSION.user, language: 'am' } }),
-  );
+it('ends the rail with an account card that leads to the organization settings', async () => {
+  renderShell();
+  await screen.findByText('page content');
+
+  // Account and organization are one surface for an owner-admin: the card in
+  // the rail's bottom edge IS the Organization link, sign-out sits beside it.
+  const account = screen.getByRole('link', { name: /Demo Owner/ });
+  expect(account).toHaveAttribute('href', '/organization');
+  expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+});
+
+it('renders the served day in the footer with its calendar era', async () => {
+  const { todayIn } = await import('@pms/calendar');
   renderShell();
   await screen.findByText('page content');
   const today = todayIn('ethiopian');
-  expect(screen.getByText(`${monthName(today, 'am')} ${today.year}`)).toBeInTheDocument();
-  expect(screen.queryByText(`${monthName(today, 'en')} ${today.year}`)).not.toBeInTheDocument();
+  const expected = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')} E.C.`;
+  expect(screen.getByText(expected)).toBeInTheDocument();
 });

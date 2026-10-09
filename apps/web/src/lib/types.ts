@@ -241,6 +241,8 @@ export interface Summary {
     collectionRate: number | null;
     arrearsMinor: string;
     chargesRaised: number;
+    /** Billed amount per charge status (org currency) — the by-status donut. */
+    chargesByStatus: { openMinor: string; partialMinor: string; paidMinor: string };
     paymentsRecorded: number;
   };
 }

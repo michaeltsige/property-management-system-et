@@ -69,7 +69,7 @@ export function StatCard({
 
   return (
     <Card className={className}>
-      <CardContent className={size === 'hero' ? 'space-y-1.5 py-5' : 'space-y-1.5 py-4'}>
+      <CardContent className={size === 'hero' ? 'space-y-1 py-4' : 'space-y-1 py-3'}>
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs font-medium text-slate-500">{label}</p>
           {delta && deltaTone ? (
@@ -90,8 +90,8 @@ export function StatCard({
         ) : (
           <p
             className={cn(
-              'tabular font-semibold leading-8 tracking-tight',
-              size === 'hero' ? 'text-3xl leading-10' : 'text-xl leading-7',
+              'tabular font-semibold tracking-tight',
+              size === 'hero' ? 'text-3xl leading-9' : 'text-xl leading-7',
               toneClasses[tone],
             )}
           >
