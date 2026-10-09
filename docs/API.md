@@ -30,6 +30,7 @@ Codes used across the API: `VALIDATION_FAILED` (400), `UNAUTHENTICATED` (401),
 | POST   | `/auth/refresh`  | Rotates the refresh token. Reusing a rotated token revokes the whole family.                |
 | POST   | `/auth/logout`   | Revokes the presented refresh token.                                                        |
 | GET    | `/auth/me`       | Current user, membership, organization, permissions.                                        |
+| POST   | `/auth/accept-invite` | `{ token, password }` — redeems the single-use invite token, sets the password, activates the membership. Rate limited. |
 
 ## Health
 
@@ -45,7 +46,10 @@ Codes used across the API: `VALIDATION_FAILED` (400), `UNAUTHENTICATED` (401),
 | GET       | `/organizations`                       | authenticated                             |
 | GET/PATCH | `/organizations/settings`              | `settings.read` / `settings.write`        |
 | GET/POST  | `/organizations/members`               | `members.read` / `members.write`          |
+| POST      | `/organizations/members/:membershipId/resend-invite` | `users.invite` — re-issues the single-use invite token (membership must still be `invited`). |
 | PATCH     | `/organizations/members/:membershipId` | `members.write` (role change, deactivate) |
+| GET       | `/audit-logs`                          | `audit.read` — filters: `entityType`, `entityId`, `actorUserId`, `action`, `from`, `to`; paginated. |
+| GET       | `/exports/:kind.csv`                   | `reports.export` — `kind`: `tenants`, `leases`, `charges`, `payments`, `arrears`. Writes an `export` audit row. |
 | GET/POST  | `/organizations/id-types`              | `settings.read` / `settings.write`        |
 
 ### Payment gateway (per organization)
@@ -94,7 +98,7 @@ responses are `{ items, page, pageSize, total }`.
 | Method | Path                               | Permission         | Notes                                                                                                                                           |
 | ------ | ---------------------------------- | ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | POST   | `/charges/generate`                | `charges.generate` | `{ periods: ["2019-01"], scope?: {...} }` → `{ created, skippedExisting, totals }`. Idempotent: re-running for the same period creates nothing. |
-| GET    | `/charges`                         | `charges.read`     | Filters: `periodKey`, `leaseId`, `status`, `propertyId`.                                                                                        |
+| GET    | `/charges`                         | `charges.read`     | Filters: `periodKey`, `leaseId`, `status`, `propertyId`. `status=overdue` is an alias for open/partial past due.                               |
 | POST   | `/charges/:chargeId/waive`         | `charges.waive`    | `{ reason }` → posts a credit ledger entry.                                                                                                     |
 | POST   | `/leases/:leaseId/deposit-charge`  | `charges.generate` | Raises a security-deposit charge.                                                                                                               |
 | GET    | `/leases/:leaseId/statement`       | `leases.read`      | Running balance in both calendars.                                                                                                              |
@@ -117,7 +121,9 @@ Receipt numbers are sequential per organization and calendar year: `RCT-2026-000
 | DELETE | `/tenants/:tenantId/portal`                  | `tenants.write` | Disables portal access.                                                                                                   |
 | POST   | `/portal/request-code`                       | (rate-limited) | `{ phone }` — identical answer for known and unknown numbers.                                                               |
 | POST   | `/portal/verify`                             | (rate-limited) | `{ phone, code }` → tenant-scoped session tokens.                                                                           |
-| GET    | `/portal/me`                                 | `portal.use` | Leases, outstanding balance and profile of the signed-in tenant.                                                              |
+| GET    | `/portal/me`                                 | `portal.use` | Leases, outstanding balance (net of overpayment credit), profile of the signed-in tenant.                                     |
+| GET    | `/portal/documents`                          | `portal.use` | Documents filed for this tenant, their leases or their units. Read-only.                                                       |
+| GET    | `/portal/documents/:id/download`             | `portal.use` | Downloads one of those documents; anyone else's → 404.                                                                        |
 | POST   | `/portal/payments/initiate`                  | `portal.pay` | `{ amountMinor? }` — creates a pending payment through the active provider and returns its checkout redirect. One live attempt per tenant: a new attempt supersedes the previous pending one. |
 | GET    | `/portal/payments/:providerRef`              | `portal.pay` | The payment attempt (amount, status). Other tenants' references are 404.                                                      |
 | POST   | `/portal/payments/:providerRef/complete`     | `portal.pay` | Re-verifies with the provider, then records the payment (oldest-first allocation, ledger, receipt). Double completion → 409.  |
