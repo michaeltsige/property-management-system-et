@@ -131,7 +131,8 @@ describe('hierarchy controls', () => {
     await user.click(screen.getByRole('button', { name: 'Create' }));
     const modal = within(screen.getByRole('dialog'));
     expect(modal.getByLabelText('Landlord')).toBeRequired();
-    await user.selectOptions(modal.getByLabelText('Landlord'), 'o1');
+    await user.click(modal.getByLabelText('Landlord'));
+    await user.click(await screen.findByRole('option', { name: 'Demo landlord' }));
     await user.type(modal.getByLabelText(EN_CATALOG['property.name']), 'New property');
     await user.click(modal.getByRole('button', { name: 'Save' }));
     await waitFor(() =>
@@ -154,18 +155,22 @@ describe('hierarchy controls', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Create' })).toBeEnabled());
     await user.click(screen.getByRole('button', { name: 'Create' }));
     const modal = within(screen.getByRole('dialog'));
-    await user.selectOptions(modal.getByLabelText('Properties'), 'p1');
-    await user.selectOptions(modal.getByLabelText('Building / block'), 'b1');
-    await user.selectOptions(modal.getByLabelText('Properties'), 'p2');
-    expect(modal.getByLabelText('Building / block')).toHaveValue('');
+    await user.click(modal.getByLabelText('Properties'));
+    await user.click(await screen.findByRole('option', { name: 'Demo property' }));
+    await user.click(modal.getByLabelText('Building / block'));
+    await user.click(await screen.findByRole('option', { name: 'North' }));
+    await user.click(modal.getByLabelText('Properties'));
+    await user.click(await screen.findByRole('option', { name: 'Other' }));
+    expect(modal.getByLabelText('Building / block')).toHaveTextContent('No block');
     expect(modal.queryByRole('option', { name: 'North' })).not.toBeInTheDocument();
   });
   it('shows self-owned by default at signup and submits the chosen managed mode', async () => {
     const user = userEvent.setup();
     vi.mocked(api.login).mockResolvedValue({ user: {}, organization: {}, role: 'owner_admin' } as never);
     render(<RegisterPage />);
-    expect(screen.getByLabelText('How will you use the account?')).toHaveValue('self_owned');
-    await user.selectOptions(screen.getByLabelText('How will you use the account?'), 'managed');
+    expect(screen.getByLabelText('How will you use the account?')).toHaveTextContent('I own these properties');
+    await user.click(screen.getByLabelText('How will you use the account?'));
+    await user.click(await screen.findByRole('option', { name: 'I manage properties for other owners' }));
     await user.type(screen.getByLabelText(EN_CATALOG['org.name']), 'Demo company');
     await user.type(screen.getByLabelText('Full name'), 'Demo Admin');
     await user.type(screen.getByLabelText('Email'), 'demo@example.test');
@@ -187,7 +192,8 @@ it('previews and submits bounded bulk labels', async () => {
   const user = userEvent.setup();
   render(<BulkUnitForm properties={[property] as never} onSaved={saved} />);
   expect(screen.getByText(/A-001, A-002/)).toBeInTheDocument();
-  await user.selectOptions(screen.getByLabelText('Properties'), 'p1');
+  await user.click(screen.getByLabelText('Properties'));
+  await user.click(await screen.findByRole('option', { name: 'Demo property' }));
   await user.click(screen.getByRole('button', { name: 'Bulk-create units' }));
   await waitFor(() => expect(saved).toHaveBeenCalledWith(10));
   expect(bulk).toHaveBeenCalledWith(

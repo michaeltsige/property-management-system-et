@@ -33,6 +33,10 @@ if (typeof window !== 'undefined' && !window.matchMedia) {
 
 if (typeof window !== 'undefined') {
   window.HTMLElement.prototype.scrollIntoView = () => undefined;
+  // Radix Select drives its listbox through the pointer-capture API while open.
+  window.Element.prototype.hasPointerCapture = () => false;
+  window.Element.prototype.releasePointerCapture = () => undefined;
+  window.Element.prototype.setPointerCapture = () => undefined;
 }
 
 // The app fetches translation overrides and data on mount; tests that do not

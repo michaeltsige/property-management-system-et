@@ -160,12 +160,14 @@ describe('property switcher and scoped lists', () => {
     );
     await screen.findByText('A-101');
     expect(screen.getByText('B-202')).toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText(EN_CATALOG['property.context']), 'p1');
+    await user.click(screen.getByLabelText(EN_CATALOG['property.context']));
+    await user.click(await screen.findByRole('option', { name: 'Alpha' }));
     expect(getPropertyContext()).toBe('p1');
     expect(screen.getByTestId('probe')).toHaveTextContent('p1');
     expect(screen.getByText('A-101')).toBeInTheDocument();
     expect(screen.queryByText('B-202')).not.toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText(EN_CATALOG['property.context']), '');
+    await user.click(screen.getByLabelText(EN_CATALOG['property.context']));
+    await user.click(await screen.findByRole('option', { name: 'All properties' }));
     expect(screen.getByText('B-202')).toBeInTheDocument();
     expect(window.localStorage.getItem('pms.property-context.v1')).toBeNull();
   });
