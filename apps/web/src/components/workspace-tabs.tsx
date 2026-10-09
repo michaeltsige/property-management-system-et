@@ -66,7 +66,7 @@ export function WorkspaceTabs() {
 
   return (
     <nav aria-label={t('tabs.label')} className="overflow-x-auto border-b border-slate-200 bg-white">
-      <ul className="flex items-center gap-1 px-2 py-1.5">
+      <ul className="flex items-center gap-1.5 px-2 py-1.5">
         {tabs.map((path) => {
           const active = path === pathname;
           return (
@@ -75,10 +75,14 @@ export function WorkspaceTabs() {
                 href={path}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs',
+                  'flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors',
                   active
-                    ? 'bg-brand-600 font-semibold text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100',
+                    ? // The one filled chip on the strip: solid brand on brand
+                      // border, so the current tab wins at a glance.
+                      'border-brand-700 bg-brand-600 font-semibold text-white shadow-sm'
+                    : // Every other tab gets a visible bordered chip so the
+                      // strip reads as separate, clickable tabs.
+                      'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900',
                 )}
               >
                 {labelFor(path)}
@@ -88,7 +92,7 @@ export function WorkspaceTabs() {
                 aria-label={`${t('tabs.close')} ${labelFor(path)}`}
                 onClick={(event) => close(event, path)}
                 className={cn(
-                  '-ml-1 rounded p-0.5',
+                  '-ml-0.5 rounded p-0.5',
                   active
                     ? 'text-white/70 hover:bg-white/20 hover:text-white'
                     : 'text-slate-400 hover:bg-slate-200 hover:text-slate-700',

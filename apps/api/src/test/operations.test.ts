@@ -339,6 +339,14 @@ describe('reports', () => {
     // The January rent was due on Meskerem 5 (15 September 2026) and 1,000,000
     // santim of it is still outstanding. The rest is due but not yet late.
     expect(summary.body.money.arrearsMinor).toBe('1000000');
+    // Rent-roll composition: the one billed charge has been partly paid, so it
+    // sits in `partial` (billed amount, not the outstanding 1,000,000).
+    expect(summary.body.money.chargesRaised).toBe(1);
+    expect(summary.body.money.chargesByStatus).toEqual({
+      openMinor: '0',
+      partialMinor: '1500000',
+      paidMinor: '0',
+    });
     expect(summary.body.period.key).toBe('2019-01');
     expect(summary.body.period.calendar).toBe('ethiopian');
   });

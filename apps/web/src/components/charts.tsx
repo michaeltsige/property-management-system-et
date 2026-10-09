@@ -33,7 +33,10 @@ export const CHART_COLORS = {
   warning: '#f59e0b',
   danger: '#dc2626',
   grid: '#e2e8f0',
-  axisLabel: '#64748b',
+  // slate-600, not slate-500: axis and legend text must clear WCAG AA (4.5:1)
+  // against the white card, and slate-500 sat right on the line.
+  axisLabel: '#475569',
+  axisLine: '#cbd5e1',
 } as const;
 
 const AXIS_LABEL = { fontSize: 11, color: CHART_COLORS.axisLabel };
@@ -85,64 +88,87 @@ export function EChart({
   return <div ref={container} role="img" aria-label={label} style={{ height }} className="w-full" />;
 }
 
-/** Expected rent vs collected, for the dashboard. */
-export function MoneyComparisonChart({
-  expected,
-  collected,
+/**
+ * Rent-roll composition for the period: billed amount per charge status, as a
+ * donut (three parts — under the four where a donut stays readable, and the
+ * house rules ban standard pies). The ring center carries the charge count so
+ * the summary number sits with the picture.
+ */
+export function ChargesByStatusChart({
+  openMinor,
+  partialMinor,
+  paidMinor,
+  count,
   currencyLabel,
   ariaLabel,
-  expectedLabel,
-  collectedLabel,
   chartDataLabel,
+  openLabel,
+  partialLabel,
+  paidLabel,
+  countLabel,
 }: {
-  expected: number;
-  collected: number;
+  openMinor: string;
+  partialMinor: string;
+  paidMinor: string;
+  count: number;
   currencyLabel: string;
   ariaLabel: string;
-  expectedLabel: string;
-  collectedLabel: string;
   chartDataLabel: string;
+  openLabel: string;
+  partialLabel: string;
+  paidLabel: string;
+  countLabel: string;
 }) {
+  const parts = [
+    { name: paidLabel, value: Number(paidMinor) / 100, color: CHART_COLORS.brand },
+    { name: partialLabel, value: Number(partialMinor) / 100, color: CHART_COLORS.gold },
+    { name: openLabel, value: Number(openMinor) / 100, color: CHART_COLORS.neutral },
+  ];
+  const total = parts.reduce((sum, part) => sum + part.value, 0);
+  // An empty period renders a quiet placeholder ring instead of nothing, so
+  // the card never reads as a failed load.
+  const data =
+    total > 0
+      ? parts.map((part) => ({ name: part.name, value: part.value, itemStyle: { color: part.color } }))
+      : [{ name: '', value: 1, itemStyle: { color: '#f1f5f9' }, tooltip: { show: false } }];
+
   return (
     <EChart
       ariaLabel={ariaLabel}
       summary={{
         caption: chartDataLabel,
-        columns: [expectedLabel, currencyLabel],
-        rows: [
-          [expectedLabel, expected.toLocaleString()],
-          [collectedLabel, collected.toLocaleString()],
-        ],
+        columns: ['', currencyLabel],
+        rows: parts.map((part) => [part.name, part.value.toLocaleString()]),
       }}
       option={{
-        grid: { left: 8, right: 8, top: 24, bottom: 8, containLabel: true },
         tooltip: {
-          trigger: 'axis',
+          trigger: 'item',
           valueFormatter: (value) => `${currencyLabel} ${Number(value).toLocaleString()}`,
         },
-        xAxis: { type: 'category', data: [expectedLabel, collectedLabel], axisLabel: AXIS_LABEL },
-        yAxis: {
-          type: 'value',
-          axisLabel: { ...AXIS_LABEL, formatter: (value: number) => value.toLocaleString() },
-          splitLine: { lineStyle: { color: CHART_COLORS.grid } },
+        legend: {
+          bottom: 0,
+          itemWidth: 10,
+          itemHeight: 10,
+          textStyle: { fontSize: 11, color: CHART_COLORS.axisLabel },
+        },
+        title: {
+          text: String(count),
+          subtext: countLabel,
+          left: 'center',
+          top: '38%',
+          textStyle: { fontSize: 24, fontWeight: 600, color: '#0f172a' },
+          subtextStyle: { fontSize: 11, color: CHART_COLORS.axisLabel },
         },
         series: [
           {
-            type: 'bar',
-            data: [
-              // Expected is the benchmark (neutral); collected is the money in
-              // (brand) — one hue pair, no decorative second color.
-              { value: expected, itemStyle: { color: CHART_COLORS.neutral } },
-              { value: collected, itemStyle: { color: CHART_COLORS.brand } },
-            ],
-            barWidth: '38%',
-            label: {
-              show: true,
-              position: 'top',
-              fontSize: 11,
-              color: CHART_COLORS.axisLabel,
-              formatter: (params: { value?: unknown }) => Number(params.value ?? 0).toLocaleString(),
-            },
+            type: 'pie',
+            radius: ['62%', '82%'],
+            center: ['50%', '44%'],
+            padAngle: total > 0 ? 1.5 : 0,
+            itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 2 },
+            label: { show: false },
+            emphasis: { scale: false },
+            data,
           },
         ],
       }}
@@ -186,6 +212,7 @@ export function CollectionsChart({
           // 13 Ethiopian months do not fit across a phone; drop labels rather
           // than draw them on top of each other.
           axisLabel: { ...AXIS_LABEL, hideOverlap: true },
+          axisLine: { lineStyle: { color: CHART_COLORS.axisLine } },
         },
         yAxis: {
           type: 'value',
@@ -243,7 +270,7 @@ export function OccupancyChart({
           textStyle: { fontSize: 11, color: CHART_COLORS.axisLabel },
         },
         xAxis: { type: 'value', minInterval: 1, axisLabel: AXIS_LABEL, splitLine: { lineStyle: { color: CHART_COLORS.grid } } },
-        yAxis: { type: 'category', data: rows.map((row) => row.name), axisLabel: AXIS_LABEL },
+        yAxis: { type: 'category', data: rows.map((row) => row.name), axisLabel: AXIS_LABEL, axisLine: { lineStyle: { color: CHART_COLORS.axisLine } } },
         series: [
           {
             name: occupiedLabel,
@@ -296,6 +323,7 @@ export function ArrearsChart({
           type: 'category',
           data: buckets.map((bucket) => bucket.label),
           axisLabel: { ...AXIS_LABEL, hideOverlap: true },
+          axisLine: { lineStyle: { color: CHART_COLORS.axisLine } },
         },
         yAxis: {
           type: 'value',

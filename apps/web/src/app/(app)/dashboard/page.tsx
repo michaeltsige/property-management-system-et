@@ -11,7 +11,7 @@ import { usePreferences } from '@/lib/preferences';
 import { api } from '@/lib/api';
 
 import { PageHeader } from '@/components/app-shell';
-import { ArrearsChart, CollectionsChart, MoneyComparisonChart, OccupancyChart } from '@/components/charts';
+import { ArrearsChart, ChargesByStatusChart, CollectionsChart, OccupancyChart } from '@/components/charts';
 import { PeriodPicker } from '@/components/form-controls';
 import { StatCard } from '@/components/stat-card';
 import {
@@ -112,7 +112,6 @@ export default function DashboardPage() {
       )}
       <PageHeader
         titleKey="dashboard.title"
-        description={`${formatPeriodKey(periodKey, calendar, language)} · ${summary.data?.portfolio.properties ?? 0} ${t('nav.properties').toLowerCase()}`}
         actions={
           <PeriodPicker
             periodKey={periodKey}
@@ -220,7 +219,7 @@ export default function DashboardPage() {
       {/* The counts a landlord checks in passing — one quiet strip, not five
           more shouty cards competing with the money row above. */}
       <Card className="mt-3">
-        <CardContent className="grid grid-cols-2 gap-y-4 py-3.5 sm:grid-cols-3 lg:grid-cols-5">
+        <CardContent className="grid grid-cols-2 gap-y-3 py-2.5 sm:grid-cols-3 lg:grid-cols-5">
           {(
             [
               { label: t('nav.tenants'), value: summary.data?.portfolio.tenants, loading: summary.loading },
@@ -250,9 +249,9 @@ export default function DashboardPage() {
             <div key={item.label} className="px-4 text-left lg:border-l lg:border-slate-100 lg:first:border-l-0">
               <p className="text-xs text-slate-500">{item.label}</p>
               {item.loading ? (
-                <Skeleton className="mt-1 h-6 w-14" />
+                <Skeleton className="mt-0.5 h-5 w-14" />
               ) : (
-                <p className={`tabular mt-0.5 text-lg font-semibold text-slate-900 ${item.tone ?? ''}`}>
+                <p className={`tabular mt-0 text-base font-semibold text-slate-900 ${item.tone ?? ''}`}>
                   {item.value ?? '—'}
                 </p>
               )}
@@ -264,23 +263,27 @@ export default function DashboardPage() {
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>{t('dashboard.rent_this_period')}</CardTitle>
-            <Link href="/reports" className="text-xs text-brand-700 hover:underline">
-              {t('reports.title')}
+            <CardTitle>{t('dashboard.charges_by_status')}</CardTitle>
+            <Link href="/charges" className="text-xs text-brand-700 hover:underline">
+              {t('nav.charges')}
             </Link>
           </CardHeader>
           <CardContent>
             {summary.loading ? (
               <Skeleton className="h-56 w-full" />
             ) : (
-              <MoneyComparisonChart
-                expected={Number(money?.expectedMinor ?? 0) / 100}
-                collected={Number(money?.collectedMinor ?? 0) / 100}
+              <ChargesByStatusChart
+                openMinor={money?.chargesByStatus?.openMinor ?? '0'}
+                partialMinor={money?.chargesByStatus?.partialMinor ?? '0'}
+                paidMinor={money?.chargesByStatus?.paidMinor ?? '0'}
+                count={money?.chargesRaised ?? 0}
                 currencyLabel={currency}
-                ariaLabel={t('dashboard.rent_this_period')}
-                expectedLabel={t('dashboard.expected_rent')}
-                collectedLabel={t('dashboard.collected')}
+                ariaLabel={t('dashboard.charges_by_status')}
                 chartDataLabel={t('a11y.chart_data')}
+                openLabel={t('charge.status.open')}
+                partialLabel={t('charge.status.partial')}
+                paidLabel={t('charge.status.paid')}
+                countLabel={t('dashboard.charges_this_period')}
               />
             )}
           </CardContent>

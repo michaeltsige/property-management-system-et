@@ -111,7 +111,7 @@ reportsRouter.get(
             periodStart: { gte: periodFrom, lte: periodTo },
             status: { in: ['open', 'partial', 'paid'] },
           },
-          select: { amountMinor: true, currency: true },
+          select: { amountMinor: true, currency: true, status: true },
         }),
         // Collected must exclude deposit money: a deposit is held, not revenue.
         prisma.payment.findMany({
@@ -163,6 +163,20 @@ reportsRouter.get(
       const expectedMinor = expectedByCurrency.get(currency) ?? 0n;
       const collectedMinor = collectedByCurrency.get(currency) ?? 0n;
       const arrearsMinor = arrearsByCurrency.get(currency) ?? 0n;
+
+      // Rent-roll composition for the period: how much of what was billed sits
+      // in each charge status. Billed amounts (not outstanding) — this is what
+      // the dashboard's by-status donut draws; outstanding money already has
+      // the arrears picture.
+      const statusAmounts = { open: 0n, partial: 0n, paid: 0n } as Record<
+        'open' | 'partial' | 'paid',
+        bigint
+      >;
+      for (const charge of periodCharges) {
+        if (charge.currency === currency && charge.status in statusAmounts) {
+          statusAmounts[charge.status as 'open' | 'partial' | 'paid'] += charge.amountMinor;
+        }
+      }
       const allCurrencies = [
         ...new Set([...expectedByCurrency.keys(), ...collectedByCurrency.keys(), ...arrearsByCurrency.keys()]),
       ].sort();
@@ -199,6 +213,11 @@ reportsRouter.get(
               : Number(((Number(collectedMinor) / Number(expectedMinor)) * 100).toFixed(2)),
           arrearsMinor: arrearsMinor.toString(),
           chargesRaised: periodCharges.length,
+          chargesByStatus: {
+            openMinor: statusAmounts.open.toString(),
+            partialMinor: statusAmounts.partial.toString(),
+            paidMinor: statusAmounts.paid.toString(),
+          },
           paymentsRecorded: periodPayments.length,
           // Every currency that moved in this period, so nothing disappears
           // because it is not the organization default.

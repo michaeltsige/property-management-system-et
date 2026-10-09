@@ -1,8 +1,9 @@
 'use client';
 
 /**
- * The application shell: sidebar navigation, top bar, and the preference
- * switchers (language + calendar) that apply to the whole session.
+ * The application shell: sidebar navigation with the property scope and the
+ * account card, a quiet top bar holding the global search, and the workspace
+ * tab strip.
  *
  * Navigation follows the information architecture used by established property
  * management products (see docs/REFERENCES.md): portfolio first, then people,
@@ -12,7 +13,11 @@
  * a quiet top bar, and dense tables doing the work — no decorative surfaces.
  *
  * Layout rules:
- * - `lg` and up: a permanent sidebar.
+ * - `lg` and up: a permanent sidebar. The property scope sits at its top (it
+ *   reframes every list below it, so it belongs above the navigation, in the
+ *   workspace-switcher spot) and the account card at its bottom (the Slack/
+ *   Linear convention) — it leads to Organization, which is where an
+ *   owner-admin's account and organization settings live together.
  * - below `lg`: the same navigation in a modal drawer, because a phone user who
  *   cannot reach any other screen cannot do the job (see ADR-0023).
  * Both copies render the same `NavLinks`; only one is ever reachable, and the
@@ -44,9 +49,9 @@ import {
 } from 'lucide-react';
 
 import { api } from '@/lib/api';
-import { formatPeriodKey, todayFor } from '@/lib/format';
+import { todayFor } from '@/lib/format';
 import { useDocumentTitle } from '@/lib/hooks';
-import { LANGUAGES, usePreferences } from '@/lib/preferences';
+import { usePreferences } from '@/lib/preferences';
 import { ROLE_LABEL_FALLBACK } from '@/lib/roles';
 import { cn } from '@/lib/utils';
 
@@ -95,7 +100,9 @@ const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
   {
     labelKey: 'nav.group.organization',
     items: [
-      { href: '/organization', labelKey: 'nav.organization', icon: Building2 },
+      // /organization itself lives in the account card at the bottom of the
+      // rail — account and organization settings are the same surface for an
+      // owner-admin, so the rail does not repeat it.
       { href: '/organization/team', labelKey: 'org.team', icon: Users },
       { href: '/organization/audit', labelKey: 'nav.audit', icon: ScrollText },
       { href: '/organization/translations', labelKey: 'nav.translations', icon: Languages },
@@ -157,38 +164,6 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   );
 }
 
-/**
- * Language is a personal, per-session choice people flip freely, so it stays in
- * the top bar. The calendar deliberately does NOT live here: a landlord follows
- * one calendar for rent collection permanently, so switching it is a settings
- * decision (Organization → Display calendar), not a light/dark-mode toggle.
- */
-function LanguageSwitcher({ idPrefix }: { idPrefix: string }) {
-  const { t, language, setLanguage } = usePreferences();
-  const selectClass =
-    'h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500';
-
-  return (
-    <div className="space-y-1">
-      <label className="block text-[11px] font-medium text-slate-500" htmlFor={`${idPrefix}-language`}>
-        {t('preferences.language')}
-      </label>
-      <select
-        id={`${idPrefix}-language`}
-        value={language}
-        onChange={(event) => setLanguage(event.target.value as typeof language)}
-        className={selectClass}
-      >
-        {LANGUAGES.map((option) => (
-          <option key={option.code} value={option.code}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
 function initialsOf(fullName: string): string {
   return fullName
     .split(/\s+/)
@@ -201,7 +176,7 @@ function initialsOf(fullName: string): string {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { session, t, calendar, language, signOut, ready } = usePreferences();
+  const { session, t, calendar, signOut, ready } = usePreferences();
   const [menuOpen, setMenuOpen] = useState(false);
 
   // A signed-out visitor never sees organization data.
@@ -251,20 +226,50 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     </div>
   );
 
-  const userBlock = (
-    <div className="flex min-w-0 items-center gap-2">
-      <span
-        aria-hidden="true"
-        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-100 text-xs font-semibold text-brand-800"
-      >
-        {initialsOf(session.user.fullName)}
-      </span>
-      <div className="min-w-0 text-right">
-        <p className="truncate text-xs font-medium text-slate-800">{session.user.fullName}</p>
-        <p className="truncate text-[11px] text-slate-500">{roleLabel}</p>
+  /**
+   * The account card: a thin rectangular strip at the bottom of the rail. The
+   * whole card leads to Organization — for an owner-admin the account and the
+   * organization it manages are the same settings surface — and sign-out stays
+   * one click away on its right edge.
+   */
+  const accountCard = (onNavigate?: () => void) => {
+    const accountActive = pathname === '/organization' || pathname.startsWith('/organization/');
+    return (
+      <div className="flex items-center gap-1 border-t border-white/10 px-2 py-2">
+        <Link
+          href="/organization"
+          aria-current={accountActive ? 'page' : undefined}
+          onClick={onNavigate}
+          title={t('nav.organization')}
+          className={cn(
+            'flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-white/5',
+            accountActive && 'bg-white/10',
+          )}
+        >
+          <span
+            aria-hidden="true"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-100 text-[11px] font-semibold text-brand-800"
+          >
+            {initialsOf(session.user.fullName)}
+          </span>
+          <span className="min-w-0 text-left">
+            <span className="block truncate text-xs font-medium text-white">{session.user.fullName}</span>
+            <span className="block truncate text-[11px] text-slate-400">{roleLabel}</span>
+          </span>
+        </Link>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="text-slate-400 hover:bg-white/10 hover:text-white"
+          aria-label={t('auth.sign_out')}
+          title={t('auth.sign_out')}
+          onClick={handleSignOut}
+        >
+          <LogOut className="h-4 w-4" />
+        </Button>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -275,12 +280,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {t('a11y.skip_to_content')}
       </a>
 
-      {/* Permanent sidebar on lg and up: the dark navigation rail. Identity
-          and sign-out live in the top bar, so the rail stays pure navigation
-          (the java110/MicroCommunity convention). */}
+      {/* Permanent sidebar on lg and up: the dark navigation rail. The property
+          scope sits at the top (it reframes every list below it) and the
+          account card at the bottom, so the rail reads top-to-bottom as:
+          workspace → navigation → account. */}
       <aside className="hidden w-64 shrink-0 flex-col bg-ink-900 lg:flex">
         <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-3.5">{brand}</div>
+        <div className="border-b border-white/10 px-3 py-3">
+          <PropertySwitcher id="sidebar-property-context" />
+        </div>
         <NavLinks pathname={pathname} />
+        {accountCard()}
       </aside>
 
       {/* The same navigation on small screens, in a drawer (ADR-0023). */}
@@ -305,69 +315,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
             <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
 
-            <div className="space-y-3 border-t border-white/10 px-4 py-4">
-              <LanguageSwitcher idPrefix="drawer" />
-              <div className="flex items-center justify-between gap-2">
-                <div className="min-w-0 text-slate-300">{userBlock}</div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-slate-400 hover:bg-white/10 hover:text-white"
-                  aria-label={t('auth.sign_out')}
-                  title={t('auth.sign_out')}
-                  onClick={handleSignOut}
-                >
-                  <LogOut className="h-4 w-4" />
-                </Button>
-              </div>
+            <div className="border-t border-white/10 px-3 py-3">
+              <PropertySwitcher id="drawer-property-context" />
             </div>
+            {accountCard(() => setMenuOpen(false))}
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-2.5">
-          <div className="flex min-w-0 items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden"
-              aria-label={t('nav.menu')}
-              aria-expanded={menuOpen}
-              aria-haspopup="dialog"
-              onClick={() => setMenuOpen(true)}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
-            <span className="truncate text-sm font-semibold text-slate-900 lg:hidden">{t('app.name')}</span>
-            {/* Today in the active calendar: quiet context, not a badge. */}
-            <span className="hidden shrink-0 rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600 sm:inline-flex">
-              {formatPeriodKey(`${today.year}-${String(today.month).padStart(2, '0')}`, calendar, language)}
-            </span>
-            <div className="hidden min-w-0 flex-1 justify-center px-2 md:flex">
-              <GlobalSearch />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex">
-              <LanguageSwitcher idPrefix="header" />
-            </div>
-            <div className="hidden lg:block">
-              <PropertySwitcher id="header-property-context" />
-            </div>
-            <div className="hidden items-center gap-2 border-l border-slate-200 pl-3 sm:flex">
-              {userBlock}
-              <Button
-                variant="ghost"
-                size="icon"
-                aria-label={t('auth.sign_out')}
-                title={t('auth.sign_out')}
-                onClick={handleSignOut}
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
+        <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-2.5">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="lg:hidden"
+            aria-label={t('nav.menu')}
+            aria-expanded={menuOpen}
+            aria-haspopup="dialog"
+            onClick={() => setMenuOpen(true)}
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+          <span className="truncate text-sm font-semibold text-slate-900 lg:hidden">{t('app.name')}</span>
+          <div className="flex min-w-0 flex-1 justify-center md:px-6">
+            <GlobalSearch />
           </div>
         </header>
 
