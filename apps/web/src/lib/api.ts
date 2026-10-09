@@ -178,12 +178,17 @@ async function toApiError(response: Response): Promise<ApiError> {
     const body = (await response.json()) as {
       error?: { code?: string; message?: string; details?: unknown };
     };
-    return new ApiError(
-      response.status,
-      body.error?.code ?? 'INTERNAL_ERROR',
-      body.error?.message ?? `Request failed with status ${response.status}`,
-      body.error?.details,
-    );
+    const baseMessage = body.error?.message ?? `Request failed with status ${response.status}`;
+    // Validation failures carry a generic message plus per-field details; surface
+    // the first field problem so "Request validation failed" explains itself.
+    const fields = (body.error?.details as { fields?: { path: string; message: string }[] } | undefined)
+      ?.fields;
+    const firstField = fields?.[0];
+    const message =
+      firstField && firstField.message
+        ? `${baseMessage} — ${firstField.path ? `${firstField.path}: ` : ''}${firstField.message}`
+        : baseMessage;
+    return new ApiError(response.status, body.error?.code ?? 'INTERNAL_ERROR', message, body.error?.details);
   } catch {
     return new ApiError(response.status, 'INTERNAL_ERROR', `Request failed with status ${response.status}`);
   }

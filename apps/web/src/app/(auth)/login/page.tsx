@@ -94,6 +94,15 @@ export default function LoginPage() {
             {t('auth.register_organization')}
           </Link>
         </p>
+
+        {/* Tenants sign in with a phone + one-time code on a separate door; the
+            staff login never hints whether a phone is enrolled, so the two flows
+            stay apart. Make the door findable, though. */}
+        <p className="mt-2 text-center text-xs text-white/70">
+          <Link href="/portal/login" className="underline-offset-2 hover:underline">
+            {t('auth.tenant_portal')}
+          </Link>
+        </p>
       </div>
     </div>
   );
