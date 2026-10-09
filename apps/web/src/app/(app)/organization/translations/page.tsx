@@ -1,6 +1,5 @@
 'use client';
 
-import { Download, Save, Upload } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import type { LanguageCode } from '@pms/calendar';
@@ -11,20 +10,7 @@ import { LANGUAGES, usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
 import { PageHeader } from '@/components/app-shell';
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  EmptyState,
-  Input,
-  Select,
-  Skeleton,
-  Table,
-  Td,
-  Th,
-} from '@/components/ui';
+import { Alert, Badge, Button, Card, CardContent, EmptyState, Icon, Input, Select, Skeleton, Table, Td, Th } from '@/components/ui';
 
 type Filter = 'all' | 'untranslated' | 'machine_draft' | 'reviewed' | 'overridden';
 
@@ -138,11 +124,11 @@ export default function TranslationsPage() {
               className="h-9 w-40"
             />
             <Button variant="secondary" onClick={() => void exportCsv()}>
-              <Download className="h-4 w-4" />
+              <Icon name="download" className="h-4 w-4" />
               {t('translation.export')}
             </Button>
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm">
-              <Upload className="h-4 w-4" />
+              <Icon name="upload" className="h-4 w-4" />
               {t('translation.import')}
               <input
                 type="file"
@@ -252,7 +238,7 @@ export default function TranslationsPage() {
                         onClick={() => void save(row.key)}
                         title={t('common.save')}
                       >
-                        <Save className="h-4 w-4" />
+                        <Icon name="save" className="h-4 w-4" />
                       </Button>
                     </Td>
                   </tr>

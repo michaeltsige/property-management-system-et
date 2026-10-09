@@ -2,7 +2,6 @@
 
 import { roleHasPermission, type Role } from '@pms/shared';
 import { CsvImport } from '@/components/csv-import';
-import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { api } from '@/lib/api';
@@ -13,21 +12,7 @@ import { LANGUAGES, usePreferences } from '@/lib/preferences';
 import { PageHeader } from '@/components/app-shell';
 import { ExportCsvButton } from '@/components/export-csv-button';
 import { Modal } from '@/components/modal';
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  EmptyState,
-  Input,
-  Label,
-  Select,
-  Skeleton,
-  Table,
-  Td,
-  Th,
-} from '@/components/ui';
+import { Alert, Badge, Button, Card, CardContent, EmptyState, Icon, Input, Label, Select, Skeleton, Table, Td, Th } from '@/components/ui';
 
 export default function TenantsPage() {
   const { t, session } = usePreferences();
@@ -113,7 +98,7 @@ export default function TenantsPage() {
               className="h-9 w-40"
             />
             <Button onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4" />
+              <Icon name="plus" className="h-4 w-4" />
               {t('common.create')}
             </Button>
           </>

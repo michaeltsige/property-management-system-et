@@ -1,12 +1,12 @@
 'use client';
 
 import * as Dialog from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
 
 import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
 import { Button } from './ui';
+import { Icon } from '@/components/ui';
 
 /** Accessible modal built on Radix Dialog, styled like shadcn/ui's `Dialog`. */
 export function Modal({
@@ -46,7 +46,7 @@ export function Modal({
             </div>
             <Dialog.Close asChild>
               <Button variant="ghost" size="icon" aria-label={t('common.close')}>
-                <X className="h-4 w-4" />
+                <Icon name="close" className="h-4 w-4" />
               </Button>
             </Dialog.Close>
           </div>

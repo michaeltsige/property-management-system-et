@@ -1,6 +1,5 @@
 'use client';
 
-import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
@@ -18,21 +17,7 @@ import { BulkUnitForm } from '@/components/bulk-unit-form';
 import { PageHeader } from '@/components/app-shell';
 import { MoneyInput } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  EmptyState,
-  Input,
-  Label,
-  Select,
-  Skeleton,
-  Table,
-  Td,
-  Th,
-} from '@/components/ui';
+import { Alert, Badge, Button, Card, CardContent, EmptyState, Icon, Input, Label, Select, Skeleton, Table, Td, Th } from '@/components/ui';
 
 export default function UnitsPage() {
   const { t, language, session } = usePreferences();
@@ -167,7 +152,7 @@ export default function UnitsPage() {
               onClick={() => setOpen(true)}
               disabled={!canWrite || (properties.data?.properties.length ?? 0) === 0}
             >
-              <Plus className="h-4 w-4" />
+              <Icon name="plus" className="h-4 w-4" />
               {t('common.create')}
             </Button>
           </>

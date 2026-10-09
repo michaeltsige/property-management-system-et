@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { ClipboardList, Receipt, TrendingDown } from 'lucide-react';
 import { roleHasPermission, type Role } from '@pms/shared';
 import { api } from '@/lib/api';
 import { useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
+import { Icon, type IconName } from '@/components/ui';
 
 /**
  * The sidebar answers "what needs attention?" before "where can I navigate?".
@@ -34,7 +34,7 @@ export function TaskPanel() {
     href: string;
     label: string;
     count: number;
-    icon: React.ComponentType<{ className?: string }>;
+    icon: IconName;
   }
   const tasks = (
     [
@@ -42,19 +42,19 @@ export function TaskPanel() {
         href: '/charges?status=overdue',
         label: t('tasks.overdue_charges'),
         count: overdue.data?.total ?? 0,
-        icon: Receipt,
+        icon: 'receipt',
       },
       canMaintenance && {
         href: '/maintenance',
         label: t('tasks.open_work_orders'),
         count: workOrders.data?.openCount ?? 0,
-        icon: ClipboardList,
+        icon: 'clipboard',
       },
       canReports && {
         href: '/reports',
         label: t('tasks.arrears_review'),
         count: arrears.data?.rows.length ?? 0,
-        icon: TrendingDown,
+        icon: 'trend-down',
       },
     ] as (Task | false)[]
   ).filter((task): task is Task => Boolean(task));
@@ -68,7 +68,6 @@ export function TaskPanel() {
       </p>
       <ul className="space-y-0.5">
         {tasks.map((task) => {
-          const Icon = task.icon;
           return (
             <li key={task.href}>
               <Link
@@ -76,7 +75,7 @@ export function TaskPanel() {
                 className="flex items-center justify-between rounded-md px-2 py-1.5 text-sm text-slate-300 hover:bg-white/5 hover:text-white"
               >
                 <span className="flex items-center gap-2">
-                  <Icon className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                  <Icon name={task.icon} className="h-4 w-4 text-slate-400" />
                   {task.label}
                 </span>
                 {task.count > 0 && (
