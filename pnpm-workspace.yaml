@@ -1,3 +1,21 @@
 packages:
   - 'apps/*'
   - 'packages/*'
+
+# Dependency resolution overrides. This file (not package.json#pnpm) is where
+# pnpm 10+ reads these settings — package.json#pnpm is ignored with a warning.
+overrides:
+  postcss@<8.5.23: ^8.5.23
+  deepmerge-ts@<8.0.0: ^8.0.0
+  vitest>tinypool: 2.1.2
+
+# pnpm 10 does not run dependency install/postinstall scripts unless they are
+# allowlisted here. This is the exact set the stack relied on under pnpm 9:
+# Prisma's engine + client generation, esbuild's binary check, and
+# unrs-resolver's native resolver. Anything new must be added deliberately.
+onlyBuiltDependencies:
+  - '@prisma/client'
+  - '@prisma/engines'
+  - esbuild
+  - prisma
+  - unrs-resolver

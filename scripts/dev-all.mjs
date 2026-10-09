@@ -4,6 +4,10 @@
  *
  *   pnpm dev:all
  *
+ *  0. makes sure the web and API ports are actually free — a stale instance of
+ *     this same repository left behind by an earlier run (terminal closed, OOM
+ *     kill, `kill -9`) is stopped automatically; a process from anywhere else
+ *     is reported and left strictly alone,
  *  1. starts PostgreSQL through Docker Compose (skipped, with a warning, when the
  *     Docker daemon is unavailable and a database is already reachable),
  *  2. waits until the database accepts connections,
@@ -27,6 +31,7 @@
  */
 
 import { buildWorkspaces } from './build-workspaces.mjs';
+import { reclaimPort } from './dev-ports.mjs';
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, statfsSync } from 'node:fs';
 import { createConnection } from 'node:net';
@@ -233,6 +238,11 @@ process.on('SIGINT', () => {
   shutdown(0);
 });
 process.on('SIGTERM', () => shutdown(0));
+// Closing the terminal window (or a dropped SSH session) sends SIGHUP. The
+// children run in their own process groups, so without this handler they
+// outlive the launcher and hold ports 3000/4000 until the next dev:all run
+// reclaims them.
+process.on('SIGHUP', () => shutdown(0));
 
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 
@@ -460,10 +470,62 @@ function banner() {
   console.log(lines.join('\n'));
 }
 
+/**
+ * Fail fast when the ports this stack needs are already taken — before any of
+ * the expensive boot work runs. A stale instance of this repository is stopped
+ * (see scripts/dev-ports.mjs); anything else aborts with a recipe instead of a
+ * bare EADDRINUSE from deep inside `next dev`.
+ */
+async function checkPorts() {
+  if (PORT === API_PORT) {
+    log('dev', `web and api would both use port ${PORT} — give them different ports:`);
+    log('dev', '  pnpm dev:all --port 3001   (or WEB_PORT / API_PORT in .env)');
+    process.exit(2);
+  }
+
+  for (const [name, port] of [
+    ['web', PORT],
+    ['api', API_PORT],
+  ]) {
+    const result = await reclaimPort(port, ROOT, (message) => log('dev', message));
+    if (result.status === 'free' || result.status === 'reclaimed') {
+      if (result.status === 'reclaimed') {
+        for (const holder of result.holders) {
+          log(
+            'dev',
+            `port ${port} (${name}) was held by a stale instance of this app — stopped PID ${holder.pid}`,
+          );
+        }
+      }
+      continue;
+    }
+
+    const holders = (result.holders ?? [])
+      .map((holder) => `PID ${holder.pid} (${holder.command})`)
+      .join(', ');
+    if (result.status === 'foreign') {
+      log(
+        'dev',
+        `port ${port} (${name}) is in use by ${holders} — not touching processes outside this repo.`,
+      );
+    } else if (result.status === 'unknown') {
+      log('dev', `port ${port} (${name}) is in use, but the process could not be identified`);
+      log('dev', '(needs lsof or ss, or permission to read /proc).');
+    } else if (result.status === 'stuck') {
+      log('dev', `port ${port} (${name}) is still held by ${holders} even after SIGKILL.`);
+    }
+    log('dev', 'Stop that process and run this again, or move the stack to other ports:');
+    log('dev', `  lsof -ti:${port} | xargs -r kill    ·    WEB_PORT=3001 API_PORT=4001 pnpm dev:all`);
+    process.exit(1);
+  }
+  log('dev', `ports ${PORT} (web) and ${API_PORT} (api) are free`);
+}
+
 async function main() {
   console.log(
     `\n  property-management-system-et — local stack (${IN_CLOUD_SHELL ? 'Cloud Shell' : 'local'})\n`,
   );
+  await checkPorts();
   checkDiskSpace();
   await ensureDependencies();
   await startDatabase();

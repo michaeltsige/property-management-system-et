@@ -76,7 +76,7 @@ localhost tunnels.**
 ```bash
 # 1. Node 20+ via corepack (pnpm is pinned in package.json)
 node -v                # 20 or newer
-corepack enable && corepack prepare pnpm@9.15.4 --activate
+corepack enable && corepack prepare pnpm@10.34.6 --activate
 
 # 2. Clone. The repository is private: authenticate with YOUR GitHub account.
 git clone https://github.com/michaeltsige/property-management-system-et.git
@@ -193,14 +193,14 @@ Cloud Shell **terminates the VM after ~40 minutes of inactivity** (12 h maximum
 session, 50 h per week). Everything outside `$HOME` is gone; the 5 GB home
 directory — your clone, `node_modules`, `.env` — persists.
 
-| After a reset                                              | What to do                                                                                                                                         |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Docker daemon not running                                  | `pnpm dev:all` starts it itself (`sudo service docker start` under the hood). Manually: `sudo service docker start`.                               |
-| Postgres container gone                                    | Recreated by `pnpm dev:all`; migrations and the seed run again automatically.                                                                      |
-| Database volume lost (Docker volumes live outside `$HOME`) | Nothing to do — the schema is rebuilt from the migrations and the demo data is re-seeded. **Never keep data you care about in the dev container.** |
-| Port 3000 already in use                                   | `pkill -f "next dev"` (or `WEB_PORT=3001 pnpm dev:all` and preview that port).                                                                     |
-| `pnpm: command not found`                                  | `corepack enable && corepack prepare pnpm@9.15.4 --activate`.                                                                                      |
-| Reconnecting after hours                                   | `cd ~/property-management-system-et && tmux new -A -s pms` then `pnpm dev:all`.                                                                    |
+| After a reset                                              | What to do                                                                                                                                                                                                         |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Docker daemon not running                                  | `pnpm dev:all` starts it itself (`sudo service docker start` under the hood). Manually: `sudo service docker start`.                                                                                               |
+| Postgres container gone                                    | Recreated by `pnpm dev:all`; migrations and the seed run again automatically.                                                                                                                                      |
+| Database volume lost (Docker volumes live outside `$HOME`) | Nothing to do — the schema is rebuilt from the migrations and the demo data is re-seeded. **Never keep data you care about in the dev container.**                                                                 |
+| Port 3000 already in use                                   | If the squatter is a stale instance of this repo, `pnpm dev:all` stops it automatically and continues. For anything else: `lsof -ti:3000 \| xargs -r kill`, or `WEB_PORT=3001 pnpm dev:all` and preview that port. |
+| `pnpm: command not found`                                  | `corepack enable && corepack prepare pnpm@10.34.6 --activate`.                                                                                                                                                     |
+| Reconnecting after hours                                   | `cd ~/property-management-system-et && tmux new -A -s pms` then `pnpm dev:all`.                                                                                                                                    |
 
 Recovery is always the same two lines:
 
