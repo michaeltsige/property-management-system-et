@@ -8,16 +8,21 @@
  */
 
 import * as LabelPrimitive from '@radix-ui/react-label';
+import * as SelectPrimitive from '@radix-ui/react-select';
 import * as SeparatorPrimitive from '@radix-ui/react-separator';
 import { cva, type VariantProps } from 'class-variance-authority';
-import type {
-  HTMLAttributes,
-  InputHTMLAttributes,
-  ReactNode,
-  Ref,
-  SelectHTMLAttributes,
-  TextareaHTMLAttributes,
-  ThHTMLAttributes,
+import { Check, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  Children,
+  Fragment,
+  isValidElement,
+  type HTMLAttributes,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type Ref,
+  type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
+  type ThHTMLAttributes,
 } from 'react';
 
 import { cn } from '@/lib/utils';
@@ -55,17 +60,177 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
   );
 }
 
-export function Select({ className, children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+/**
+ * Radix Select behind the native `<select>` API. Call sites keep writing
+ * `<Select value onChange>{<option/>s}</Select>` and the adapter translates:
+ *
+ * - `<option>` children become Radix items. Radix forbids empty item values,
+ *   so an option with `value=""` (the "All"/"Select…" placeholder pattern)
+ *   travels as an internal sentinel and maps back to `''` on change —
+ *   `e.target.value` semantics are preserved exactly.
+ * - `onChange` receives a native-shaped `{ target: { value, name } }`, so the
+ *   twenty-odd existing `onChange={(e) => set(e.target.value)}` call sites
+ *   compile and run unchanged.
+ * - With `name` set, a visually hidden native `<select>` mirrors the current
+ *   value so FormData submission and native `required` validation behave as
+ *   they did with the plain element (the Radix trigger is a button, which
+ *   browsers do not associate with form submission).
+ */
+const SELECT_EMPTY = '__pms_empty__';
+
+interface CollectedOption {
+  value: string;
+  label: ReactNode;
+  disabled: boolean;
+}
+
+function collectOptions(children: ReactNode): CollectedOption[] {
+  const options: CollectedOption[] = [];
+  const visit = (nodes: ReactNode) => {
+    Children.forEach(nodes, (child) => {
+      if (!isValidElement(child)) return;
+      if (child.type === 'option') {
+        const props = child.props as {
+          value?: string | number;
+          label?: ReactNode;
+          disabled?: boolean;
+          children?: ReactNode;
+        };
+        options.push({
+          value: String(props.value ?? ''),
+          label: props.label ?? props.children ?? '',
+          disabled: props.disabled ?? false,
+        });
+        return;
+      }
+      // `<>...</>` fragments are a common way to group options (and a classic
+      // trap: Children.forEach does NOT walk into them); recurse through.
+      if (child.type === Fragment) {
+        visit((child.props as { children?: ReactNode }).children);
+      }
+    });
+  };
+  visit(children);
+  return options;
+}
+
+export type SelectProps = Omit<
+  SelectHTMLAttributes<HTMLSelectElement>,
+  'defaultValue' | 'multiple' | 'onChange' | 'size' | 'value'
+> & {
+  /** Controlled value. `''` selects the placeholder-style `<option value="">`. */
+  value?: string | number;
+  defaultValue?: string | number;
+  /** Native-shaped handler: `{ target: { value, name } }`. */
+  onChange?: (event: { target: { value: string; name: string } }) => void;
+};
+
+export function Select({
+  className,
+  children,
+  id,
+  name,
+  required,
+  disabled,
+  value,
+  defaultValue,
+  onChange,
+  'aria-label': ariaLabel,
+  'aria-labelledby': ariaLabelledBy,
+}: SelectProps) {
+  const options = collectOptions(children);
+  const isControlled = value !== undefined;
+  const toRadix = (v: string | number | undefined) => {
+    if (v === undefined) return undefined;
+    const s = String(v);
+    return s === '' ? SELECT_EMPTY : s;
+  };
+  // A native select with no explicit value shows its first option; keep that.
+  const rootValue = isControlled ? toRadix(value) : undefined;
+  const rootDefaultValue = isControlled
+    ? undefined
+    : toRadix(defaultValue ?? options[0]?.value ?? '');
+
+  const handleValueChange = (next: string) => {
+    onChange?.({ target: { value: next === SELECT_EMPTY ? '' : next, name: name ?? '' } });
+  };
+
+  const mirroredValue = isControlled
+    ? String(value)
+    : String(defaultValue ?? options[0]?.value ?? '');
+
   return (
-    <select
-      className={cn(
-        'flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500',
-        className,
-      )}
-      {...props}
+    <SelectPrimitive.Root
+      value={rootValue}
+      defaultValue={rootDefaultValue}
+      onValueChange={handleValueChange}
+      disabled={disabled}
     >
-      {children}
-    </select>
+      <SelectPrimitive.Trigger
+        id={id}
+        aria-label={ariaLabel}
+        aria-labelledby={ariaLabelledBy}
+        aria-required={required || undefined}
+        className={cn(
+          'flex h-9 w-full items-center justify-between gap-1 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-60 data-[state=open]:border-brand-500 data-[state=open]:ring-1 data-[state=open]:ring-brand-500 [&>span]:min-w-0 [&>span]:truncate',
+          className,
+        )}
+      >
+        <SelectPrimitive.Value />
+        <SelectPrimitive.Icon className="shrink-0 opacity-50">
+          <ChevronDown className="h-4 w-4" aria-hidden="true" />
+        </SelectPrimitive.Icon>
+      </SelectPrimitive.Trigger>
+      <SelectPrimitive.Portal>
+        <SelectPrimitive.Content
+          position="popper"
+          sideOffset={4}
+          className="relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border border-slate-200 bg-white text-slate-900 shadow-md"
+        >
+          <SelectPrimitive.ScrollUpButton className="flex h-6 items-center justify-center">
+            <ChevronUp className="h-4 w-4" aria-hidden="true" />
+          </SelectPrimitive.ScrollUpButton>
+          <SelectPrimitive.Viewport className="p-1">
+            {options.map((option) => (
+              <SelectPrimitive.Item
+                key={option.value}
+                value={option.value === '' ? SELECT_EMPTY : option.value}
+                disabled={option.disabled}
+                className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-slate-100 data-[highlighted]:text-slate-900"
+              >
+                <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
+                <SelectPrimitive.ItemIndicator className="absolute right-2 inline-flex items-center">
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                </SelectPrimitive.ItemIndicator>
+              </SelectPrimitive.Item>
+            ))}
+          </SelectPrimitive.Viewport>
+          <SelectPrimitive.ScrollDownButton className="flex h-6 items-center justify-center">
+            <ChevronDown className="h-4 w-4" aria-hidden="true" />
+          </SelectPrimitive.ScrollDownButton>
+        </SelectPrimitive.Content>
+      </SelectPrimitive.Portal>
+      {name ? (
+        <select
+          name={name}
+          required={required}
+          disabled={disabled}
+          value={mirroredValue}
+          onChange={() => {}}
+          className="sr-only"
+          aria-hidden="true"
+          tabIndex={-1}
+        >
+          {options.map((option) => (
+            <option key={option.value} value={option.value} disabled={option.disabled}>
+              {typeof option.label === 'string' || typeof option.label === 'number'
+                ? option.label
+                : undefined}
+            </option>
+          ))}
+        </select>
+      ) : null}
+    </SelectPrimitive.Root>
   );
 }
 

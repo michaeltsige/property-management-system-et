@@ -64,7 +64,8 @@ describe('payment gateway settings card', () => {
     expect(screen.getByText(EN_CATALOG['org.gateway_platform_source'])).toBeTruthy();
 
     // Switch to Chapa: its credential fields appear (labels from the catalog).
-    await user.selectOptions(screen.getByLabelText(EN_CATALOG['org.gateway_provider']), 'chapa');
+    await user.click(screen.getByLabelText(EN_CATALOG['org.gateway_provider']));
+    await user.click(await screen.findByRole('option', { name: 'Chapa' }));
     await user.type(screen.getByLabelText(EN_CATALOG['org.gateway_field_secret_key']), 'sk_test_123');
     await user.type(screen.getByLabelText(EN_CATALOG['org.gateway_field_webhook_secret']), 'whsec_9');
     await user.click(screen.getByRole('button', { name: EN_CATALOG['common.save'] }));

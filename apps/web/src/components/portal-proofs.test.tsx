@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EN_CATALOG } from '@pms/i18n';
@@ -55,7 +55,8 @@ describe('portal payment proofs section', () => {
     // Amount: MoneyInput renders the label as "Amount *"; type a plain integer.
     const amountInput = screen.getByLabelText(/Amount/);
     await user.type(amountInput, '15000');
-    await user.selectOptions(screen.getByLabelText(EN_CATALOG['money.method']), 'bank_transfer');
+    await user.click(screen.getByLabelText(EN_CATALOG['money.method']));
+    await user.click(await screen.findByRole('option', { name: 'Bank transfer' }));
     await user.type(screen.getByLabelText(EN_CATALOG['payment.reference']), 'CBE-99881');
     await user.upload(screen.getByLabelText(EN_CATALOG['payment.proof_file']), pngFile);
 
@@ -108,7 +109,12 @@ describe('portal payment proofs section', () => {
     render(<PortalPaymentProofs currency="ETB" />);
 
     expect(await screen.findByText(EN_CATALOG['payment.proof_status.approved'])).toBeDefined();
-    expect(screen.getByText(EN_CATALOG['payment.method.bank_transfer'])).toBeDefined();
+    // Scope to the proofs list: the method select's trigger and Radix's hidden
+    // form bubble also carry the method label ("Bank transfer").
+    const list = screen.getByRole('list');
+    // The method label shares a <p> with the reference and date, so match
+    // partially instead of exactly.
+    expect(within(list).getByText(/Bank transfer/)).toBeDefined();
     expect(screen.getByText(/CBE-99881/)).toBeDefined();
   });
 });
