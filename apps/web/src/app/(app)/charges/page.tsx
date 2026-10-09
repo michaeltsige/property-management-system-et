@@ -45,13 +45,14 @@ export default function ChargesPage() {
   const [reason, setReason] = useState('');
   const { pending, error, message, setMessage, run } = useAction();
 
-  const query = `?periodKey=${periodKey}${status ? `&status=${status}` : ''}&pageSize=100`;
+  const query = `?periodKey=${periodKey}&calendar=${calendar}${status ? `&status=${status}` : ''}&pageSize=100`;
   const charges = useAsync(() => api.charges(query), [query]);
 
   async function generate() {
     await run(async () => {
       const result = await api.generateCharges({
         periodKeys: [periodKey],
+        calendar,
         skipNotYetStarted: true,
       });
       setMessage(
@@ -82,7 +83,7 @@ export default function ChargesPage() {
           <>
             <ExportCsvButton
               kind="charges"
-              query={`periodKey=${periodKey}${status ? `&status=${status}` : ''}`}
+              query={`periodKey=${periodKey}&calendar=${calendar}${status ? `&status=${status}` : ''}`}
             />
             <PeriodPicker
               periodKey={periodKey}

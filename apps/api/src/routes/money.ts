@@ -23,14 +23,11 @@ import { validate } from '../middleware/validate.js';
 import { getPrisma } from '../lib/prisma.js';
 import { notFound } from '../lib/errors.js';
 import { num, pstr, str } from '../lib/query.js';
+import { civilToUtcDate, parsePeriodKey, periodGregorianSpan, type CalendarKind } from '@pms/calendar';
 import { balanceMinor, leaseStatement, reverseEntry } from '../services/ledger.js';
 import { createDepositCharge, generateCharges, waiveCharge } from '../services/charges.js';
 import { recordPayment, reversePayment } from '../services/payments.js';
-import {
-  approvePaymentProof,
-  listPaymentProofs,
-  rejectPaymentProof,
-} from '../services/payment-proofs.js';
+import { approvePaymentProof, listPaymentProofs, rejectPaymentProof } from '../services/payment-proofs.js';
 import { buildPaymentReceipt } from '../services/receipts.js';
 import { renderReceiptPdf } from '../lib/pdf.js';
 
@@ -51,6 +48,7 @@ moneyRouter.post(
       const result = await generateCharges(getPrisma(), {
         organizationId: organizationIdOf(req),
         periodKeys: req.body.periodKeys,
+        sourceCalendar: req.body.calendar,
         leaseIds: req.body.leaseIds,
         skipNotYetStarted: req.body.skipNotYetStarted,
         actorUserId: req.auth?.userId ?? null,
@@ -84,6 +82,8 @@ moneyRouter.get(
         .string()
         .regex(/^\d{4}-\d{2}$/)
         .optional(),
+      /** Which calendar `periodKey` is expressed in; charges may be billed in either. */
+      calendar: z.enum(['ethiopian', 'gregorian']).optional(),
     }),
   }),
   async (req, res, next) => {
@@ -96,6 +96,21 @@ moneyRouter.get(
       const tenantId = str(req.query.tenantId);
       const status = str(req.query.status);
       const periodKey = str(req.query.periodKey);
+      const calendar = str(req.query.calendar) as CalendarKind | '';
+
+      // A period key only has meaning inside its own calendar, but charges are
+      // billed in the LEASE's calendar. So when the caller states which calendar
+      // it is looking at (the charges screen now always does), the filter becomes
+      // the wall-clock window of that period — a lease billed in the other
+      // calendar still lands in it instead of silently disappearing.
+      const periodFilter = periodKey
+        ? calendar
+          ? (() => {
+              const span = periodGregorianSpan(parsePeriodKey(periodKey, calendar));
+              return { periodStart: { gte: civilToUtcDate(span.from), lte: civilToUtcDate(span.to) } };
+            })()
+          : { periodKey }
+        : {};
 
       const where = {
         organizationId,
@@ -106,7 +121,7 @@ moneyRouter.get(
           : status
             ? { status }
             : {}),
-        ...(periodKey ? { periodKey } : {}),
+        ...periodFilter,
       };
 
       const [items, total] = await Promise.all([
