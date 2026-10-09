@@ -25,6 +25,23 @@ import { Logo } from './logo';
 import { usePathname, useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useEffect, useState } from 'react';
+import {
+  BarChart3,
+  Building2,
+  CalendarDays,
+  FileText,
+  Home,
+  Languages,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Receipt,
+  ScrollText,
+  Users,
+  Wallet,
+  Wrench,
+  X,
+} from 'lucide-react';
 
 import { api } from '@/lib/api';
 import { formatPeriodKey, todayFor } from '@/lib/format';
@@ -33,7 +50,7 @@ import { LANGUAGES, usePreferences } from '@/lib/preferences';
 import { ROLE_LABEL_FALLBACK } from '@/lib/roles';
 import { cn } from '@/lib/utils';
 
-import { Button, Icon, type IconName } from '@/components/ui';
+import { Button } from './ui';
 import { GlobalSearch } from './global-search';
 import { PropertySwitcher } from './property-switcher';
 import { TaskPanel } from './task-panel';
@@ -43,45 +60,45 @@ import { openWorkspaceTab } from '@/lib/workspace-tabs';
 interface NavItem {
   href: string;
   labelKey: string;
-  icon: IconName;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
 const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
   {
     labelKey: 'nav.group.overview',
-    items: [{ href: '/dashboard', labelKey: 'nav.dashboard', icon: 'dashboard' }],
+    items: [{ href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard }],
   },
   {
     labelKey: 'nav.group.portfolio',
     items: [
-      { href: '/properties', labelKey: 'nav.properties', icon: 'building' },
-      { href: '/units', labelKey: 'nav.units', icon: 'home' },
-      { href: '/tenants', labelKey: 'nav.tenants', icon: 'users' },
-      { href: '/leases', labelKey: 'nav.leases', icon: 'calendar' },
+      { href: '/properties', labelKey: 'nav.properties', icon: Building2 },
+      { href: '/units', labelKey: 'nav.units', icon: Home },
+      { href: '/tenants', labelKey: 'nav.tenants', icon: Users },
+      { href: '/leases', labelKey: 'nav.leases', icon: CalendarDays },
     ],
   },
   {
     labelKey: 'nav.group.money',
     items: [
-      { href: '/charges', labelKey: 'nav.charges', icon: 'receipt' },
-      { href: '/payments', labelKey: 'nav.payments', icon: 'wallet' },
-      { href: '/reports', labelKey: 'nav.reports', icon: 'chart' },
+      { href: '/charges', labelKey: 'nav.charges', icon: Receipt },
+      { href: '/payments', labelKey: 'nav.payments', icon: Wallet },
+      { href: '/reports', labelKey: 'nav.reports', icon: BarChart3 },
     ],
   },
   {
     labelKey: 'nav.group.operations',
     items: [
-      { href: '/maintenance', labelKey: 'nav.maintenance', icon: 'wrench' },
-      { href: '/documents', labelKey: 'nav.documents', icon: 'file' },
+      { href: '/maintenance', labelKey: 'nav.maintenance', icon: Wrench },
+      { href: '/documents', labelKey: 'nav.documents', icon: FileText },
     ],
   },
   {
     labelKey: 'nav.group.organization',
     items: [
-      { href: '/organization', labelKey: 'nav.organization', icon: 'building' },
-      { href: '/organization/team', labelKey: 'org.team', icon: 'users' },
-      { href: '/organization/audit', labelKey: 'nav.audit', icon: 'ledger' },
-      { href: '/organization/translations', labelKey: 'nav.translations', icon: 'globe' },
+      { href: '/organization', labelKey: 'nav.organization', icon: Building2 },
+      { href: '/organization/team', labelKey: 'org.team', icon: Users },
+      { href: '/organization/audit', labelKey: 'nav.audit', icon: ScrollText },
+      { href: '/organization/translations', labelKey: 'nav.translations', icon: Languages },
     ],
   },
 ];
@@ -111,6 +128,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
           <ul className="space-y-0.5 px-2">
             {group.items.map((item) => {
               const active = item.href === activeHref;
+              const Icon = item.icon;
               return (
                 <li key={item.href}>
                   <Link
@@ -126,10 +144,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                         : 'text-slate-300 hover:bg-white/5 hover:text-white',
                     )}
                   >
-                    <Icon
-                      name={item.icon}
-                      className={cn('h-4 w-4', active ? 'text-brand-300' : 'text-slate-400')}
-                    />
+                    <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-brand-300' : 'text-slate-400')} />
                     <span className="truncate">{t(item.labelKey as never)}</span>
                   </Link>
                 </li>
@@ -283,7 +298,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   className="text-slate-400 hover:bg-white/10 hover:text-white"
                   aria-label={t('common.close')}
                 >
-                  <Icon name="close" className="h-4 w-4" />
+                  <X className="h-4 w-4" />
                 </Button>
               </Dialog.Close>
             </div>
@@ -302,7 +317,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   title={t('auth.sign_out')}
                   onClick={handleSignOut}
                 >
-                  <Icon name="log-out" className="h-4 w-4" />
+                  <LogOut className="h-4 w-4" />
                 </Button>
               </div>
             </div>
@@ -322,7 +337,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               aria-haspopup="dialog"
               onClick={() => setMenuOpen(true)}
             >
-              <Icon name="menu" className="h-5 w-5" />
+              <Menu className="h-5 w-5" />
             </Button>
             <span className="truncate text-sm font-semibold text-slate-900 lg:hidden">{t('app.name')}</span>
             {/* Today in the active calendar: quiet context, not a badge. */}
@@ -350,7 +365,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 title={t('auth.sign_out')}
                 onClick={handleSignOut}
               >
-                <Icon name="log-out" className="h-4 w-4" />
+                <LogOut className="h-4 w-4" />
               </Button>
             </div>
           </div>

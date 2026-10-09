@@ -11,7 +11,6 @@ import * as LabelPrimitive from '@radix-ui/react-label';
 import * as SeparatorPrimitive from '@radix-ui/react-separator';
 import { cva, type VariantProps } from 'class-variance-authority';
 import type {
-  ComponentProps,
   HTMLAttributes,
   InputHTMLAttributes,
   ReactNode,
@@ -22,8 +21,6 @@ import type {
 } from 'react';
 
 import { cn } from '@/lib/utils';
-
-import { Icon } from './icon';
 
 export function Label({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
   return <LabelPrimitive.Root className={cn('text-xs font-medium text-slate-600', className)} {...props} />;
@@ -200,35 +197,11 @@ export function Td({ className, ...props }: HTMLAttributes<HTMLTableCellElement>
   );
 }
 
-/**
- * A zero-state owns the space it sits in: it explains the value of the screen
- * (title), says what to do first (description), and puts the first action one
- * click away (action) instead of leaving the user to hunt for it. The optional
- * icon gives the block enough visual weight that an empty table never reads as
- * a page that failed to load.
- */
-export function EmptyState({
-  title,
-  description,
-  icon,
-  action,
-}: {
-  title: string;
-  description?: string;
-  /** Optional decorative glyph, sized for an empty-state accent. */
-  icon?: ComponentProps<typeof Icon>['name'];
-  action?: ReactNode;
-}) {
+export function EmptyState({ title, description }: { title: string; description?: string }) {
   return (
-    <div className="flex flex-col items-center justify-center gap-2 px-4 py-14 text-center">
-      {icon ? (
-        <div className="mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100">
-          <Icon name={icon} size="lg" className="text-slate-400" />
-        </div>
-      ) : null}
+    <div className="flex flex-col items-center justify-center gap-1 px-4 py-12 text-center">
       <p className="text-sm font-medium text-slate-700">{title}</p>
-      {description ? <p className="max-w-md text-xs leading-5 text-slate-500">{description}</p> : null}
-      {action ? <div className="mt-2">{action}</div> : null}
+      {description ? <p className="max-w-md text-xs text-slate-500">{description}</p> : null}
     </div>
   );
 }

@@ -10,6 +10,7 @@
  * be unambiguous to both parties.
  */
 
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useMemo } from 'react';
 
 import {
@@ -26,7 +27,6 @@ import {
 
 import { cn } from '@/lib/utils';
 import { usePreferences } from '@/lib/preferences';
-import { Icon } from '@/components/ui';
 
 import { Button, Label } from './ui';
 
@@ -88,7 +88,7 @@ export function EthiopianDatePicker({
           onClick={() => shiftMonth(-1)}
           aria-label={t('common.previous')}
         >
-          <Icon name="chevron-left" className="h-4 w-4" />
+          <ChevronLeft className="h-4 w-4" />
         </Button>
         <div className="text-center">
           <p className="text-sm font-semibold text-slate-900">
@@ -107,7 +107,7 @@ export function EthiopianDatePicker({
           onClick={() => shiftMonth(1)}
           aria-label={t('common.next')}
         >
-          <Icon name="chevron-right" className="h-4 w-4" />
+          <ChevronRight className="h-4 w-4" />
         </Button>
       </div>
 

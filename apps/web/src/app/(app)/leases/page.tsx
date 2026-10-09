@@ -1,5 +1,6 @@
 'use client';
 
+import { Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 import { BILLING_FREQUENCIES, LEASE_STATUSES, type BillingFrequency, type LeaseStatus } from '@pms/shared';
@@ -17,7 +18,21 @@ import { ExportCsvButton } from '@/components/export-csv-button';
 import { DateField } from '@/components/ethiopian-date-picker';
 import { MoneyInput } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
-import { Alert, Badge, Button, Card, CardContent, EmptyState, Icon, Input, Label, Select, Skeleton, Table, Td, Th } from '@/components/ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  EmptyState,
+  Input,
+  Label,
+  Select,
+  Skeleton,
+  Table,
+  Td,
+  Th,
+} from '@/components/ui';
 
 export default function LeasesPage() {
   const { t, language, calendar } = usePreferences();
@@ -128,7 +143,7 @@ export default function LeasesPage() {
           <>
             <ExportCsvButton kind="leases" />
             <Button onClick={() => setOpen(true)}>
-              <Icon name="plus" className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
               {t('common.create')}
             </Button>
           </>

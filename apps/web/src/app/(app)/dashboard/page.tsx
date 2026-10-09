@@ -3,6 +3,7 @@
 import { useCalendarPeriod } from '@/lib/use-calendar-period';
 import Link from 'next/link';
 import { useMemo } from 'react';
+import { Building2, CalendarPlus, TrendingDown, TrendingUp, UserPlus, Wallet } from 'lucide-react';
 
 import { formatAmount, formatPeriodKey } from '@/lib/format';
 import { useAsync } from '@/lib/hooks';
@@ -22,10 +23,8 @@ import {
   CardHeader,
   CardTitle,
   EmptyState,
-  Icon,
   Skeleton,
 } from '@/components/ui';
-import type { IconName } from '@/components/ui';
 
 /**
  * The four things a landlord does most often. Each link opens the screen with
@@ -33,11 +32,11 @@ import type { IconName } from '@/components/ui';
  * work, not just a place to read numbers. Recording money is the daily action
  * and gets the one primary button on this screen; the rest stay quiet.
  */
-const QUICK_ACTIONS: { href: string; labelKey: string; icon: IconName; primary: boolean }[] = [
-  { href: '/payments?new=1', labelKey: 'money.record_payment', icon: 'wallet', primary: true },
-  { href: '/leases?new=1', labelKey: 'dashboard.quick.lease', icon: 'calendar-plus', primary: false },
-  { href: '/tenants?new=1', labelKey: 'dashboard.quick.tenant', icon: 'user-plus', primary: false },
-  { href: '/properties?new=1', labelKey: 'dashboard.onboarding_cta', icon: 'building', primary: false },
+const QUICK_ACTIONS = [
+  { href: '/payments?new=1', labelKey: 'money.record_payment', icon: Wallet, primary: true },
+  { href: '/leases?new=1', labelKey: 'dashboard.quick.lease', icon: CalendarPlus, primary: false },
+  { href: '/tenants?new=1', labelKey: 'dashboard.quick.tenant', icon: UserPlus, primary: false },
+  { href: '/properties?new=1', labelKey: 'dashboard.onboarding_cta', icon: Building2, primary: false },
 ];
 
 export default function DashboardPage() {
@@ -128,6 +127,7 @@ export default function DashboardPage() {
         <h2 id="quick-actions" className="sr-only">{t('dashboard.quick_actions')}</h2>
         <div className="flex flex-wrap gap-2">
           {QUICK_ACTIONS.map((action) => {
+            const Icon = action.icon;
             return (
               <Button
                 key={action.href}
@@ -136,7 +136,7 @@ export default function DashboardPage() {
                 asChild
               >
                 <Link href={action.href}>
-                  <Icon name={action.icon} className="h-4 w-4" />
+                  <Icon className="h-4 w-4" aria-hidden="true" />
                   {t(action.labelKey as never)}
                 </Link>
               </Button>
@@ -161,7 +161,7 @@ export default function DashboardPage() {
             <div className="flex justify-center pb-6">
               <Button asChild>
                 <Link href="/properties?new=1">
-                  <Icon name="building" className="h-4 w-4" />
+                  <Building2 className="h-4 w-4" aria-hidden="true" />
                   {t('dashboard.onboarding_cta')}
                 </Link>
               </Button>
@@ -299,11 +299,11 @@ export default function DashboardPage() {
                   tone={trendDelta.direction === 'up' ? 'brand' : trendDelta.direction === 'down' ? 'danger' : 'neutral'}
                   className="gap-1 tabular"
                 >
-                  <Icon
-                    name={trendDelta.direction === 'down' ? 'trend-down' : 'trend-up'}
-                    size="sm"
-                    className="h-3 w-3"
-                  />
+                  {trendDelta.direction === 'down' ? (
+                    <TrendingDown className="h-3 w-3" aria-hidden="true" />
+                  ) : (
+                    <TrendingUp className="h-3 w-3" aria-hidden="true" />
+                  )}
                   {trendDelta.value} {t('dashboard.delta_completed_periods')}
                 </Badge>
               ) : null}

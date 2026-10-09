@@ -1,5 +1,6 @@
 'use client';
 
+import { Download, Plus, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 import { DOCUMENT_CATEGORIES, ALLOWED_UPLOAD_MIME_TYPES, DEFAULT_MAX_UPLOAD_BYTES } from '@pms/shared';
@@ -11,7 +12,21 @@ import { usePreferences } from '@/lib/preferences';
 
 import { PageHeader } from '@/components/app-shell';
 import { Modal } from '@/components/modal';
-import { Alert, Badge, Button, Card, CardContent, EmptyState, Icon, Input, Label, Select, Skeleton, Table, Td, Th } from '@/components/ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  EmptyState,
+  Input,
+  Label,
+  Select,
+  Skeleton,
+  Table,
+  Td,
+  Th,
+} from '@/components/ui';
 
 /**
  * Documents. The API is JSON-only, so a file is read in the browser, base64
@@ -90,7 +105,7 @@ export default function DocumentsPage() {
         description={`${ALLOWED_UPLOAD_MIME_TYPES.length} accepted file types · ${maxMb} MB maximum`}
         actions={
           <Button onClick={() => setOpen(true)}>
-            <Icon name="plus" className="h-4 w-4" />
+            <Plus className="h-4 w-4" />
             {t('documents.upload')}
           </Button>
         }
@@ -143,7 +158,7 @@ export default function DocumentsPage() {
                         title={t('documents.download')}
                         onClick={() => void download(document.id, document.title ?? 'document')}
                       >
-                        <Icon name="download" className="h-4 w-4" />
+                        <Download className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
@@ -151,7 +166,7 @@ export default function DocumentsPage() {
                         title={t('common.delete')}
                         onClick={() => void remove(document.id)}
                       >
-                        <Icon name="trash" className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </Td>
                   </tr>

@@ -1,5 +1,6 @@
 'use client';
 
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { MANUAL_PAYMENT_METHODS, PAYMENT_METHODS } from '@pms/shared';
@@ -14,7 +15,21 @@ import { ExportCsvButton } from '@/components/export-csv-button';
 import { MoneyInput } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
 import { PaymentProofsReview } from '@/components/payment-proofs-review';
-import { Alert, Badge, Button, Card, CardContent, EmptyState, Icon, Input, Label, Select, Skeleton, Table, Td, Th } from '@/components/ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  EmptyState,
+  Input,
+  Label,
+  Select,
+  Skeleton,
+  Table,
+  Td,
+  Th,
+} from '@/components/ui';
 
 /**
  * Payments. Recording cash, a bank transfer or a cheque is the first-class flow;
@@ -115,7 +130,7 @@ export default function PaymentsPage() {
             </Select>
             <ExportCsvButton kind="payments" />
             <Button onClick={() => setOpen(true)}>
-              <Icon name="plus" className="h-4 w-4" />
+              <Plus className="h-4 w-4" />
               {t('money.record_payment')}
             </Button>
           </>

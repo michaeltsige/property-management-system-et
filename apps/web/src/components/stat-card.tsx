@@ -1,8 +1,10 @@
 'use client';
 
+import { TrendingDown, TrendingUp } from 'lucide-react';
+
 import { cn } from '@/lib/utils';
 
-import { Card, CardContent, Icon, Skeleton, type IconName } from './ui';
+import { Card, CardContent, Skeleton } from './ui';
 
 /**
  * One KPI. The optional `progress` (0–100) draws a hairline bar under the
@@ -60,10 +62,10 @@ export function StatCard({
     delta === undefined
       ? undefined
       : delta.direction === 'up'
-        ? { icon: 'trend-up' as IconName, classes: 'bg-brand-50 text-brand-800' }
+        ? { icon: TrendingUp, classes: 'bg-brand-50 text-brand-800' }
         : delta.direction === 'down'
-          ? { icon: 'trend-down' as IconName, classes: 'bg-red-50 text-red-800' }
-          : { icon: 'trend-down' as IconName, classes: 'bg-slate-100 text-slate-600' };
+          ? { icon: TrendingDown, classes: 'bg-red-50 text-red-800' }
+          : { icon: TrendingDown, classes: 'bg-slate-100 text-slate-600' };
 
   return (
     <Card className={className}>
@@ -77,7 +79,7 @@ export function StatCard({
                 deltaTone.classes,
               )}
             >
-              <Icon name={deltaTone.icon} size="sm" className="h-3 w-3" />
+              <deltaTone.icon className="h-3 w-3" aria-hidden="true" />
               {delta.value}
               <span className="font-normal opacity-80">{delta.label}</span>
             </span>
