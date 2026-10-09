@@ -1,6 +1,6 @@
 'use client';
 
-import { signupBillingSchema } from '@pms/shared';
+import { signupBillingSchema, CURRENCIES } from '@pms/shared';
 import { SignupBillingForm } from '@/components/signup-billing';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -27,7 +27,8 @@ export default function RegisterPage() {
     phone: '',
     password: '',
     language: 'en' as LanguageCode,
-    calendar: 'ethiopian' as CalendarKind,
+    calendar: 'gregorian' as CalendarKind,
+    currency: 'ETB' as keyof typeof CURRENCIES,
   });
   const [step, setStep] = useState(0);
   const [registered, setRegistered] = useState(false);
@@ -73,7 +74,7 @@ export default function RegisterPage() {
           phone: form.phone || undefined,
           language: form.language,
           calendar: form.calendar,
-          currency: 'ETB',
+          currency: form.currency,
         });
         setRegistered(true);
       }
@@ -197,10 +198,28 @@ export default function RegisterPage() {
                     value={form.password}
                     onChange={(event) => update('password', event.target.value)}
                   />
-                  <p className="text-[11px] text-slate-500">At least 10 characters.</p>
+                  <p className="text-[11px] text-slate-500">
+                    At least 10 characters, including at least one letter and one number.
+                  </p>
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="currency">{t('org.default_currency')}</Label>
+                    <Select
+                      id="currency"
+                      value={form.currency}
+                      onChange={(event) => update('currency', event.target.value as typeof form.currency)}
+                    >
+                      {Object.entries(CURRENCIES).map(([code, definition]) => (
+                        <option key={code} value={code}>
+                          {code}
+                          {definition.symbol ? ` (${definition.symbol})` : ''}
+                        </option>
+                      ))}
+                    </Select>
+                    <p className="text-[11px] text-slate-500">{t('org.default_currency_hint')}</p>
+                  </div>
                   <div className="space-y-1">
                     <Label htmlFor="language">{t('org.default_language')}</Label>
                     <Select
@@ -254,7 +273,9 @@ export default function RegisterPage() {
                   <p>
                     {t('onboarding.fee_rule')}: {t(`onboarding.${billing.lateFeeRule}`)}
                   </p>
-                  <p>{billing.acceptedPaymentMethods.join(', ')} · ETB</p>
+                  <p>
+                    {billing.acceptedPaymentMethods.join(', ')} · {form.currency}
+                  </p>
                   <p>
                     {billing.lateFeeRule === 'fixed'
                       ? `${billing.lateFeeMinor} santim`

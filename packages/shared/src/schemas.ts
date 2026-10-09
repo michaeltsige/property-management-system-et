@@ -45,6 +45,8 @@ export const isoDateSchema = z
 
 export const calendarKindSchema = z.enum(CALENDAR_KINDS as unknown as [CalendarKind, ...CalendarKind[]]);
 export const languageSchema = z.enum(['en', 'am', 'om', 'ti']);
+/** Currencies the platform can hold books in (ETB default — see CURRENCIES). */
+export const currencyCodeSchema = z.enum(Object.keys(CURRENCIES) as [string, ...string[]]);
 
 /**
  * A civil (date-only) value in a chosen calendar. Validated through
@@ -166,7 +168,7 @@ export const portfolioModeSchema = z.enum(['self_owned', 'managed']);
 
 export const signupBillingSchema = z
   .object({
-    billingCalendar: calendarKindSchema.default('ethiopian'),
+    billingCalendar: calendarKindSchema.default('gregorian'),
     dueDay: z.number().int().min(1).max(28).default(5),
     graceDays: z.number().int().min(0).max(60).default(0),
     lateFeeRule: z.enum(['none', 'percent', 'fixed']).default('none'),
@@ -183,7 +185,8 @@ export const signupBillingSchema = z
 
 export const registerSchema = z.object({
   accountType: z.enum(['individual_landlord', 'management_company']).default('individual_landlord'),
-  currency: z.literal('ETB').default('ETB'),
+  /** The books' currency; leases are later validated against it. ETB by default. */
+  currency: currencyCodeSchema.default('ETB'),
   billing: signupBillingSchema.optional(),
   portfolioMode: portfolioModeSchema.default('self_owned'),
   organizationName: z.string().trim().min(2).max(120),
@@ -194,7 +197,8 @@ export const registerSchema = z.object({
   password: passwordSchema,
   /** UI language preference; the organization default is chosen separately. */
   language: languageSchema.default('en'),
-  calendar: calendarKindSchema.default('ethiopian'),
+  /** Display calendar preference; Gregorian by default, Ethiopian is opt-in. */
+  calendar: calendarKindSchema.default('gregorian'),
 });
 
 export const loginSchema = z.object({
@@ -419,11 +423,14 @@ export const terminateLeaseSchema = z.object({
 });
 
 export const generateChargesSchema = z.object({
-  /** Periods to generate, in the lease's own billing calendar, e.g. ["2026-09"]. */
+  /** Periods to generate, e.g. ["2026-09"]. Interpreted in `calendar` when given,
+   *  then converted to each lease's own billing calendar. */
   periodKeys: z
     .array(z.string().regex(/^\d{4}-\d{2}$/))
     .min(1)
     .max(24),
+  /** The calendar the period keys are expressed in (default: each lease's own). */
+  calendar: calendarKindSchema.optional(),
   /** Generate for specific leases only (default: all active leases in the organization). */
   leaseIds: z.array(uuidSchema).max(500).optional(),
   /** Skip leases whose start date is after the period ends. Defaults to true. */
