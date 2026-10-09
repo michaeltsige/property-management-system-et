@@ -9,6 +9,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
 
 import { civilToUtcDate, periodForDate, utcDateToCivil, type CalendarKind } from '@pms/calendar';
 import {
@@ -31,7 +32,7 @@ import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
 import { businessRule, notFound } from '../lib/errors.js';
 import { decryptField, encryptField, lastFour } from '../lib/crypto.js';
-import { pstr, str } from '../lib/query.js';
+import { num, pstr, str } from '../lib/query.js';
 import { getPrisma } from '../lib/prisma.js';
 import { balanceMinor, postLedgerEntry } from '../services/ledger.js';
 import { createDepositChargeInTx } from '../services/charges.js';
@@ -41,6 +42,54 @@ import { recordAudit } from '../services/audit.js';
 
 export const portfolioRouter = Router();
 portfolioRouter.use(requireAuth);
+
+// ---------------------------------------------------------------------------
+// Lease lifecycle
+// ---------------------------------------------------------------------------
+
+/**
+ * Legal lease status transitions. Terminal states (`expired`, `terminated`,
+ * `cancelled`) accept no further transitions — money history attached to them
+ * stays stable and a "revived" lease cannot dodge its recorded arrears.
+ */
+const LEASE_TRANSITIONS: Record<string, readonly string[]> = {
+  draft: ['pending', 'active', 'cancelled'],
+  pending: ['active', 'cancelled', 'draft'],
+  active: ['expired', 'terminated'],
+  expired: [],
+  terminated: [],
+  cancelled: [],
+};
+
+export function assertLeaseTransition(from: string, to: string): void {
+  if (from === to) return; // idempotent PATCH with no real change
+  const allowed = LEASE_TRANSITIONS[from];
+  if (!allowed || !allowed.includes(to)) {
+    throw businessRule(`A ${from} lease cannot move to ${to}`);
+  }
+}
+
+export function isTerminalLease(status: string): boolean {
+  return status === 'expired' || status === 'terminated' || status === 'cancelled';
+}
+
+/**
+ * Free a unit when a lease leaves it. Only becomes `vacant` when no other
+ * pending/active lease still holds the unit (e.g. a back-to-back renewal).
+ */
+export async function releaseUnitIfFree(
+  tx: Prisma.TransactionClient,
+  organizationId: string,
+  unitId: string,
+  exceptLeaseId: string,
+): Promise<void> {
+  const remaining = await tx.lease.count({
+    where: { organizationId, unitId, id: { not: exceptLeaseId }, status: { in: ['pending', 'active'] }, deletedAt: null },
+  });
+  if (remaining === 0) {
+    await tx.unit.update({ where: { id: unitId }, data: { status: 'vacant' } });
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Properties
@@ -140,16 +189,22 @@ portfolioRouter.patch(
           data: {
             ...(ownerId !== undefined ? { ownerId } : {}),
             ...(rest.name !== undefined ? { name: rest.name } : {}),
+            ...(rest.code !== undefined ? { code: rest.code ?? null } : {}),
             ...(rest.type !== undefined ? { type: rest.type } : {}),
             ...(rest.status !== undefined ? { status: rest.status } : {}),
             ...(rest.notes !== undefined ? { notes: rest.notes } : {}),
+            ...(rest.yearBuilt !== undefined ? { yearBuilt: rest.yearBuilt ?? null } : {}),
+            ...(rest.totalFloors !== undefined ? { totalFloors: rest.totalFloors ?? null } : {}),
             ...(address
               ? {
                   regionCode: address.regionCode ?? existing.regionCode,
+                  region: address.region ?? existing.region,
                   cityOrZone: address.cityOrZone ?? existing.cityOrZone,
                   subCity: address.subCity ?? existing.subCity,
                   woreda: address.woreda ?? existing.woreda,
                   kebele: address.kebele ?? existing.kebele,
+                  houseNumber: address.houseNumber ?? existing.houseNumber,
+                  street: address.street ?? existing.street,
                   landmark: address.landmark ?? existing.landmark,
                 }
               : {}),
@@ -325,7 +380,12 @@ portfolioRouter.patch(
             ...(req.body.buildingId !== undefined ? { buildingId: req.body.buildingId } : {}),
             ...(req.body.label !== undefined ? { label: req.body.label } : {}),
             ...(req.body.typeLabel !== undefined ? { typeLabel: req.body.typeLabel || null } : {}),
+            ...(req.body.floor !== undefined ? { floor: req.body.floor ?? null } : {}),
+            ...(req.body.bedrooms !== undefined ? { bedrooms: req.body.bedrooms ?? null } : {}),
+            ...(req.body.bathrooms !== undefined ? { bathrooms: req.body.bathrooms ?? null } : {}),
+            ...(req.body.areaSqm !== undefined ? { areaSqm: req.body.areaSqm ?? null } : {}),
             ...(req.body.status !== undefined ? { status: req.body.status } : {}),
+            ...(req.body.notes !== undefined ? { notes: req.body.notes ?? null } : {}),
             ...(req.body.marketRent !== undefined
               ? { marketRentMinor: req.body.marketRent ? BigInt(req.body.marketRent.amountMinor) : null }
               : {}),
@@ -423,18 +483,27 @@ portfolioRouter.get(
   validate({ query: paginationSchema.partial() }),
   async (req, res, next) => {
     try {
-      const tenants = await getPrisma().tenant.findMany({
-        where: {
-          organizationId: organizationIdOf(req),
-          deletedAt: null,
-          ...(str(req.query.search)
-            ? { fullName: { contains: str(req.query.search), mode: 'insensitive' as const } }
-            : {}),
-        },
-        orderBy: { fullName: 'asc' },
-        take: 200,
-      });
-      res.json({ tenants });
+      const prisma = getPrisma();
+      const page = num(req.query.page, 1);
+      const pageSize = num(req.query.pageSize, 100);
+      const where = {
+        organizationId: organizationIdOf(req),
+        deletedAt: null,
+        ...(str(req.query.search)
+          ? { fullName: { contains: str(req.query.search), mode: 'insensitive' as const } }
+          : {}),
+      };
+      // Real pagination: a hard take(200) silently hid tenants past the cap.
+      const [tenants, total] = await Promise.all([
+        prisma.tenant.findMany({
+          where,
+          orderBy: { fullName: 'asc' },
+          skip: (page - 1) * pageSize,
+          take: pageSize,
+        }),
+        prisma.tenant.count({ where }),
+      ]);
+      res.json({ tenants, page, pageSize, total });
     } catch (error) {
       next(error);
     }
@@ -592,7 +661,19 @@ portfolioRouter.patch(
           data: {
             ...(req.body.fullName !== undefined ? { fullName: req.body.fullName } : {}),
             ...(req.body.phone !== undefined ? { phone: req.body.phone } : {}),
-            ...(req.body.email !== undefined ? { email: req.body.email } : {}),
+            ...(req.body.altPhone !== undefined ? { altPhone: req.body.altPhone ?? null } : {}),
+            ...(req.body.email !== undefined ? { email: req.body.email ?? null } : {}),
+            ...(req.body.language !== undefined ? { language: req.body.language ?? null } : {}),
+            ...(req.body.nationality !== undefined
+              ? { nationality: req.body.nationality ?? null }
+              : {}),
+            ...(req.body.emergencyContactName !== undefined
+              ? { emergencyContactName: req.body.emergencyContactName ?? null }
+              : {}),
+            ...(req.body.emergencyContactPhone !== undefined
+              ? { emergencyContactPhone: req.body.emergencyContactPhone ?? null }
+              : {}),
+            ...(req.body.employer !== undefined ? { employer: req.body.employer ?? null } : {}),
             ...(req.body.notes !== undefined ? { notes: req.body.notes } : {}),
           },
         });
@@ -618,6 +699,138 @@ portfolioRouter.patch(
 );
 
 // ---------------------------------------------------------------------------
+// Soft deletes
+// ---------------------------------------------------------------------------
+
+/**
+ * Soft delete a property. The columns existed; no endpoint used them, so a
+ * mis-keyed property could never be removed. Soft only: money and lease history
+ * stay intact, the row just leaves every list and pick-list.
+ */
+portfolioRouter.delete(
+  '/properties/:propertyId',
+  requirePermission('properties.write'),
+  validate({ params: z.object({ propertyId: uuidSchema }) }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const organizationId = organizationIdOf(req);
+      const property = await prisma.property.findFirst({
+        where: { id: pstr(req, 'propertyId'), organizationId, deletedAt: null },
+      });
+      if (!property) throw notFound('Property not found in this organization');
+
+      const liveLeases = await prisma.lease.count({
+        where: {
+          organizationId,
+          deletedAt: null,
+          status: { in: ['pending', 'active'] },
+          unit: { is: { propertyId: property.id, deletedAt: null } },
+        },
+      });
+      if (liveLeases > 0) throw businessRule('End the leases on this property before deleting it');
+
+      const liveUnits = await prisma.unit.count({
+        where: { organizationId, propertyId: property.id, deletedAt: null },
+      });
+      if (liveUnits > 0) {
+        throw businessRule('Delete or move the units of this property first');
+      }
+
+      await prisma.$transaction(async (tx) => {
+        await tx.property.update({ where: { id: property.id }, data: { deletedAt: new Date() } });
+        await recordAudit(tx, {
+          organizationId,
+          actorUserId: req.auth?.userId,
+          action: 'delete',
+          entityType: 'Property',
+          entityId: property.id,
+          before: { name: property.name, status: property.status },
+          requestId: req.requestId,
+        });
+      });
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+portfolioRouter.delete(
+  '/units/:unitId',
+  requirePermission('units.write'),
+  validate({ params: z.object({ unitId: uuidSchema }) }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const organizationId = organizationIdOf(req);
+      const unit = await prisma.unit.findFirst({
+        where: { id: pstr(req, 'unitId'), organizationId, deletedAt: null },
+      });
+      if (!unit) throw notFound('Unit not found in this organization');
+
+      const liveLeases = await prisma.lease.count({
+        where: { organizationId, unitId: unit.id, deletedAt: null, status: { in: ['pending', 'active'] } },
+      });
+      if (liveLeases > 0) throw businessRule('End the lease on this unit before deleting it');
+
+      await prisma.$transaction(async (tx) => {
+        await tx.unit.update({ where: { id: unit.id }, data: { deletedAt: new Date() } });
+        await recordAudit(tx, {
+          organizationId,
+          actorUserId: req.auth?.userId,
+          action: 'delete',
+          entityType: 'Unit',
+          entityId: unit.id,
+          before: { label: unit.label, status: unit.status },
+          requestId: req.requestId,
+        });
+      });
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+portfolioRouter.delete(
+  '/tenants/:tenantId',
+  requirePermission('tenants.write'),
+  validate({ params: z.object({ tenantId: uuidSchema }) }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const organizationId = organizationIdOf(req);
+      const tenant = await prisma.tenant.findFirst({
+        where: { id: pstr(req, 'tenantId'), organizationId, deletedAt: null },
+      });
+      if (!tenant) throw notFound('Tenant not found in this organization');
+
+      const liveLeases = await prisma.lease.count({
+        where: { organizationId, tenantId: tenant.id, deletedAt: null, status: { in: ['pending', 'active'] } },
+      });
+      if (liveLeases > 0) throw businessRule('End the leases of this tenant before deleting them');
+
+      await prisma.$transaction(async (tx) => {
+        await tx.tenant.update({ where: { id: tenant.id }, data: { deletedAt: new Date() } });
+        await recordAudit(tx, {
+          organizationId,
+          actorUserId: req.auth?.userId,
+          action: 'delete',
+          entityType: 'Tenant',
+          entityId: tenant.id,
+          before: { fullName: tenant.fullName, phone: tenant.phone },
+          requestId: req.requestId,
+        });
+      });
+      res.status(204).end();
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// ---------------------------------------------------------------------------
 // Leases
 // ---------------------------------------------------------------------------
 
@@ -630,12 +843,21 @@ portfolioRouter.post(
       const prisma = getPrisma();
       const organizationId = organizationIdOf(req);
 
-      const [unit, tenant] = await Promise.all([
+      const [unit, tenant, organization] = await Promise.all([
         prisma.unit.findFirst({ where: { id: req.body.unitId, organizationId, deletedAt: null } }),
         prisma.tenant.findFirst({ where: { id: req.body.tenantId, organizationId, deletedAt: null } }),
+        prisma.organization.findUnique({ where: { id: organizationId }, select: { currency: true } }),
       ]);
       if (!unit) throw notFound('Unit not found in this organization');
       if (!tenant) throw notFound('Tenant not found in this organization');
+
+      // The organization bills in one currency; a lease in another currency would
+      // create ledger rows that can never be settled or reported coherently.
+      if (organization && req.body.rentAmount.currency !== organization.currency) {
+        throw businessRule(
+          `Leases are billed in ${organization.currency}; change the organization currency first`,
+        );
+      }
 
       const overlapping = await prisma.lease.findFirst({
         where: {
@@ -743,14 +965,27 @@ portfolioRouter.get('/leases', requirePermission('leases.read'), async (req, res
   try {
     const prisma = getPrisma();
     const organizationId = organizationIdOf(req);
-    const leases = await prisma.lease.findMany({
-      where: { organizationId, deletedAt: null },
-      include: {
-        unit: { include: { property: { select: { id: true, name: true } } } },
-        tenant: { select: { id: true, fullName: true, phone: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+    const page = num(req.query.page, 1);
+    const pageSize = num(req.query.pageSize, 100);
+    const status = str(req.query.status);
+    const where = {
+      organizationId,
+      deletedAt: null,
+      ...(status ? { status } : {}),
+    };
+    const [leases, total] = await Promise.all([
+      prisma.lease.findMany({
+        where,
+        include: {
+          unit: { include: { property: { select: { id: true, name: true } } } },
+          tenant: { select: { id: true, fullName: true, phone: true } },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip: (page - 1) * pageSize,
+        take: pageSize,
+      }),
+      prisma.lease.count({ where }),
+    ]);
 
     // One aggregate for all leases beats N round-trips; the list can have hundreds.
     const balances = await prisma.ledgerEntry.groupBy({
@@ -764,7 +999,7 @@ portfolioRouter.get('/leases', requirePermission('leases.read'), async (req, res
       balanceMinor: (balanceByLease.get(lease.id) ?? 0n).toString(),
     }));
 
-    res.json({ leases: withBalances });
+    res.json({ leases: withBalances, page, pageSize, total });
   } catch (error) {
     next(error);
   }
@@ -808,8 +1043,10 @@ portfolioRouter.get(
  * Terminate a lease.
  *
  * Ends the lease today (or on the given date), frees the unit, and — when a
- * deposit refund is stated — records it as a ledger entry, because money moving
- * back to a tenant belongs in the books, not in a note field.
+ * deposit refund is stated — records it as a real refund payment allocated to
+ * the deposit charge, because money moving back to a tenant belongs in the
+ * books, not in a note field. The deposit still held after the refund lands in
+ * `depositHeldMinor`, together with `terminatedOn` and `terminationReason`.
  */
 portfolioRouter.post(
   '/leases/:leaseId/terminate',
@@ -823,33 +1060,112 @@ portfolioRouter.post(
         where: { id: pstr(req, 'leaseId'), organizationId, deletedAt: null },
       });
       if (!existing) throw notFound('Lease not found in this organization');
-      if (existing.status === 'terminated' || existing.status === 'expired') {
+      if (isTerminalLease(existing.status)) {
         throw businessRule('This lease has already ended');
       }
 
       const terminatedOn = civilToUtcDate(req.body.terminatedOn);
+      const reason = req.body.reason ?? null;
 
       const lease = await prisma.$transaction(async (tx) => {
         const updated = await tx.lease.update({
           where: { id: existing.id },
-          data: { status: 'terminated', endDate: terminatedOn },
+          data: {
+            status: 'terminated',
+            endDate: terminatedOn,
+            // Dead columns become the termination record.
+            terminatedOn,
+            terminationReason: reason,
+          },
         });
 
-        await tx.unit.update({ where: { id: existing.unitId }, data: { status: 'vacant' } });
+        await releaseUnitIfFree(tx, organizationId, existing.unitId, existing.id);
 
+        let depositHeldMinor = existing.depositHeldMinor;
         const refundMinor = req.body.depositRefundedAmount?.amountMinor ?? 0;
         if (refundMinor > 0) {
-          await postLedgerEntry(tx, {
-            organizationId,
-            leaseId: existing.id,
-            kind: 'adjustment',
-            amountMinor: -BigInt(refundMinor),
-            currency: req.body.depositRefundedAmount?.currency ?? existing.currency,
-            occurredAt: terminatedOn,
-            memo: 'Security deposit refunded on termination',
-            createdById: req.auth?.userId ?? null,
+          const refundCurrency = req.body.depositRefundedAmount?.currency ?? existing.currency;
+          if (refundCurrency !== existing.currency) {
+            throw businessRule(`Deposits are held in ${existing.currency}`);
+          }
+          const depositCharge = await tx.charge.findFirst({
+            where: { leaseId: existing.id, type: 'deposit', status: { in: ['open', 'partial', 'paid'] } },
           });
+          const heldBefore = depositCharge?.paidMinor ?? 0n;
+          if (BigInt(refundMinor) > heldBefore) {
+            throw businessRule('The refund cannot exceed the deposit actually held');
+          }
+
+          if (depositCharge) {
+            // A refund is money going back: a Payment row allocated to the deposit
+            // charge plus its negative ledger entry. The deposit charge line is
+            // paid down in the same transaction, so reports and statements agree.
+            const refund = await tx.payment.create({
+              data: {
+                organizationId,
+                leaseId: existing.id,
+                tenantId: existing.tenantId,
+                amountMinor: BigInt(refundMinor),
+                currency: existing.currency,
+                method: 'other',
+                status: 'refunded',
+                paidAt: terminatedOn,
+                reference: 'deposit-refund',
+                notes: reason ? `Deposit refund on termination: ${reason}` : 'Deposit refund on termination',
+                recordedById: req.auth?.userId ?? null,
+              },
+            });
+            await tx.paymentAllocation.create({
+              data: { paymentId: refund.id, chargeId: depositCharge.id, amountMinor: BigInt(refundMinor) },
+            });
+            const newPaid = depositCharge.paidMinor + BigInt(refundMinor);
+            await tx.charge.update({
+              where: { id: depositCharge.id },
+              data: {
+                paidMinor: newPaid,
+                status: newPaid >= depositCharge.amountMinor ? 'paid' : 'partial',
+              },
+            });
+            await postLedgerEntry(tx, {
+              organizationId,
+              leaseId: existing.id,
+              paymentId: refund.id,
+              chargeId: depositCharge.id,
+              kind: 'payment',
+              amountMinor: -BigInt(refundMinor),
+              currency: existing.currency,
+              occurredAt: terminatedOn,
+              memo: 'Security deposit refunded on termination',
+              createdById: req.auth?.userId ?? null,
+            });
+            // What the landlord still holds after the refund.
+            depositHeldMinor = heldBefore - BigInt(refundMinor);
+          } else {
+            // No deposit charge (legacy data): record the movement plainly.
+            await postLedgerEntry(tx, {
+              organizationId,
+              leaseId: existing.id,
+              kind: 'adjustment',
+              amountMinor: -BigInt(refundMinor),
+              currency: existing.currency,
+              occurredAt: terminatedOn,
+              memo: 'Security deposit refunded on termination',
+              createdById: req.auth?.userId ?? null,
+            });
+            depositHeldMinor = 0n;
+          }
+        } else if (!req.body.depositRefundedAmount) {
+          // Nothing stated: the deposit stays held as-is.
+          const depositCharge = await tx.charge.findFirst({
+            where: { leaseId: existing.id, type: 'deposit', status: { in: ['open', 'partial', 'paid'] } },
+            select: { paidMinor: true },
+          });
+          depositHeldMinor = depositCharge?.paidMinor ?? existing.depositHeldMinor;
+        } else {
+          depositHeldMinor = existing.depositHeldMinor;
         }
+
+        await tx.lease.update({ where: { id: existing.id }, data: { depositHeldMinor } });
 
         await recordAudit(tx, {
           organizationId,
@@ -861,8 +1177,10 @@ portfolioRouter.post(
           after: {
             status: updated.status,
             endDate: updated.endDate,
-            reason: req.body.reason ?? null,
+            terminatedOn: terminatedOn.toISOString().slice(0, 10),
+            reason,
             depositRefundedMinor: refundMinor.toString(),
+            depositHeldMinor: depositHeldMinor.toString(),
           },
           requestId: req.requestId,
         });
@@ -890,6 +1208,34 @@ portfolioRouter.patch(
       });
       if (!existing) throw notFound('Lease not found in this organization');
 
+      // Terminal leases are historical records: only notes may be corrected.
+      if (isTerminalLease(existing.status)) {
+        const touchesMoreThanNotes = Object.keys(req.body).some((key) => key !== 'notes');
+        if (touchesMoreThanNotes) {
+          throw businessRule(`A ${existing.status} lease is closed and cannot be modified`);
+        }
+      }
+
+      if (req.body.status !== undefined) {
+        assertLeaseTransition(existing.status, req.body.status);
+      }
+
+      // Activating a lease must not stack on top of another live lease for the
+      // same unit (the create path checks this; PATCH did not).
+      if (existing.status !== 'active' && req.body.status === 'active') {
+        const overlapping = await prisma.lease.findFirst({
+          where: {
+            organizationId,
+            unitId: existing.unitId,
+            id: { not: existing.id },
+            deletedAt: null,
+            status: { in: ['pending', 'active'] },
+          },
+          select: { id: true },
+        });
+        if (overlapping) throw businessRule('This unit already has an active or pending lease');
+      }
+
       const updated = await prisma.$transaction(async (tx) => {
         const lease = await tx.lease.update({
           where: { id: existing.id },
@@ -899,35 +1245,69 @@ portfolioRouter.patch(
             ...(req.body.status !== undefined ? { status: req.body.status } : {}),
             ...(req.body.notes !== undefined ? { notes: req.body.notes } : {}),
             ...(req.body.endDate ? { endDate: civilToUtcDate(req.body.endDate) } : {}),
+            ...(req.body.startDate ? { startDate: civilToUtcDate(req.body.startDate) } : {}),
+            ...(req.body.billingFrequency !== undefined
+              ? { billingFrequency: req.body.billingFrequency }
+              : {}),
+            ...(req.body.gracePeriodDays !== undefined
+              ? { gracePeriodDays: req.body.gracePeriodDays }
+              : {}),
+            ...(req.body.lateFeePercent !== undefined
+              ? { lateFeePercent: req.body.lateFeePercent }
+              : {}),
+            ...(req.body.depositMonths !== undefined ? { depositMonths: req.body.depositMonths } : {}),
+            ...(req.body.depositAmount
+              ? { depositAmountMinor: BigInt(req.body.depositAmount.amountMinor) }
+              : {}),
+            ...(req.body.escalationPercent !== undefined
+              ? { escalationPercent: req.body.escalationPercent }
+              : {}),
+            ...(req.body.escalationEveryMonths !== undefined
+              ? { escalationEveryMonths: req.body.escalationEveryMonths }
+              : {}),
+            ...(req.body.signedAt ? { signedAt: new Date(req.body.signedAt) } : {}),
           },
         });
 
-        // Activating a pending lease must also materialise its deposit; creating
-        // the lease as pending is the only path that skipped it.
+        // Co-tenants are synced to the submitted list (create-path parity).
+        if (req.body.coTenantIds !== undefined) {
+          await tx.leaseCoTenant.deleteMany({ where: { leaseId: lease.id } });
+          for (const coTenantId of req.body.coTenantIds) {
+            const coTenant = await tx.tenant.findFirst({ where: { id: coTenantId, organizationId } });
+            if (!coTenant) throw notFound('A co-tenant was not found in this organization');
+            await tx.leaseCoTenant.create({ data: { leaseId: lease.id, tenantId: coTenantId } });
+          }
+        }
+
         const activating = existing.status !== 'active' && lease.status === 'active';
-        if (activating && lease.depositAmountMinor !== null && lease.depositAmountMinor > 0n) {
-          try {
-            await createDepositChargeInTx(tx, {
-              organizationId,
-              leaseId: lease.id,
-              amountMinor: lease.depositAmountMinor,
-              currency: lease.currency,
-              actorUserId: req.auth?.userId ?? null,
-              dueDate: lease.startDate,
-            });
-          } catch (error) {
-            // Already has a deposit (e.g. retried activation) — not a failure.
-            const isConflict =
-              typeof error === 'object' &&
-              error !== null &&
-              'statusCode' in error &&
-              (error as { statusCode?: number }).statusCode === 409;
-            if (!isConflict) throw error;
+        if (activating) {
+          // Activating a pending lease must also materialise its deposit; creating
+          // the lease as pending is the only path that skipped it.
+          if (lease.depositAmountMinor !== null && lease.depositAmountMinor > 0n) {
+            try {
+              await createDepositChargeInTx(tx, {
+                organizationId,
+                leaseId: lease.id,
+                amountMinor: lease.depositAmountMinor,
+                currency: lease.currency,
+                actorUserId: req.auth?.userId ?? null,
+                dueDate: lease.startDate,
+              });
+            } catch (error) {
+              // Already has a deposit (e.g. retried activation) — not a failure.
+              const isConflict =
+                typeof error === 'object' &&
+                error !== null &&
+                'statusCode' in error &&
+                (error as { statusCode?: number }).statusCode === 409;
+              if (!isConflict) throw error;
+            }
           }
           await tx.unit.update({ where: { id: lease.unitId }, data: { status: 'occupied' } });
-        } else if (lease.status === 'active' && existing.status !== 'active') {
-          // No deposit to create but the unit still becomes occupied.
-          await tx.unit.update({ where: { id: lease.unitId }, data: { status: 'occupied' } });
+        } else if (lease.status !== existing.status && isTerminalLease(lease.status)) {
+          // Marked expired/cancelled through PATCH: release the unit the same way
+          // termination does.
+          await releaseUnitIfFree(tx, organizationId, lease.unitId, lease.id);
         }
 
         await recordAudit(tx, {

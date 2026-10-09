@@ -17,6 +17,8 @@ import { disconnectPrisma, getPrisma } from './lib/prisma.js';
 import { createBoss, QUEUES } from './jobs/boss.js';
 import { handleChargeGeneration } from './jobs/charge-generation.job.js';
 import { runOverdueSweep } from './jobs/overdue-sweep.job.js';
+import { runLeaseExpirySweep } from './jobs/lease-expiry.job.js';
+import { runSendNotification } from './jobs/send-notification.job.js';
 import { registerWorkers } from './jobs/register.js';
 
 function parseOnceArgument(argv: string[]): string | null {
@@ -44,6 +46,12 @@ async function main(): Promise<void> {
     } else if (once === QUEUES.overdueSweep) {
       const result = await runOverdueSweep(prisma);
       logger.info(result, 'overdue sweep completed');
+    } else if (once === QUEUES.leaseExpirySweep) {
+      const result = await runLeaseExpirySweep(prisma);
+      logger.info(result, 'lease expiry sweep completed');
+    } else if (once === QUEUES.sendNotification) {
+      const result = await runSendNotification(prisma);
+      logger.info(result, 'notification dispatch completed');
     } else {
       logger.error({ job: once }, 'unknown job');
       process.exitCode = 1;

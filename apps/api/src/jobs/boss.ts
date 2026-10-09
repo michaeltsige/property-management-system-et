@@ -15,6 +15,7 @@ export const QUEUES = {
   generateCharges: 'charges.generate',
   overdueSweep: 'charges.overdue-sweep',
   sendNotification: 'notifications.send',
+  leaseExpirySweep: 'leases.expire-sweep',
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];
