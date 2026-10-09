@@ -318,6 +318,9 @@ export async function issueTokens(
   await prisma.authSession.create({
     data: {
       userId,
+      // The session remembers which organization it was issued for; refresh
+      // re-issues for this one and never for whatever memberships[0] says.
+      organizationId,
       refreshTokenHash: hash,
       userAgent: meta.userAgent ?? null,
       ipAddress: meta.ip ?? null,
@@ -335,6 +338,12 @@ export async function issueTokens(
  * which session it belonged to, so we do nothing dramatic; if it matches a session
  * that is already revoked, that is a reuse of a rotated token and every session
  * for that user is revoked.
+ *
+ * The new tokens are issued for the organization the session was created in —
+ * never for whichever membership happens to sort first today. Sessions created
+ * before the `organizationId` column existed (null) fall back to the oldest
+ * active membership, matching the old behaviour, and the replacement session
+ * becomes bound.
  */
 export async function refresh(
   refreshToken: string,
@@ -368,8 +377,18 @@ export async function refresh(
   }
   if (session.expiresAt < new Date()) throw unauthenticated('Session expired');
 
-  const membership = session.user.memberships[0];
-  if (!membership) throw notFound('No active organization membership for this user');
+  // Stay in the session's organization. Membership must still be active there.
+  const membership = session.organizationId
+    ? session.user.memberships.find((m) => m.organizationId === session.organizationId)
+    : session.user.memberships[0];
+  if (!membership) {
+    throw notFound(
+      session.organizationId
+        ? 'No active membership in the organization of this session'
+        : 'No active organization membership for this user',
+    );
+  }
+  if (membership.organization.status !== 'active') throw forbidden('This organization is not active');
 
   await prisma.authSession.update({ where: { id: session.id }, data: { revokedAt: new Date() } });
 
@@ -398,4 +417,70 @@ export async function logout(refreshToken: string | undefined, userId: string, o
     entityType: 'AuthSession',
     entityId: null,
   });
+}
+
+/**
+ * Accept a staff invitation: redeem the single-use token, set the account
+ * password and activate the membership. This is the path that turns the
+ * "invited" membership row into a sign-in-able account — without it an invite
+ * is a dead end.
+ *
+ * The response mirrors the fields the login screen needs to continue straight
+ * into the organization.
+ */
+export async function acceptInvite(
+  input: { token: string; password: string },
+  meta: { requestId?: string; ip?: string; userAgent?: string } = {},
+) {
+  const prisma = getPrisma();
+  const tokenHash = hashRefreshToken(input.token);
+
+  const membership = await prisma.membership.findFirst({
+    where: { inviteTokenHash: tokenHash },
+    include: { organization: true, user: true },
+  });
+  // Same answer whether the token is unknown, used, or expired.
+  const invalid = () => unauthenticated('This invitation is no longer valid; ask for a new one');
+  if (!membership) throw invalid();
+  if (membership.status !== 'invited' || !membership.inviteExpiresAt) throw invalid();
+  if (membership.inviteExpiresAt < new Date()) throw invalid();
+  if (!membership.user.isActive) throw forbidden('This account has been disabled');
+
+  const passwordHash = await hashPassword(input.password);
+
+  const [user] = await prisma.$transaction([
+    prisma.user.update({
+      where: { id: membership.userId },
+      data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
+    }),
+    prisma.membership.update({
+      where: { id: membership.id },
+      data: {
+        status: 'active',
+        acceptedAt: new Date(),
+        inviteTokenHash: null,
+        inviteExpiresAt: null,
+      },
+    }),
+  ]);
+
+  await recordAudit(prisma, {
+    organizationId: membership.organizationId,
+    actorUserId: membership.userId,
+    action: 'update',
+    entityType: 'Membership',
+    entityId: membership.id,
+    after: { status: 'active', acceptedAt: new Date().toISOString() },
+    requestId: meta.requestId ?? null,
+    ipAddress: meta.ip ?? null,
+  });
+
+  return {
+    email: user.email,
+    organization: {
+      id: membership.organization.id,
+      name: membership.organization.name,
+      slug: membership.organization.slug,
+    },
+  };
 }

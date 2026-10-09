@@ -26,6 +26,7 @@ import {
   getSettings,
   inviteMember,
   listMembers,
+  resendInvite,
   updateMembership,
   updateSettings,
 } from '../services/organizations.service.js';
@@ -90,14 +91,34 @@ organizationsRouter.post(
   validate({ body: inviteUserSchema }),
   async (req, res, next) => {
     try {
-      const membership = await inviteMember(getPrisma(), {
+      const result = await inviteMember(getPrisma(), {
         organizationId: organizationIdOf(req),
         actorUserId: req.auth?.userId ?? '',
         email: req.body.email,
         role: req.body.role as Role,
         fullName: req.body.fullName,
       });
-      res.status(201).json({ membership });
+      // The invite token is shown once so staff can hand it to the invitee;
+      // it is stored hashed and can be re-issued via resend-invite.
+      res.status(201).json({ membership: result.membership, invite: result.invite });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+organizationsRouter.post(
+  '/members/:membershipId/resend-invite',
+  requirePermission('users.invite'),
+  validate({ params: z.object({ membershipId: z.string().uuid() }) }),
+  async (req, res, next) => {
+    try {
+      const result = await resendInvite(getPrisma(), {
+        organizationId: organizationIdOf(req),
+        actorUserId: req.auth?.userId ?? '',
+        membershipId: pstr(req, 'membershipId'),
+      });
+      res.json(result);
     } catch (error) {
       next(error);
     }

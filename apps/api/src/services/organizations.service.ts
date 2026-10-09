@@ -11,8 +11,13 @@ import type { PrismaClient } from '@prisma/client';
 import { DEFAULT_ORG_SETTINGS, PAYMENT_GATEWAY_SETTING_KEY, type Role, type UpdateOrganizationSettings } from '@pms/shared';
 
 import { conflict, notFound } from '../lib/errors.js';
-import { hashPassword } from '../lib/crypto.js';
+import { generateRefreshToken, hashPassword } from '../lib/crypto.js';
 import { recordAudit } from './audit.js';
+
+/** Invitation tokens use the same shape as refresh tokens: opaque, stored hashed. */
+function generateInviteToken(): { token: string; hash: string } {
+  return generateRefreshToken();
+}
 
 export type ResolvedSettings = typeof DEFAULT_ORG_SETTINGS & Record<string, unknown>;
 
@@ -116,10 +121,14 @@ export async function listMembers(prisma: PrismaClient, organizationId: string) 
  * Invite a user by email.
  *
  * If the person already has an account they are attached to this organization; if
- * not, a placeholder account is created with a random unusable password and a
- * password-reset flow (Phase 2) activates it. Either way they never gain access
- * until they accept.
+ * not, a placeholder account is created with a random unusable password. Either
+ * way the membership starts as `invited` and the invitee activates it by
+ * redeeming the returned single-use token (POST /auth/accept-invite), which sets
+ * their password. The token is returned once — it is up to the client to hand it
+ * to the invitee (link or message) until email delivery exists.
  */
+const INVITE_TTL_DAYS = 14;
+
 export async function inviteMember(
   prisma: PrismaClient,
   params: { organizationId: string; actorUserId: string; email: string; role: Role; fullName?: string },
@@ -143,6 +152,9 @@ export async function inviteMember(
     });
     if (existingMembership) throw conflict('This person is already a member of the organization');
 
+    const { token, hash } = generateInviteToken();
+    const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000);
+
     const membership = await tx.membership.create({
       data: {
         organizationId,
@@ -151,6 +163,8 @@ export async function inviteMember(
         status: 'invited',
         invitedById: actorUserId,
         invitedAt: new Date(),
+        inviteTokenHash: hash,
+        inviteExpiresAt: expiresAt,
       },
     });
 
@@ -163,7 +177,45 @@ export async function inviteMember(
       after: { email, role, status: membership.status },
     });
 
-    return membership;
+    return { membership, invite: { token, expiresAt, email } };
+  });
+}
+
+/**
+ * Re-issue the invite token for a membership that is still `invited` (e.g. the
+ * first token expired or was lost). Active memberships have nothing to redeem.
+ */
+export async function resendInvite(
+  prisma: PrismaClient,
+  params: { organizationId: string; actorUserId: string; membershipId: string },
+) {
+  return prisma.$transaction(async (tx) => {
+    const membership = await tx.membership.findFirst({
+      where: { id: params.membershipId, organizationId: params.organizationId },
+      include: { user: true },
+    });
+    if (!membership) throw notFound('Membership not found in this organization');
+    if (membership.status !== 'invited') {
+      throw conflict('This membership is already active; no invitation is pending');
+    }
+
+    const { token, hash } = generateInviteToken();
+    const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 24 * 60 * 60 * 1000);
+    await tx.membership.update({
+      where: { id: membership.id },
+      data: { inviteTokenHash: hash, inviteExpiresAt: expiresAt, invitedAt: new Date() },
+    });
+
+    await recordAudit(tx, {
+      organizationId: params.organizationId,
+      actorUserId: params.actorUserId,
+      action: 'update',
+      entityType: 'Membership',
+      entityId: membership.id,
+      after: { inviteResent: true, inviteExpiresAt: expiresAt.toISOString() },
+    });
+
+    return { invite: { token, expiresAt, email: membership.user.email } };
   });
 }
 
