@@ -59,7 +59,7 @@ const FORWARD_REQUEST_HEADERS = [
 ];
 
 /** Response headers worth passing back. `set-cookie` is ours, not the API's. */
-const FORWARD_RESPONSE_HEADERS = ['content-type', 'retry-after', 'x-request-id'];
+const FORWARD_RESPONSE_HEADERS = ['content-type', 'content-disposition', 'retry-after', 'x-request-id'];
 
 /** Endpoints that mint tokens are not reachable from the browser (see ADR-0026). */
 const TOKEN_MINTING_PATHS = new Set([

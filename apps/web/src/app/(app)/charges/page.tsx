@@ -12,6 +12,7 @@ import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
 import { PageHeader } from '@/components/app-shell';
+import { ExportCsvButton } from '@/components/export-csv-button';
 import { PeriodPicker } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
 import {
@@ -79,6 +80,10 @@ export default function ChargesPage() {
         description={formatPeriodKey(periodKey, calendar, language)}
         actions={
           <>
+            <ExportCsvButton
+              kind="charges"
+              query={`periodKey=${periodKey}${status ? `&status=${status}` : ''}`}
+            />
             <PeriodPicker
               periodKey={periodKey}
               onChange={setPeriodKey}

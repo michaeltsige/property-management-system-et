@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { Router } from 'express';
-import { z } from 'zod';
+import type { z } from 'zod';
 import {
   CSV_HEADERS,
   csvTenantSchema,

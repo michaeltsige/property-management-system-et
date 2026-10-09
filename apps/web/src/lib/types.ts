@@ -363,6 +363,35 @@ export interface PortalMe {
   }[];
   /** Sum of pending + overdue charges, minor units as a decimal string. */
   dueMinor: string;
+  /** Credit from earlier overpayments, minor units as a decimal string. */
+  creditMinor?: string;
+  currency?: string;
+}
+
+/** A lease paper or receipt the tenant can open from the portal. */
+export interface PortalDocument {
+  id: string;
+  category: string;
+  title: string | null;
+  mimeType: string;
+  sizeBytes: string;
+  property: string | null;
+  unit: string | null;
+  createdAt: string;
+}
+
+/** One row of the audit trail (actor and snapshots already redacted server-side). */
+export interface AuditLogEntry {
+  id: string;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  actor: { id: string; email: string; fullName: string } | null;
+  before: Record<string, unknown> | null;
+  after: Record<string, unknown> | null;
+  ipAddress: string | null;
+  requestId: string | null;
+  createdAt: string;
 }
 
 /** A portal payment attempt: pending until the provider confirms it. */

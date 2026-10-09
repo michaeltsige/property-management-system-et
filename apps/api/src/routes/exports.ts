@@ -7,7 +7,7 @@
  * so an exporter can never see more than the UI would show them.
  */
 
-import { Router } from 'express';
+import { Router, type Response } from 'express';
 import { z } from 'zod';
 
 import { organizationIdOf, requireAuth } from '../middleware/context.js';
@@ -39,7 +39,7 @@ function csvCell(value: string | number | bigint | null | undefined): string {
 
 type CsvValue = string | number | bigint | null | undefined;
 
-function csvResponse(res: import('express').Response, filename: string, header: string[], rows: CsvValue[][]): void {
+function csvResponse(res: Response, filename: string, header: string[], rows: CsvValue[][]): void {
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
   res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
   const lines = [header, ...rows].map((row) => row.map(csvCell).join(','));
@@ -124,7 +124,9 @@ exportsRouter.get(
           where: { organizationId, leaseId: { in: leases.map((lease) => lease.id) } },
           _sum: { amountMinor: true },
         });
-        const balanceByLease = new Map(balances.map((entry) => [entry.leaseId, entry._sum.amountMinor ?? 0n]));
+        const balanceByLease = new Map(
+          balances.map((entry) => [entry.leaseId, entry._sum.amountMinor ?? 0n]),
+        );
         rows = leases.map((lease) => [
           lease.id,
           lease.unit.label,
@@ -207,7 +209,16 @@ exportsRouter.get(
           payment.leaseId,
         ]);
       } else if (kind === 'arrears') {
-        header = ['tenant', 'unit', 'property', 'leaseId', 'dueDate', 'outstandingMinor', 'currency', 'daysLate'];
+        header = [
+          'tenant',
+          'unit',
+          'property',
+          'leaseId',
+          'dueDate',
+          'outstandingMinor',
+          'currency',
+          'daysLate',
+        ];
         const now = new Date();
         const charges = await prisma.charge.findMany({
           where: {

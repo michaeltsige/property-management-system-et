@@ -14,6 +14,7 @@ import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
 import { PageHeader } from '@/components/app-shell';
+import { ExportCsvButton } from '@/components/export-csv-button';
 import { DateField } from '@/components/ethiopian-date-picker';
 import { MoneyInput } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
@@ -139,10 +140,13 @@ export default function LeasesPage() {
       <PageHeader
         titleKey="nav.leases"
         actions={
-          <Button onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4" />
-            {t('common.create')}
-          </Button>
+          <>
+            <ExportCsvButton kind="leases" />
+            <Button onClick={() => setOpen(true)}>
+              <Plus className="h-4 w-4" />
+              {t('common.create')}
+            </Button>
+          </>
         }
       />
 
