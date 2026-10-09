@@ -48,6 +48,7 @@ model Organization {
   deletedAt     DateTime?
 
   memberships   Membership[]
+  authSessions  AuthSession[]
   settings      OrganizationSetting[]
   owners        Owner[]
   buildings     Building[]
@@ -98,6 +99,10 @@ model User {
 model AuthSession {
   id               String    @id @default(uuid()) @db.Uuid
   userId           String    @db.Uuid
+  // The organization this session is bound to. Refresh always re-issues tokens
+  // for THIS organization — a stale membership list can never silently switch
+  // the user to a different one. Null for sessions created before this column.
+  organizationId   String?   @db.Uuid
   // Refresh tokens are stored hashed; the raw value never touches the database.
   refreshTokenHash String    @unique
   userAgent        String?
@@ -106,10 +111,12 @@ model AuthSession {
   revokedAt        DateTime?
   createdAt        DateTime  @default(now())
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
   @@index([userId])
   @@index([expiresAt])
+  @@index([organizationId])
 }
 
 model Membership {
@@ -121,6 +128,10 @@ model Membership {
   invitedById    String?   @db.Uuid
   invitedAt      DateTime?
   acceptedAt     DateTime?
+  // Hashed single-use token the invitee redeems to set a password and activate
+  // the membership (POST /auth/accept-invite). Null once accepted.
+  inviteTokenHash String?
+  inviteExpiresAt DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 

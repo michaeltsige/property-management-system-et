@@ -11,6 +11,7 @@ import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
 import { LANGUAGES, usePreferences } from '@/lib/preferences';
 
 import { PageHeader } from '@/components/app-shell';
+import { ExportCsvButton } from '@/components/export-csv-button';
 import { Modal } from '@/components/modal';
 import {
   Alert,
@@ -104,6 +105,7 @@ export default function TenantsPage() {
             {roleHasPermission(session?.role as Role, 'tenants.write') && (
               <CsvImport kind="tenants" onImported={tenants.reload} />
             )}
+            <ExportCsvButton kind="tenants" />
             <Input
               placeholder={t('common.search')}
               value={search}

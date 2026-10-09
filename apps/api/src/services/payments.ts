@@ -59,6 +59,154 @@ export interface RecordedPayment {
   allocations: { chargeId: string; amountMinor: bigint }[];
 }
 
+/** Credit available per currency: the negative part of the ledger balance. */
+async function creditByCurrency(
+  tx: Prisma.TransactionClient,
+  organizationId: string,
+  leaseIds: string[],
+): Promise<Map<string, bigint>> {
+  if (leaseIds.length === 0) return new Map();
+  const grouped = await tx.ledgerEntry.groupBy({
+    by: ['currency'],
+    where: { organizationId, leaseId: { in: leaseIds } },
+    _sum: { amountMinor: true },
+  });
+  const credits = new Map<string, bigint>();
+  for (const row of grouped) {
+    const balance = row._sum.amountMinor ?? 0n;
+    if (balance < 0n) credits.set(row.currency, -balance);
+  }
+  return credits;
+}
+
+/**
+ * Apply stranded lease credit to open charges, oldest first, per currency.
+ *
+ * An overpayment leaves the ledger negative — that IS the credit, but nothing
+ * ever spent it: charges stayed open, arrears reports counted them, and the
+ * tenant was chased for money they had effectively already given.
+ *
+ * Mechanics (append-only ledger stays truthful):
+ * - the charges' `paidMinor` rises by the applied amount (they are settled),
+ * - a `Payment` row with `reference = 'credit-application'` documents it,
+ * - one positive `adjustment` ledger entry cancels the negative balance, so
+ *   `sum(amountMinor)` still equals the outstanding balance afterwards.
+ *
+ * Returns the total applied across currencies.
+ */
+export async function applyLeaseCreditInTx(
+  tx: Prisma.TransactionClient,
+  params: { organizationId: string; leaseId: string; actorUserId?: string | null; now?: Date },
+): Promise<bigint> {
+  const now = params.now ?? new Date();
+  const credits = await creditByCurrency(tx, params.organizationId, [params.leaseId]);
+  let totalApplied = 0n;
+
+  for (const [currency, credit] of credits) {
+    if (credit <= 0n) continue;
+    const openCharges = await tx.charge.findMany({
+      where: {
+        organizationId: params.organizationId,
+        leaseId: params.leaseId,
+        currency,
+        status: { in: ['open', 'partial'] },
+      },
+      orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+    });
+
+    let remaining = credit;
+    const planned: { chargeId: string; amountMinor: bigint }[] = [];
+    for (const charge of openCharges) {
+      if (remaining <= 0n) break;
+      const outstanding = charge.amountMinor - charge.paidMinor;
+      if (outstanding <= 0n) continue;
+      const amount = outstanding < remaining ? outstanding : remaining;
+      planned.push({ chargeId: charge.id, amountMinor: amount });
+      remaining -= amount;
+    }
+    const applied = planned.reduce((sum, item) => sum + item.amountMinor, 0n);
+    if (applied <= 0n) continue;
+
+    const payment = await tx.payment.create({
+      data: {
+        organizationId: params.organizationId,
+        leaseId: params.leaseId,
+        amountMinor: applied,
+        currency,
+        method: 'other',
+        status: 'succeeded',
+        paidAt: now,
+        reference: 'credit-application',
+        notes: 'Overpayment credit applied to outstanding charges',
+        recordedById: params.actorUserId ?? null,
+      },
+    });
+
+    for (const item of planned) {
+      await tx.paymentAllocation.create({
+        data: { paymentId: payment.id, chargeId: item.chargeId, amountMinor: item.amountMinor },
+      });
+      const charge = openCharges.find((c) => c.id === item.chargeId);
+      if (!charge) continue;
+      const newPaid = charge.paidMinor + item.amountMinor;
+      await tx.charge.update({
+        where: { id: charge.id },
+        data: { paidMinor: newPaid, status: newPaid >= charge.amountMinor ? 'paid' : 'partial' },
+      });
+    }
+
+    // Positive entry: cancels the stranded credit instead of adding a new one.
+    await postLedgerEntry(tx, {
+      organizationId: params.organizationId,
+      leaseId: params.leaseId,
+      paymentId: payment.id,
+      kind: 'adjustment',
+      amountMinor: applied,
+      currency,
+      occurredAt: now,
+      memo: 'Credit from overpayment applied to outstanding charges',
+      createdById: params.actorUserId ?? null,
+    });
+
+    await recordAudit(tx, {
+      organizationId: params.organizationId,
+      actorUserId: params.actorUserId ?? null,
+      action: 'create',
+      entityType: 'Payment',
+      entityId: payment.id,
+      after: {
+        kind: 'credit_application',
+        appliedMinor: applied.toString(),
+        currency,
+        allocations: planned.map((p) => ({ chargeId: p.chargeId, amountMinor: p.amountMinor.toString() })),
+      },
+    });
+
+    totalApplied += applied;
+  }
+
+  return totalApplied;
+}
+
+/** Apply credit across every lease of a tenant (portal payment entry point). */
+async function applyTenantCreditInTx(
+  tx: Prisma.TransactionClient,
+  params: { organizationId: string; tenantId: string; actorUserId?: string | null; now?: Date },
+): Promise<void> {
+  const leases = await tx.lease.findMany({
+    where: { organizationId: params.organizationId, tenantId: params.tenantId, deletedAt: null },
+    select: { id: true },
+  });
+  for (const lease of leases) {
+    await applyLeaseCreditInTx(tx, {
+      organizationId: params.organizationId,
+      leaseId: lease.id,
+      actorUserId: params.actorUserId,
+      now: params.now,
+    });
+  }
+}
+
 export async function recordPayment(
   prisma: PrismaClient,
   input: RecordPaymentInput,
@@ -128,6 +276,22 @@ export function recordPaymentInTx(input: RecordPaymentInput) {
           where: { id: anchor.leaseId, organizationId: input.organizationId, deletedAt: null },
         });
       }
+    }
+
+    // Spend stranded credit BEFORE the fresh money: an earlier overpayment must
+    // clear the oldest charges rather than sit idle while a new payment pays them.
+    if (lease) {
+      await applyLeaseCreditInTx(tx, {
+        organizationId: input.organizationId,
+        leaseId: lease.id,
+        actorUserId: input.actorUserId,
+      });
+    } else if (input.tenantId) {
+      await applyTenantCreditInTx(tx, {
+        organizationId: input.organizationId,
+        tenantId: input.tenantId,
+        actorUserId: input.actorUserId,
+      });
     }
 
     const target = input.allocations?.length
@@ -382,7 +546,7 @@ export interface PortalPaymentIntent {
   status: string;
 }
 
-/** Outstanding balance for a tenant in the organization currency, in minor units. */
+/** Outstanding balance for a tenant in the given currency, in minor units. */
 export async function tenantDueMinor(
   prisma: PrismaClient,
   params: { organizationId: string; tenantId: string; currency: string },
@@ -396,7 +560,32 @@ export async function tenantDueMinor(
     },
     select: { amountMinor: true, paidMinor: true },
   });
-  return open.reduce((sum, charge) => sum + (charge.amountMinor - charge.paidMinor), BigInt(0));
+  const owed = open.reduce((sum, charge) => sum + (charge.amountMinor - charge.paidMinor), BigInt(0));
+
+  // Credit on the tenant's leases reduces what they can/should pay now.
+  const leases = await prisma.lease.findMany({
+    where: { organizationId: params.organizationId, tenantId: params.tenantId, deletedAt: null },
+    select: { id: true },
+  });
+  let credit = 0n;
+  if (leases.length > 0) {
+    const grouped = await prisma.ledgerEntry.groupBy({
+      by: ['currency'],
+      where: {
+        organizationId: params.organizationId,
+        leaseId: { in: leases.map((lease) => lease.id) },
+      },
+      _sum: { amountMinor: true },
+    });
+    for (const row of grouped) {
+      if (row.currency === params.currency && (row._sum.amountMinor ?? 0n) < 0n) {
+        credit = -(row._sum.amountMinor ?? 0n);
+      }
+    }
+  }
+
+  const net = owed - credit;
+  return net > 0n ? net : 0n;
 }
 
 export async function initiatePortalPayment(
@@ -431,8 +620,54 @@ export async function initiatePortalPayment(
     throw businessRule('The payment cannot exceed the outstanding balance');
   }
 
-  // One live attempt at a time: starting a new payment supersedes any previous
-  // still-pending attempt, so a tapped button twice cannot create two intents.
+  // Double-tap protection that keeps real payments reachable: an identical
+  // pending attempt is returned as-is instead of being force-failed. Force-
+  // failing it used to strand money the provider had already taken — the old
+  // reference could still verify as paid but was no longer completable.
+  const existingPending = await prisma.payment.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      tenantId: input.tenantId,
+      status: 'pending',
+      currency,
+      amountMinor,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  if (existingPending?.providerRef) {
+    const providerCheck = await resolveOrgPaymentProvider(
+      prisma,
+      input.organizationId,
+      existingPending.provider as ProviderName,
+    )
+      .then((resolved) => resolved.adapter)
+      .catch(() => null);
+    const stillLive = providerCheck
+      ? await providerCheck
+          .verify(existingPending.providerRef)
+          .then((verification) => verification.status !== 'failed')
+          .catch(() => false)
+      : false;
+    if (stillLive) {
+      return {
+        paymentId: existingPending.id,
+        provider: existingPending.provider ?? '',
+        providerRef: existingPending.providerRef,
+        redirectUrl: (existingPending.providerPayload as { redirectUrl?: string } | null)?.redirectUrl,
+        amountMinor: existingPending.amountMinor.toString(),
+        currency: existingPending.currency,
+        status: existingPending.status,
+      };
+    }
+    // Dead attempt (expired/failed at the provider): clear it before starting over.
+    await prisma.payment.update({
+      where: { id: existingPending.id },
+      data: { status: 'failed', notes: 'Superseded by a newer payment attempt' },
+    });
+  }
+
+  // Different amount: the previous attempt no longer matches what the tenant
+  // wants to pay, so it is explicitly superseded.
   await prisma.payment.updateMany({
     where: {
       organizationId: input.organizationId,
@@ -485,7 +720,12 @@ export async function initiatePortalPayment(
       reference,
       provider: provider.name,
       providerRef: initiation.providerRef,
-      providerPayload: (initiation.raw ?? undefined) as Prisma.InputJsonValue | undefined,
+      // redirectUrl is kept so an idempotent re-initiate can send the payer back
+      // to the same checkout instead of losing the session.
+      providerPayload: {
+        redirectUrl: initiation.redirectUrl,
+        initiate: initiation.raw,
+      } as Prisma.InputJsonValue,
       recordedById: input.actorUserId ?? null,
     },
   });
@@ -607,6 +847,22 @@ function runCompletion(
     if (payment.status === 'succeeded') throw conflict('This payment has already been completed');
     if (payment.status !== 'pending') {
       throw businessRule('This payment attempt is no longer pending; start a new payment');
+    }
+
+    // Stranded credit is spent before the provider money, same rule as the
+    // manual path — the tenant should not pay for charges their credit covers.
+    if (payment.tenantId) {
+      await applyTenantCreditInTx(tx, {
+        organizationId: payment.organizationId,
+        tenantId: payment.tenantId,
+        actorUserId: params.actorUserId,
+      });
+    } else if (payment.leaseId) {
+      await applyLeaseCreditInTx(tx, {
+        organizationId: payment.organizationId,
+        leaseId: payment.leaseId,
+        actorUserId: params.actorUserId,
+      });
     }
 
     // Oldest open charges first, same rule a cashier's unallocated payment follows.

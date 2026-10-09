@@ -151,6 +151,17 @@ export const EN_CATALOG = {
   'org.overdue_reminder_hint': 'How often the worker sends overdue SMS reminders to tenants.',
   'org.late_fee_hint': 'Late fees are a local legal question — see docs/DECISIONS.md before enabling.',
   'nav.translations': 'Translations',
+  'nav.audit': 'Audit log',
+
+  // CSV exports (FEATURES.md promise) and the audit trail reads
+  'app.export_csv': 'Export CSV',
+  'audit.title': 'Audit log',
+  'audit.subtitle': 'Every change to money and lease data, newest first.',
+  'audit.empty': 'Nothing recorded yet',
+  'audit.actor': 'User',
+  'audit.action': 'Action',
+  'audit.entity': 'Record',
+  'audit.when': 'When',
 
   // --- auth ---------------------------------------------------------------
   'auth.sign_in': 'Sign in',
@@ -182,6 +193,9 @@ export const EN_CATALOG = {
   'portal.maintenance_hint': 'Report an issue in your home and your landlord will follow up here.',
   'portal.new_maintenance_request': 'Report an issue',
   'portal.maintenance_submitted': 'Request sent — your landlord will follow up here.',
+  'portal.documents': 'Documents',
+  'portal.documents_empty': 'No documents from your landlord yet.',
+  'portal.download': 'Download',
   // Tenant portal online payment; non-English entries are unreviewed machine drafts.
   'portal.pay_now': 'Pay now',
   'portal.pay_hint': 'Pay your outstanding balance online.',
@@ -299,6 +313,7 @@ export const EN_CATALOG = {
   'payment.method.cheque': 'Cheque',
   'payment.method.telebirr': 'Telebirr',
   'payment.method.chapa': 'Chapa',
+  'payment.method.amole': 'Amole (Dashen)',
   'payment.method.cbe_birr': 'CBE Birr',
   'payment.method.mock': 'Mock (demo)',
   'payment.method.other': 'Other',
@@ -381,6 +396,7 @@ export const EN_CATALOG = {
   'common.edit': 'Edit',
   'common.delete': 'Delete',
   'common.loading': 'Loading…',
+  'common.retry': 'Try again',
   'common.none': 'None',
   'common.total': 'Total',
   'common.optional': 'Optional',
@@ -448,6 +464,7 @@ export const EN_CATALOG = {
   'payment.status.succeeded': 'Succeeded',
   'payment.status.failed': 'Failed',
   'payment.status.reversed': 'Reversed',
+  'payment.status.refunded': 'Refunded',
   'payment.reverse': 'Reverse payment',
   'payment.reverse_reason': 'Reason for reversal',
   'payment.reverse_hint':
@@ -492,7 +509,8 @@ export const EN_CATALOG = {
   'org.gateway_demo_note': 'Demo mode: the tenant checkout is simulated end to end and no real money moves.',
   'org.gateway_live_note':
     'Live mode requires the provider adapter to be verified against the official sandbox; until then live calls are refused.',
-  'org.gateway_platform_source': 'No organization gateway configured — the platform default provider is in effect.',
+  'org.gateway_platform_source':
+    'No organization gateway configured — the platform default provider is in effect.',
   'org.gateway_credentials_hint':
     'Saved values stay encrypted and are never shown again. Type a new value to replace one; leave a field empty to keep it.',
   'org.gateway_missing': 'Missing credentials: {fields}',

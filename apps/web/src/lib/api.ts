@@ -24,6 +24,7 @@ import type {
   Owner,
   Building,
   Arrears,
+  AuditLogEntry,
   Charge,
   CollectionRow,
   Document,
@@ -35,6 +36,7 @@ import type {
   Payment,
   PaymentProof,
   PortalCompletedPayment,
+  PortalDocument,
   PortalMe,
   PortalPaymentIntent,
   Property,
@@ -311,6 +313,14 @@ export const api = {
     apiFetch<{ enrolled: boolean }>(`/tenants/${tenantId}/portal`, { method: 'DELETE' }),
   /** What a signed-in tenant sees on their portal page. */
   portalMe: () => apiFetch<PortalMe>('/portal/me'),
+  /** Lease papers, receipts and anything else filed for this tenant. */
+  portalDocuments: () => apiFetch<{ items: PortalDocument[] }>('/portal/documents'),
+  /** Same-origin download URL — the session cookie authorizes it. */
+  portalDocumentUrl: (id: string) => `/api/v1/portal/documents/${id}/download`,
+  /** Server-side CSV export; open in a new tab so the browser downloads it. */
+  exportCsvUrl: (kind: 'tenants' | 'leases' | 'charges' | 'payments' | 'arrears') =>
+    `/api/v1/exports/${kind}.csv`,
+  auditLogs: (query = '') => apiFetch<{ items: AuditLogEntry[]; total: number }>(`/audit-logs${query}`),
 
   // --- tenant portal payments -----------------------------------------------
   // The intent lives server-side; the browser only ever sees the reference.

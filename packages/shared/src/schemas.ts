@@ -210,6 +210,11 @@ export const portalVerifySchema = z
 
 export const refreshTokenSchema = z.object({ refreshToken: z.string().min(20) });
 
+/** Redeem a staff invitation: single-use token + the password to activate with. */
+export const acceptInviteSchema = z
+  .object({ token: z.string().min(20).max(200), password: passwordSchema })
+  .strict();
+
 export const inviteUserSchema = z.object({
   email: emailSchema,
   role: z.enum(ROLES as unknown as [string, ...string[]]),

@@ -48,6 +48,10 @@ const envSchema = z.object({
         .map((origin) => origin.trim())
         .filter(Boolean),
     ),
+  // Explicit origin providers send the payer back to after a portal checkout.
+  // Defaults to CORS_ORIGINS[0]; set it when the public URL differs from the
+  // first CORS entry (proxies, custom domains, separate portal host).
+  PORTAL_RETURN_ORIGIN: z.string().url().optional(),
 
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   TEST_DATABASE_URL: z.string().optional(),

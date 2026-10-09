@@ -101,38 +101,75 @@ reportsRouter.get(
         prisma.workOrder.count({
           where: { organizationId, status: { in: ['open', 'assigned', 'in_progress', 'on_hold'] } },
         }),
-        prisma.charge.aggregate({
+        // Expected = what was BILLED for this period. Quarterly/annual charges are
+        // raised once but span several periods; keying on the charge's own period
+        // start inside this period keeps them in the month they are billed instead
+        // of dropping them (the old start>=from AND end<=to test excluded them).
+        prisma.charge.findMany({
           where: {
             organizationId,
-            periodCalendar: period.calendar,
-            periodStart: { gte: periodFrom },
-            periodEnd: { lte: periodTo },
+            periodStart: { gte: periodFrom, lte: periodTo },
             status: { in: ['open', 'partial', 'paid'] },
           },
-          _sum: { amountMinor: true },
-          _count: true,
+          select: { amountMinor: true, currency: true },
         }),
-        prisma.payment.aggregate({
+        // Collected must exclude deposit money: a deposit is held, not revenue.
+        prisma.payment.findMany({
           where: { organizationId, status: 'succeeded', paidAt: { gte: periodFrom, lte: periodTo } },
-          _sum: { amountMinor: true },
-          _count: true,
+          select: {
+            amountMinor: true,
+            currency: true,
+            allocations: { select: { amountMinor: true, charge: { select: { type: true } } } },
+          },
         }),
         prisma.charge.findMany({
           where: { organizationId, status: { in: ['open', 'partial'] }, dueDate: { lt: now } },
-          select: { amountMinor: true, paidMinor: true },
+          select: { amountMinor: true, paidMinor: true, currency: true },
         }),
       ]);
 
-      const arrearsMinor = arrearsCharges.reduce(
-        (sum, charge) => sum + (charge.amountMinor - charge.paidMinor),
-        0n,
-      );
-      const expectedMinor = periodCharges._sum.amountMinor ?? 0n;
-      const collectedMinor = periodPayments._sum.amountMinor ?? 0n;
+      // Per-currency books: mixing currencies into one sum produces a number in
+      // no currency at all.
+      const expectedByCurrency = new Map<string, bigint>();
+      for (const charge of periodCharges) {
+        expectedByCurrency.set(
+          charge.currency,
+          (expectedByCurrency.get(charge.currency) ?? 0n) + charge.amountMinor,
+        );
+      }
+      const collectedByCurrency = new Map<string, bigint>();
+      for (const payment of periodPayments) {
+        const depositPart = payment.allocations.reduce(
+          (sum, allocation) => (allocation.charge.type === 'deposit' ? sum + allocation.amountMinor : sum),
+          0n,
+        );
+        collectedByCurrency.set(
+          payment.currency,
+          (collectedByCurrency.get(payment.currency) ?? 0n) + (payment.amountMinor - depositPart),
+        );
+      }
+      const arrearsByCurrency = new Map<string, bigint>();
+      for (const charge of arrearsCharges) {
+        const outstanding = charge.amountMinor - charge.paidMinor;
+        if (outstanding > 0n) {
+          arrearsByCurrency.set(
+            charge.currency,
+            (arrearsByCurrency.get(charge.currency) ?? 0n) + outstanding,
+          );
+        }
+      }
+
+      const currency = organization.currency;
+      const expectedMinor = expectedByCurrency.get(currency) ?? 0n;
+      const collectedMinor = collectedByCurrency.get(currency) ?? 0n;
+      const arrearsMinor = arrearsByCurrency.get(currency) ?? 0n;
+      const allCurrencies = [
+        ...new Set([...expectedByCurrency.keys(), ...collectedByCurrency.keys(), ...arrearsByCurrency.keys()]),
+      ].sort();
 
       res.json({
         organization: {
-          currency: organization.currency,
+          currency,
           calendar: organization.calendar,
           language: organization.language,
         },
@@ -153,7 +190,7 @@ reportsRouter.get(
           to: periodTo,
         },
         money: {
-          currency: organization.currency,
+          currency,
           expectedMinor: expectedMinor.toString(),
           collectedMinor: collectedMinor.toString(),
           collectionRate:
@@ -161,8 +198,16 @@ reportsRouter.get(
               ? null
               : Number(((Number(collectedMinor) / Number(expectedMinor)) * 100).toFixed(2)),
           arrearsMinor: arrearsMinor.toString(),
-          chargesRaised: periodCharges._count,
-          paymentsRecorded: periodPayments._count,
+          chargesRaised: periodCharges.length,
+          paymentsRecorded: periodPayments.length,
+          // Every currency that moved in this period, so nothing disappears
+          // because it is not the organization default.
+          currencies: allCurrencies.map((code) => ({
+            currency: code,
+            expectedMinor: (expectedByCurrency.get(code) ?? 0n).toString(),
+            collectedMinor: (collectedByCurrency.get(code) ?? 0n).toString(),
+            arrearsMinor: (arrearsByCurrency.get(code) ?? 0n).toString(),
+          })),
         },
       });
     } catch (error) {
@@ -258,14 +303,25 @@ reportsRouter.get(
         };
       });
 
-      const totals = rows.reduce(
-        (accumulator, row) => ({
-          dueMinor: accumulator.dueMinor + BigInt(row.periodDueMinor),
-          paidMinor: accumulator.paidMinor + BigInt(row.periodPaidMinor),
-          outstandingMinor: accumulator.outstandingMinor + BigInt(row.outstandingMinor),
-        }),
-        { dueMinor: 0n, paidMinor: 0n, outstandingMinor: 0n },
-      );
+      // Totals per currency: rows carry the lease's own currency, and adding ETB
+      // to USD produces a number in neither.
+      const totalsByCurrency = new Map<string, { dueMinor: bigint; paidMinor: bigint; outstandingMinor: bigint }>();
+      for (const row of rows) {
+        const bucket = totalsByCurrency.get(row.currency) ?? {
+          dueMinor: 0n,
+          paidMinor: 0n,
+          outstandingMinor: 0n,
+        };
+        bucket.dueMinor += BigInt(row.periodDueMinor);
+        bucket.paidMinor += BigInt(row.periodPaidMinor);
+        bucket.outstandingMinor += BigInt(row.outstandingMinor);
+        totalsByCurrency.set(row.currency, bucket);
+      }
+      const primary = totalsByCurrency.get(organization.currency) ?? {
+        dueMinor: 0n,
+        paidMinor: 0n,
+        outstandingMinor: 0n,
+      };
 
       res.json({
         period: {
@@ -277,11 +333,19 @@ reportsRouter.get(
         currency: organization.currency,
         rows: rows.map((row) => ({ ...row, property: row.property })),
         totals: {
-          dueMinor: totals.dueMinor.toString(),
-          paidMinor: totals.paidMinor.toString(),
-          outstandingMinor: totals.outstandingMinor.toString(),
+          dueMinor: primary.dueMinor.toString(),
+          paidMinor: primary.paidMinor.toString(),
+          outstandingMinor: primary.outstandingMinor.toString(),
           leaseCount: rows.length,
         },
+        totalsByCurrency: [...totalsByCurrency.entries()]
+          .sort(([a], [b]) => (a < b ? -1 : 1))
+          .map(([code, bucket]) => ({
+            currency: code,
+            dueMinor: bucket.dueMinor.toString(),
+            paidMinor: bucket.paidMinor.toString(),
+            outstandingMinor: bucket.outstandingMinor.toString(),
+          })),
       });
     } catch (error) {
       next(error);

@@ -221,12 +221,26 @@ export default function MaintenancePage() {
                           </Button>
                         ) : null}
                         {row.status === 'in_progress' ? (
+                          <>
+                            <Button variant="ghost" size="sm" onClick={() => void advance(row.id, 'on_hold')}>
+                              {t('work_order.status.on_hold')}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setCloseFor({ id: row.id, status: 'completed' })}
+                            >
+                              {t('work_order.status.completed')}
+                            </Button>
+                          </>
+                        ) : null}
+                        {row.status === 'on_hold' ? (
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => setCloseFor({ id: row.id, status: 'completed' })}
+                            onClick={() => void advance(row.id, 'in_progress')}
                           >
-                            {t('work_order.status.completed')}
+                            {t('work_order.status.in_progress')}
                           </Button>
                         ) : null}
                       </span>

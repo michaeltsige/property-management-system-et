@@ -13,6 +13,7 @@ import { organizationIdOf, requireAuth } from '../middleware/context.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
 import { getPrisma } from '../lib/prisma.js';
+import { pstr } from '../lib/query.js';
 import { badRequest, businessRule, notFound } from '../lib/errors.js';
 import { nextTicketNumber } from './operations.js';
 import { authRateLimiter } from './auth.js';
@@ -153,6 +154,7 @@ portalRouter.get('/portal/me', requireAuth, requirePermission('portal.use'), asy
     const prisma = getPrisma();
     const tenant = await prisma.tenant.findFirst({
       where: { userId: req.auth?.userId, organizationId: req.auth?.organizationId, deletedAt: null },
+      include: { organization: { select: { currency: true } } },
     });
     if (!tenant) throw notFound('Portal account is not linked to a tenant');
 
@@ -165,17 +167,39 @@ portalRouter.get('/portal/me', requireAuth, requirePermission('portal.use'), asy
     });
 
     // Outstanding = amount minus what was already paid, over charges that are
-    // still owed ('open'/'partial'). Summing amountMinor alone would re-count
-    // money the tenant already handed over.
+    // still owed ('open'/'partial') in the organization's billing currency —
+    // summing across currencies would produce a number in neither.
     const open = await prisma.charge.findMany({
       where: {
         tenantId: tenant.id,
         organizationId: tenant.organizationId,
+        currency: tenant.organization.currency,
         status: { in: ['open', 'partial'] },
       },
       select: { amountMinor: true, paidMinor: true },
     });
-    const dueMinor = open.reduce((sum, charge) => sum + (charge.amountMinor - charge.paidMinor), BigInt(0));
+    const owedMinor = open.reduce((sum, charge) => sum + (charge.amountMinor - charge.paidMinor), BigInt(0));
+
+    // Credit from earlier overpayments lives on the ledger, not on the charges:
+    // without netting it here the tenant would be asked to pay twice.
+    const leaseIds = leases.map((lease) => lease.id);
+    let creditMinor = 0n;
+    if (leaseIds.length > 0) {
+      const grouped = await prisma.ledgerEntry.groupBy({
+        by: ['currency'],
+        where: {
+          organizationId: tenant.organizationId,
+          leaseId: { in: leaseIds },
+        },
+        _sum: { amountMinor: true },
+      });
+      for (const row of grouped) {
+        if (row.currency === tenant.organization.currency && (row._sum.amountMinor ?? 0n) < 0n) {
+          creditMinor = -(row._sum.amountMinor ?? 0n);
+        }
+      }
+    }
+    const netDue = owedMinor - creditMinor;
 
     res.json({
       tenant: {
@@ -193,7 +217,9 @@ portalRouter.get('/portal/me', requireAuth, requirePermission('portal.use'), asy
         currency: lease.currency,
         startDate: lease.startDate.toISOString().slice(0, 10),
       })),
-      dueMinor: dueMinor.toString(),
+      dueMinor: (netDue > 0n ? netDue : 0n).toString(),
+      creditMinor: creditMinor.toString(),
+      currency: tenant.organization.currency,
     });
   } catch (error) {
     next(error);
@@ -203,11 +229,13 @@ portalRouter.get('/portal/me', requireAuth, requirePermission('portal.use'), asy
 // --- payments (tenant-initiated, provider-confirmed) ------------------------
 
 /**
- * The browser origin the provider sends the payer back to. The stack is one web
- * app on one origin (CORS_ORIGINS[0]), so the first entry is that origin.
+ * The browser origin the provider sends the payer back to. PORTAL_RETURN_ORIGIN
+ * wins when set (production behind a proxy or custom domain); otherwise the
+ * stack is one web app on one origin (CORS_ORIGINS[0]).
  */
 function portalReturnUrl(): string {
-  const origin = getConfig().CORS_ORIGINS[0] ?? 'http://localhost:3000';
+  const origin =
+    getConfig().PORTAL_RETURN_ORIGIN ?? getConfig().CORS_ORIGINS[0] ?? 'http://localhost:3000';
   return `${origin.replace(/\/$/, '')}/portal/pay/mock`;
 }
 
@@ -377,6 +405,108 @@ portalRouter.get(
       const stream = await getStorageDriver().stream(document.storageKey);
       res.setHeader('Content-Type', document.mimeType);
       res.setHeader('Content-Disposition', `attachment; filename="${document.id}"`);
+      stream.pipe(res);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// --- documents (tenant-visible lease papers) --------------------------------
+
+/**
+ * Documents the tenant may see: anything filed directly against them, against
+ * their leases, or their units. Categories containing other tenants' data
+ * (payment proofs of the house, staff notes) are not exposed through this list;
+ * payment proofs keep their own endpoint.
+ */
+portalRouter.get(
+  '/portal/documents',
+  requireAuth,
+  requirePermission('portal.use'),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      const leases = await prisma.lease.findMany({
+        where: { tenantId: tenant.id, organizationId: tenant.organizationId },
+        select: { id: true, unitId: true },
+      });
+
+      const documents = await prisma.document.findMany({
+        where: {
+          organizationId: tenant.organizationId,
+          deletedAt: null,
+          OR: [
+            { tenantId: tenant.id },
+            { leaseId: { in: leases.map((lease) => lease.id) } },
+            { unitId: { in: leases.map((lease) => lease.unitId).filter((id): id is string => Boolean(id)) } },
+          ],
+        },
+        include: {
+          property: { select: { name: true } },
+          unit: { select: { label: true } },
+          lease: { select: { id: true, unit: { select: { label: true } } } },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 100,
+      });
+
+      res.json({
+        items: documents.map((document) => ({
+          id: document.id,
+          category: document.category,
+          title: document.title,
+          mimeType: document.mimeType,
+          sizeBytes: document.sizeBytes.toString(),
+          property: document.property?.name ?? null,
+          unit: document.unit?.label ?? document.lease?.unit.label ?? null,
+          createdAt: document.createdAt,
+        })),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+portalRouter.get(
+  '/portal/documents/:documentId/download',
+  requireAuth,
+  requirePermission('portal.use'),
+  validate({ params: z.object({ documentId: uuidSchema }) }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      const leases = await prisma.lease.findMany({
+        where: { tenantId: tenant.id, organizationId: tenant.organizationId },
+        select: { id: true, unitId: true },
+      });
+
+      // Scope check before the bytes move: a document belongs to this tenant only
+      // when it is filed against them, one of their leases, or one of their units.
+      const document = await prisma.document.findFirst({
+        where: {
+          id: pstr(req, 'documentId'),
+          organizationId: tenant.organizationId,
+          deletedAt: null,
+          OR: [
+            { tenantId: tenant.id },
+            { leaseId: { in: leases.map((lease) => lease.id) } },
+            { unitId: { in: leases.map((lease) => lease.unitId).filter((id): id is string => Boolean(id)) } },
+          ],
+        },
+      });
+      if (!document) throw notFound('Document not found');
+
+      const storage = getStorageDriver();
+      const stream = await storage.stream(document.storageKey);
+      res.setHeader('Content-Type', document.mimeType);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${document.title ?? document.id}"`,
+      );
       stream.pipe(res);
     } catch (error) {
       next(error);

@@ -97,19 +97,31 @@ describe('initiating a portal payment', () => {
     expect(firstRow.method).toBe('mock');
     expect(firstRow.leaseId).toBe(session.leaseId);
 
-    // A second attempt supersedes the first: one live intent per tenant.
+    // A second attempt for the SAME amount returns the same live intent —
+    // double-tapping the button must not strand a payment the provider may
+    // have already taken (the old behaviour force-failed the first attempt).
     const second = await request(app)
       .post('/api/v1/portal/payments/initiate')
       .set(header)
       .send({})
       .expect(201);
-    expect(second.body.providerRef).not.toBe(first.body.providerRef);
-    const superseded = await prisma.payment.findUniqueOrThrow({ where: { id: first.body.paymentId } });
-    expect(superseded.status).toBe('failed');
+    expect(second.body.paymentId).toBe(first.body.paymentId);
+    const stillPending = await prisma.payment.findUniqueOrThrow({ where: { id: first.body.paymentId } });
+    expect(stillPending.status).toBe('pending');
     const pendingCount = await prisma.payment.count({
       where: { organizationId: session.organizationId, tenantId: session.tenantId, status: 'pending' },
     });
     expect(pendingCount).toBe(1);
+
+    // A DIFFERENT amount explicitly supersedes the old attempt.
+    const third = await request(app)
+      .post('/api/v1/portal/payments/initiate')
+      .set(header)
+      .send({ amountMinor: '1500000' })
+      .expect(201);
+    expect(third.body.paymentId).not.toBe(first.body.paymentId);
+    const superseded = await prisma.payment.findUniqueOrThrow({ where: { id: first.body.paymentId } });
+    expect(superseded.status).toBe('failed');
   });
 
   it('accepts a partial amount but refuses more than the outstanding balance', async () => {

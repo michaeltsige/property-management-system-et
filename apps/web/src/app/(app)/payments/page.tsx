@@ -3,7 +3,7 @@
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
-import { MANUAL_PAYMENT_METHODS } from '@pms/shared';
+import { MANUAL_PAYMENT_METHODS, PAYMENT_METHODS } from '@pms/shared';
 
 import { api } from '@/lib/api';
 import { formatAmount, formatDate } from '@/lib/format';
@@ -11,6 +11,7 @@ import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 
 import { PageHeader } from '@/components/app-shell';
+import { ExportCsvButton } from '@/components/export-csv-button';
 import { MoneyInput } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
 import { PaymentProofsReview } from '@/components/payment-proofs-review';
@@ -118,12 +119,16 @@ export default function PaymentsPage() {
               aria-label={t('payment.filter_method')}
             >
               <option value="">{t('common.filters')}</option>
-              {MANUAL_PAYMENT_METHODS.concat(['telebirr', 'chapa'] as never).map((option) => (
+              {/* Every method money can arrive by — the demo gateway and the
+                  providers that come online later included. */}
+              {PAYMENT_METHODS.filter((option) => option !== 'other').map((option) => (
                 <option key={option} value={option}>
                   {t(`payment.method.${option}` as never)}
                 </option>
               ))}
+              <option value="other">{t('payment.method.other' as never)}</option>
             </Select>
+            <ExportCsvButton kind="payments" />
             <Button onClick={() => setOpen(true)}>
               <Plus className="h-4 w-4" />
               {t('money.record_payment')}
@@ -200,11 +205,7 @@ export default function PaymentsPage() {
                             >
                               {t('payment.receipt_download')}
                             </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setReverseTarget(payment.id)}
-                            >
+                            <Button variant="ghost" size="sm" onClick={() => setReverseTarget(payment.id)}>
                               {t('payment.reverse')}
                             </Button>
                           </>

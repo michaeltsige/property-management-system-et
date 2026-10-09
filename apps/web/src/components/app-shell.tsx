@@ -36,6 +36,7 @@ import {
   LogOut,
   Menu,
   Receipt,
+  ScrollText,
   Users,
   Wallet,
   Wrench,
@@ -96,6 +97,7 @@ const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
     items: [
       { href: '/organization', labelKey: 'nav.organization', icon: Building2 },
       { href: '/organization/team', labelKey: 'org.team', icon: Users },
+      { href: '/organization/audit', labelKey: 'nav.audit', icon: ScrollText },
       { href: '/organization/translations', labelKey: 'nav.translations', icon: Languages },
     ],
   },

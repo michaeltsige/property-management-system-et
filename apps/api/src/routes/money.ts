@@ -77,7 +77,9 @@ moneyRouter.get(
     query: paginationSchema.partial().extend({
       leaseId: uuidSchema.optional(),
       tenantId: uuidSchema.optional(),
-      status: z.enum(['open', 'partial', 'paid', 'waived', 'written_off']).optional(),
+      // `overdue` is an alias for "open or partial AND past due" — the sidebar
+      // task list filters on it and a 400 here used to brick that panel.
+      status: z.enum(['open', 'partial', 'paid', 'waived', 'written_off', 'overdue']).optional(),
       periodKey: z
         .string()
         .regex(/^\d{4}-\d{2}$/)
@@ -99,7 +101,11 @@ moneyRouter.get(
         organizationId,
         ...(leaseId ? { leaseId } : {}),
         ...(tenantId ? { tenantId } : {}),
-        ...(status ? { status } : {}),
+        ...(status === 'overdue'
+          ? { status: { in: ['open', 'partial'] }, dueDate: { lt: new Date() } }
+          : status
+            ? { status }
+            : {}),
         ...(periodKey ? { periodKey } : {}),
       };
 

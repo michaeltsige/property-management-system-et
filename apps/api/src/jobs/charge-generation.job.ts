@@ -52,6 +52,7 @@ export async function runChargeGeneration(
 
     for (const periodKey of periodKeys) {
       const idempotencyKey = `${organization.id}:${periodKey}`;
+      let jobRunId: string | null = null;
       try {
         const jobRun = await prisma.jobRun.create({
           data: {
@@ -61,6 +62,7 @@ export async function runChargeGeneration(
             status: 'running',
           },
         });
+        jobRunId = jobRun.id;
 
         const result = await generateCharges(prisma, {
           organizationId: organization.id,
@@ -80,15 +82,68 @@ export async function runChargeGeneration(
           },
         });
       } catch (error) {
-        // Unique violation on (jobName, idempotencyKey): this period was already
-        // processed for this organization.
+        // Unique violation on (jobName, idempotencyKey): a JobRun exists for this
+        // organization/period. A SUCCEEDED run means the period was already
+        // processed — skip. A FAILED run used to block this period forever; it
+        // is reset to running so the retry actually happens (charge creation
+        // itself stays idempotent through the Charge unique constraint).
         if (typeof error === 'object' && error !== null && 'code' in error && error.code === 'P2002') {
-          skippedJobRuns += 1;
+          const existing = await prisma.jobRun.findUnique({
+            where: {
+              jobName_idempotencyKey: { jobName: QUEUES.generateCharges, idempotencyKey },
+            },
+          });
+          // A `running` row younger than this is probably a live concurrent
+          // worker — leave it alone. Anything older crashed mid-run and would
+          // block the period forever.
+          const staleRunning =
+            existing?.status === 'running' &&
+            existing.startedAt.getTime() < Date.now() - 15 * 60 * 1000;
+          if (existing?.status === 'failed' || staleRunning) {
+            logger.warn(
+              { organizationId: organization.id, periodKey, previousStatus: existing?.status },
+              'retrying previously failed charge generation run',
+            );
+            await prisma.jobRun.update({
+              where: { id: existing!.id },
+              data: { status: 'running', error: null, finishedAt: null, startedAt: new Date() },
+            });
+            try {
+              const result = await generateCharges(prisma, {
+                organizationId: organization.id,
+                periodKeys: [periodKey],
+                skipNotYetStarted: true,
+              });
+              created += result.created;
+              skippedExisting += result.skippedExisting;
+              await prisma.jobRun.update({
+                where: { id: existing.id },
+                data: {
+                  status: 'succeeded',
+                  finishedAt: new Date(),
+                  result: { created: result.created, skippedExisting: result.skippedExisting },
+                },
+              });
+            } catch (retryError) {
+              await prisma.jobRun.update({
+                where: { id: existing.id },
+                data: { status: 'failed', finishedAt: new Date(), error: String(retryError) },
+              });
+              throw retryError;
+            }
+          } else {
+            skippedJobRuns += 1;
+          }
           continue;
         }
         logger.error({ err: error, organizationId: organization.id, periodKey }, 'charge generation failed');
         await prisma.jobRun.updateMany({
-          where: { jobName: QUEUES.generateCharges, idempotencyKey, status: 'running' },
+          where: {
+            OR: [
+              { jobName: QUEUES.generateCharges, idempotencyKey, status: 'running' },
+              ...(jobRunId ? [{ id: jobRunId }] : []),
+            ],
+          },
           data: { status: 'failed', finishedAt: new Date(), error: String(error) },
         });
         throw error;

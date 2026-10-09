@@ -8,13 +8,13 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
-import { loginSchema, refreshTokenSchema, registerSchema } from '@pms/shared';
+import { loginSchema, refreshTokenSchema, registerSchema, acceptInviteSchema } from '@pms/shared';
 
 import { getConfig } from '../config.js';
 import { createRateLimiter } from '../middleware/rate-limit.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/context.js';
-import { login, logout, refresh, registerOrganization } from '../services/auth.service.js';
+import { acceptInvite, login, logout, refresh, registerOrganization } from '../services/auth.service.js';
 
 const config = getConfig();
 
@@ -63,6 +63,29 @@ authRouter.post(
         userAgent: req.header('user-agent') ?? undefined,
       });
       res.json({ tokens });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * Redeem a staff invitation: single-use token → password set, membership active.
+ * Unauthenticated by design — the token IS the credential — but rate limited
+ * like every other auth endpoint.
+ */
+authRouter.post(
+  '/accept-invite',
+  authRateLimiter,
+  validate({ body: acceptInviteSchema }),
+  async (req, res, next) => {
+    try {
+      const result = await acceptInvite(req.body, {
+        requestId: req.requestId,
+        ip: req.ip ?? undefined,
+        userAgent: req.header('user-agent') ?? undefined,
+      });
+      res.json(result);
     } catch (error) {
       next(error);
     }
