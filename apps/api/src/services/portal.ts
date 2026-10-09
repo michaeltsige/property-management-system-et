@@ -20,6 +20,7 @@ import type { PrismaClient } from '@prisma/client';
 import { badRequest, unauthenticated } from '../lib/errors.js';
 import { hashPassword } from '../lib/crypto.js';
 import { logger } from '../lib/logger.js';
+import { getConfig } from '../config.js';
 import { getSmsProvider } from '../providers/sms/index.js';
 import { recordAudit } from './audit.js';
 import type { PrismaLike } from './audit.js';
@@ -59,7 +60,18 @@ export async function requestPortalCode(
   meta: { requestId?: string },
 ): Promise<{ ok: true }> {
   const tenant = await findEnrolledTenantByPhone(prisma, phone);
-  if (!tenant?.user) return { ok: true };
+  if (!tenant?.user) {
+    // Anti-enumeration: production stays silent. Development logs a hint, because
+    // a silent `ok: true` is indistinguishable from a broken SMS provider there.
+    if (getConfig().isDevelopment) {
+      logger.info(
+        { phone },
+        'DEV demo: portal code requested for a phone with no enrolled, active tenant — nothing sent. ' +
+          'Use a phone that is enrolled for portal access (the seeded demo phone is printed by `pnpm db:seed`).',
+      );
+    }
+    return { ok: true };
+  }
 
   const last = await prisma.tenantOtp.findFirst({
     where: { tenantId: tenant.id },
@@ -67,6 +79,12 @@ export async function requestPortalCode(
   });
   if (last && Date.now() - last.createdAt.getTime() < OTP_RESEND_COOLDOWN_SECONDS * 1000) {
     // Enforcing the cooldown publicly would reveal enrollment; stay silent.
+    if (getConfig().isDevelopment) {
+      logger.info(
+        { phone },
+        `DEV demo: portal code requested again within the ${OTP_RESEND_COOLDOWN_SECONDS}s resend cooldown — not resending. The earlier code (if one was sent) is still valid.`,
+      );
+    }
     return { ok: true };
   }
 
