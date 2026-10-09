@@ -16,7 +16,7 @@
     "typecheck": "turbo run typecheck",
     "test": "node --test scripts/test-pool.test.mjs scripts/build-workspaces.test.mjs && turbo run test --concurrency=2",
     "db:generate": "node scripts/with-env.mjs pnpm --filter @pms/api db:generate",
-    "db:migrate": "node scripts/with-env.mjs pnpm exec turbo run db:migrate",
+    "db:migrate": "node scripts/with-env.mjs pnpm --filter @pms/api db:migrate",
     "db:deploy": "node scripts/with-env.mjs pnpm exec turbo run db:deploy",
     "db:seed": "node scripts/with-env.mjs pnpm exec turbo run db:seed",
     "db:seed:force": "node scripts/with-env.mjs pnpm exec turbo run db:seed -- --force",
