@@ -46,7 +46,7 @@ import {
 import { api } from '@/lib/api';
 import { formatPeriodKey, todayFor } from '@/lib/format';
 import { useDocumentTitle } from '@/lib/hooks';
-import { CALENDARS, LANGUAGES, usePreferences } from '@/lib/preferences';
+import { LANGUAGES, usePreferences } from '@/lib/preferences';
 import { ROLE_LABEL_FALLBACK } from '@/lib/roles';
 import { cn } from '@/lib/utils';
 
@@ -157,48 +157,34 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   );
 }
 
-function PreferenceSwitchers({ idPrefix }: { idPrefix: string }) {
-  const { t, language, calendar, setLanguage, setCalendar } = usePreferences();
+/**
+ * Language is a personal, per-session choice people flip freely, so it stays in
+ * the top bar. The calendar deliberately does NOT live here: a landlord follows
+ * one calendar for rent collection permanently, so switching it is a settings
+ * decision (Organization → Display calendar), not a light/dark-mode toggle.
+ */
+function LanguageSwitcher({ idPrefix }: { idPrefix: string }) {
+  const { t, language, setLanguage } = usePreferences();
   const selectClass =
     'h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500';
 
   return (
-    <div className="flex flex-wrap items-end gap-2">
-      <div className="space-y-1">
-        <label className="block text-[11px] font-medium text-slate-500" htmlFor={`${idPrefix}-language`}>
-          {t('preferences.language')}
-        </label>
-        <select
-          id={`${idPrefix}-language`}
-          value={language}
-          onChange={(event) => setLanguage(event.target.value as typeof language)}
-          className={selectClass}
-        >
-          {LANGUAGES.map((option) => (
-            <option key={option.code} value={option.code}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="space-y-1">
-        <label className="block text-[11px] font-medium text-slate-500" htmlFor={`${idPrefix}-calendar`}>
-          {t('preferences.calendar')}
-        </label>
-        <select
-          id={`${idPrefix}-calendar`}
-          value={calendar}
-          onChange={(event) => setCalendar(event.target.value as typeof calendar)}
-          className={selectClass}
-        >
-          {CALENDARS.map((option) => (
-            <option key={option.code} value={option.code}>
-              {option.english}
-            </option>
-          ))}
-        </select>
-      </div>
+    <div className="space-y-1">
+      <label className="block text-[11px] font-medium text-slate-500" htmlFor={`${idPrefix}-language`}>
+        {t('preferences.language')}
+      </label>
+      <select
+        id={`${idPrefix}-language`}
+        value={language}
+        onChange={(event) => setLanguage(event.target.value as typeof language)}
+        className={selectClass}
+      >
+        {LANGUAGES.map((option) => (
+          <option key={option.code} value={option.code}>
+            {option.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }
@@ -320,7 +306,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
 
             <div className="space-y-3 border-t border-white/10 px-4 py-4">
-              <PreferenceSwitchers idPrefix="drawer" />
+              <LanguageSwitcher idPrefix="drawer" />
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0 text-slate-300">{userBlock}</div>
                 <Button
@@ -365,7 +351,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           <div className="flex items-center gap-3">
             <div className="hidden md:flex">
-              <PreferenceSwitchers idPrefix="header" />
+              <LanguageSwitcher idPrefix="header" />
             </div>
             <div className="hidden lg:block">
               <PropertySwitcher id="header-property-context" />

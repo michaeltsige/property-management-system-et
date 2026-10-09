@@ -17,6 +17,7 @@ import type { PrismaClient } from '@prisma/client';
 
 import { DEFAULT_ORG_SETTINGS, signupBillingSchema, type Role } from '@pms/shared';
 import type { CalendarKind, LanguageCode } from '@pms/calendar';
+import type { CurrencyCode } from '@pms/shared';
 
 import { getConfig } from '../config.js';
 import { conflict, forbidden, notFound, unauthenticated } from '../lib/errors.js';
@@ -44,6 +45,8 @@ export interface RegisterInput {
   email: string;
   phone?: string;
   password: string;
+  /** The books' currency for the new organization; defaults to ETB. */
+  currency?: CurrencyCode;
   language: LanguageCode;
   calendar: CalendarKind;
 }
@@ -85,7 +88,7 @@ export async function registerOrganization(input: RegisterInput, meta: { request
         name: input.organizationName,
         portfolioMode: input.portfolioMode ?? 'self_owned',
         slug,
-        currency: DEFAULT_ORG_SETTINGS.currency,
+        currency: input.currency ?? DEFAULT_ORG_SETTINGS.currency,
         calendar: input.calendar,
         language: input.language,
       },

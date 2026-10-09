@@ -8,13 +8,15 @@
  */
 
 import { describe, expect, it } from 'vitest';
+import request from 'supertest';
 
 import { civilToUtcDate, ethiopianToGregorian } from '@pms/calendar';
 
+import { createApp } from '../app.js';
 import { getPrisma } from '../lib/prisma.js';
 import { balanceMinor } from '../services/ledger.js';
 import { amountForPeriod, generateCharges, isChargingPeriod } from '../services/charges.js';
-import { createOrganizationFixture, createPortfolio, utcDate } from './helpers.js';
+import { authHeader, createOrganizationFixture, createPortfolio, utcDate } from './helpers.js';
 
 const etStart = civilToUtcDate({ year: 2015, month: 1, day: 1, calendar: 'ethiopian' });
 
@@ -163,6 +165,62 @@ describe('Ethiopian calendar awareness', () => {
     });
     expect(result.created).toBe(0);
     expect(await prisma.charge.count({ where: { leaseId: portfolio.leaseId } })).toBe(0);
+  });
+});
+
+describe('cross-calendar charging (display calendar vs billing calendar)', () => {
+  it('generates the equivalent billing period when the caller speaks another calendar', async () => {
+    const prisma = getPrisma();
+    const fixture = await createOrganizationFixture('crosscal');
+    const portfolio = await createPortfolio(prisma, {
+      organizationId: fixture.organizationId,
+      billingCalendar: 'ethiopian',
+      startDate: etStart,
+    });
+
+    // The screen shows "October 2026" (Gregorian); the lease bills Ethiopian.
+    const result = await generateCharges(prisma, {
+      organizationId: fixture.organizationId,
+      periodKeys: ['2026-10'],
+      sourceCalendar: 'gregorian',
+    });
+    expect(result.created).toBe(1);
+
+    const charge = await prisma.charge.findFirstOrThrow({ where: { leaseId: portfolio.leaseId } });
+    expect(charge.periodCalendar).toBe('ethiopian');
+    // Gregorian October 2026 straddles Ethiopian 2019-02 (Oct 11 – Nov 9).
+    expect(charge.periodKey).toBe('2019-02');
+  });
+
+  it('finds a charge billed in one calendar through the other calendar window', async () => {
+    const prisma = getPrisma();
+    const fixture = await createOrganizationFixture('crossfilter');
+    const portfolio = await createPortfolio(prisma, {
+      organizationId: fixture.organizationId,
+      billingCalendar: 'ethiopian',
+      startDate: etStart,
+    });
+    await generateCharges(prisma, {
+      organizationId: fixture.organizationId,
+      periodKeys: ['2019-02'],
+    });
+
+    const app = createApp();
+    // Viewing the wall-clock month in Gregorian still shows the Ethiopian-billed charge.
+    const found = await request(app)
+      .get('/api/v1/charges?periodKey=2026-10&calendar=gregorian')
+      .set(authHeader(fixture))
+      .expect(200);
+    expect(found.body.items.map((row: { id: string }) => row.id)).toContain(
+      (await prisma.charge.findFirstOrThrow({ where: { leaseId: portfolio.leaseId } })).id,
+    );
+
+    // Without the calendar hint the key matches literally, as before.
+    const exact = await request(app)
+      .get('/api/v1/charges?periodKey=2026-10')
+      .set(authHeader(fixture))
+      .expect(200);
+    expect(exact.body.items).toHaveLength(0);
   });
 });
 

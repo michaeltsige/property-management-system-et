@@ -227,7 +227,7 @@ export default function DocumentsPage() {
             <div className="space-y-1">
               <Label htmlFor="leaseId">{t('nav.leases')}</Label>
               <Select id="leaseId" value={leaseId} onChange={(event) => setLeaseId(event.target.value)}>
-                <option value="">—</option>
+                <option value="">{t('common.select')}</option>
                 {(leases.data?.leases ?? []).map((lease) => (
                   <option key={lease.id} value={lease.id}>
                     {lease.unit.property.name} · {lease.unit.label}
@@ -238,7 +238,7 @@ export default function DocumentsPage() {
             <div className="space-y-1">
               <Label htmlFor="tenantId">{t('nav.tenants')}</Label>
               <Select id="tenantId" value={tenantId} onChange={(event) => setTenantId(event.target.value)}>
-                <option value="">—</option>
+                <option value="">{t('common.select')}</option>
                 {(tenants.data?.tenants ?? []).map((tenant) => (
                   <option key={tenant.id} value={tenant.id}>
                     {tenant.fullName}

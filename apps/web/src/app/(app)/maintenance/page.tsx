@@ -274,7 +274,7 @@ export default function MaintenancePage() {
         <div className="space-y-2">
           <Label htmlFor="vendorId">{t('maintenance.assign_vendor')}</Label>
           <Select id="vendorId" value={vendorId} onChange={(event) => setVendorId(event.target.value)}>
-            <option value="">—</option>
+            <option value="">{t('common.select')}</option>
             {vendors.data?.vendors.map((vendor) => (
               <option key={vendor.id} value={vendor.id}>
                 {vendor.name}

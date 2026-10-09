@@ -30,8 +30,8 @@ export const LANGUAGES: { code: LanguageCode; label: string; english: string }[]
 ];
 
 export const CALENDARS: { code: CalendarKind; label: string; english: string }[] = [
-  { code: 'ethiopian', label: 'ኢትዮጵያ', english: 'Ethiopian' },
   { code: 'gregorian', label: 'Gregorian', english: 'Gregorian' },
+  { code: 'ethiopian', label: 'ኢትዮጵያ', english: 'Ethiopian' },
 ];
 
 interface PreferenceState {
@@ -55,7 +55,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [overrides, setOverrides] = useState<TranslationOverride[]>([]);
   const [language, setLanguageState] = useState<LanguageCode>('en');
-  const [calendar, setCalendarState] = useState<CalendarKind>('ethiopian');
+  const [calendar, setCalendarState] = useState<CalendarKind>('gregorian');
 
   // Restore on mount: localStorage is not available during server rendering.
   // The stored session is a display cache, so it is verified against the server —

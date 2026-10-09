@@ -35,7 +35,7 @@ import {
  * is stored as data and is never hardcoded.
  */
 export default function OrganizationPage() {
-  const { t, session } = usePreferences();
+  const { t, session, calendar, setCalendar } = usePreferences();
   const settings = useAsync(() => api.settings(), []);
   const idTypes = useAsync(() => api.idTypes(), []);
   const { pending, error, message, setMessage, run } = useAction();
@@ -46,6 +46,14 @@ export default function OrganizationPage() {
   useEffect(() => {
     if (!name && session?.organization.name) setName(session.organization.name);
   }, [session, name]);
+
+  // A confirmation ribbon that never leaves is just noise: fade it out after a
+  // few seconds so the page reads clean until the next save.
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(null), 4000);
+    return () => clearTimeout(timer);
+  }, [message, setMessage]);
 
   async function save(patch: Record<string, unknown>) {
     await run(async () => {
@@ -122,6 +130,22 @@ export default function OrganizationPage() {
                     ))}
                   </Select>
                 </div>
+              </div>
+
+              <div className="space-y-1">
+                <Label htmlFor="displayCalendar">{t('org.display_calendar')}</Label>
+                <Select
+                  id="displayCalendar"
+                  value={calendar}
+                  onChange={(event) => setCalendar(event.target.value as CalendarKind)}
+                >
+                  {CALENDARS.map((option) => (
+                    <option key={option.code} value={option.code}>
+                      {option.english}
+                    </option>
+                  ))}
+                </Select>
+                <p className="text-[11px] text-slate-500">{t('org.display_calendar_hint')}</p>
               </div>
             </CardContent>
           </Card>

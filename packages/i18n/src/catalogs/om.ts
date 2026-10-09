@@ -206,6 +206,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'auth.email': 'Imeelii',
   'auth.password': 'Jecha darbii',
   'auth.register_organization': 'Dhaabbata keetiif herrega banadhu',
+  'auth.tenant_portal': 'Kirayyaa dhaa? Suursa kirayyaa irraa seeni',
   'auth.invalid_credentials': 'Imeelii yookaan jecha darbii sirrii miti',
   'auth.session_expired': "Yeroon seensa kee darbeera. Maaloo irra deebi'ii seeni.",
   'auth.too_many_attempts': "Yaalii baay'ee. Maaloo daqiiqaa {minutes} booda yaali.",
@@ -223,6 +224,11 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'org.name': 'Dhaabbata',
   'org.settings': "Qindaa'ina dhaabbataa",
   'org.default_currency': 'Maallaqa durtii',
+  'org.default_currency_hint':
+    'Maallaqa kitaabonni kee itaan keessatti; kireenii fi kaffaltiin itti fayyadama.',
+  'org.display_calendar': 'Kalendara agarsiisaa (kan kee)',
+  'org.display_calendar_hint':
+    'Guyyaan akkamitti akka siif mul\u2019atu. Sagantni kaffaltiinsaa kalendara kaffaltii jalatti hordofa.',
   'org.default_calendar': 'Akkaataa guyyaa durtii',
   'org.billing_calendar': 'Kaalandarii kaffaltii',
   'org.billing_calendar_hint':
@@ -441,6 +447,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'common.delete': 'Haqi',
   'common.loading': 'Fe’aa jira…',
   'common.retry': 'Irra deebiʼi yaali',
+  'common.select': 'Filadhaa…',
   'common.none': 'Homaa',
   'common.total': 'Waliigala',
   'common.optional': 'Filannoo',

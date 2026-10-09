@@ -25,6 +25,7 @@ import {
   compareCivil,
   periodEnd,
   periodForDate,
+  periodInOtherCalendar,
   periodStart,
   shiftPeriod,
   utcDateToCivil,
@@ -191,6 +192,10 @@ function toUtcDate(civil: CivilDate): Date {
 export interface GenerateChargeOptions {
   organizationId: string;
   periodKeys: string[];
+  /** The calendar the period keys are expressed in. When given and different
+   *  from a lease's billing calendar, each key is translated into that lease's
+   *  calendar so the same wall-clock month is billed for every lease. */
+  sourceCalendar?: CalendarKind;
   leaseIds?: string[];
   skipNotYetStarted?: boolean;
   actorUserId?: string | null;
@@ -223,7 +228,16 @@ export async function generateCharges(
     const leaseEnd = lease.endDate ? utcDateToCivil(lease.endDate, calendar) : null;
 
     for (const periodKey of options.periodKeys) {
-      const period: BillingPeriod = { calendar, ...parsePeriodKeyFor(periodKey, calendar) };
+      let period: BillingPeriod = { calendar, ...parsePeriodKeyFor(periodKey, calendar) };
+      if (options.sourceCalendar && options.sourceCalendar !== calendar) {
+        // The caller looks at the month in another calendar (the display one);
+        // aim for the lease calendar period covering the same wall-clock days.
+        const requested: BillingPeriod = {
+          calendar: options.sourceCalendar,
+          ...parsePeriodKeyFor(periodKey, options.sourceCalendar),
+        };
+        period = periodInOtherCalendar(requested);
+      }
 
       const months =
         lease.billingFrequency === 'custom'
@@ -286,10 +300,7 @@ export async function generateCharges(
           // Keep the escalation tracker current: the next date rent is due to
           // rise, in the lease's own calendar. Read by dashboards via the
           // (organizationId, billingCalendar, nextEscalationDate) index.
-          if (
-            (lease.escalationPercent ?? 0) > 0 &&
-            (lease.escalationEveryMonths ?? 0) > 0
-          ) {
+          if ((lease.escalationPercent ?? 0) > 0 && (lease.escalationEveryMonths ?? 0) > 0) {
             const startPeriod = periodForDate(utcDateToCivil(lease.startDate, calendar));
             const monthsIn = monthsBetweenPeriods(startPeriod, period);
             const every = lease.escalationEveryMonths ?? 0;

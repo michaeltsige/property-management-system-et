@@ -253,7 +253,7 @@ export default function LeasesPage() {
               value={form.unitId}
               onChange={(event) => setForm((current) => ({ ...current, unitId: event.target.value }))}
             >
-              <option value="">—</option>
+              <option value="">{t('common.select')}</option>
               {unoccupied.map((unit) => (
                 <option key={unit.id} value={unit.id}>
                   {unit.property?.name ? `${unit.property.name} · ` : ''}
@@ -271,7 +271,7 @@ export default function LeasesPage() {
               value={form.tenantId}
               onChange={(event) => setForm((current) => ({ ...current, tenantId: event.target.value }))}
             >
-              <option value="">—</option>
+              <option value="">{t('common.select')}</option>
               {tenants.data?.tenants.map((tenant) => (
                 <option key={tenant.id} value={tenant.id}>
                   {tenant.fullName}
