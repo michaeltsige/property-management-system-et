@@ -1,5 +1,6 @@
 'use client';
 
+import { PlayCircle } from 'lucide-react';
 import { useState } from 'react';
 
 import { useCalendarPeriod } from '@/lib/use-calendar-period';
@@ -14,7 +15,21 @@ import { PageHeader } from '@/components/app-shell';
 import { ExportCsvButton } from '@/components/export-csv-button';
 import { PeriodPicker } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
-import { Alert, Badge, Button, Card, CardContent, EmptyState, Icon, Label, Select, Skeleton, Table, Td, Textarea, Th } from '@/components/ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  EmptyState,
+  Label,
+  Select,
+  Skeleton,
+  Table,
+  Td,
+  Textarea,
+  Th,
+} from '@/components/ui';
 
 /**
  * Rent charges: the rent roll as a list, with the two actions that touch a
@@ -89,7 +104,7 @@ export default function ChargesPage() {
               <option value="waived">{t('charge.status.waived')}</option>
             </Select>
             <Button onClick={() => void generate()} disabled={pending}>
-              <Icon name="play" className="h-4 w-4" />
+              <PlayCircle className="h-4 w-4" />
               {pending ? t('app.loading') : t('money.rent_due')}
             </Button>
           </>

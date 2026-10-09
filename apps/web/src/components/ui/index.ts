@@ -1,5 +1,4 @@
 export { Button, buttonVariants, type ButtonProps } from './button';
-export { Icon, type IconName, type IconSize, type IconProps } from './icon';
 export {
   Alert,
   Badge,

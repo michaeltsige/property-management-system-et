@@ -29,6 +29,7 @@ licenses (MIT/Apache-2.0/ISC). Notable ones:
 | `tailwindcss`                                                      | MIT              | Styling.                                                      |
 | `@radix-ui/*`                                                      | MIT              | Accessible primitives behind the shadcn-style components.     |
 | `class-variance-authority`, `clsx`, `tailwind-merge`               | MIT              | Component variants and class merging (shadcn/ui conventions). |
+| `lucide-react`                                                     | ISC              | Icons.                                                        |
 | `echarts`                                                          | Apache-2.0       | Dashboards and reports.                                       |
 | `express`, `cors`, `helmet`, `express-rate-limit`                  | MIT              | API server and hardening.                                     |
 | `prisma`, `@prisma/client`                                         | Apache-2.0       | ORM and migrations.                                           |

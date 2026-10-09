@@ -1,6 +1,7 @@
 'use client';
 
 import { useCalendarPeriod } from '@/lib/use-calendar-period';
+import { Download } from 'lucide-react';
 import { useState } from 'react';
 
 import { todayIn } from '@pms/calendar';
@@ -15,7 +16,20 @@ import { PageHeader } from '@/components/app-shell';
 import { ArrearsChart } from '@/components/charts';
 import { PeriodPicker } from '@/components/form-controls';
 import { StatCard } from '@/components/stat-card';
-import { Alert, Badge, Button, Card, CardContent, CardHeader, CardTitle, EmptyState, Icon, Skeleton, Table, Td, Th } from '@/components/ui';
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Skeleton,
+  Table,
+  Td,
+  Th,
+} from '@/components/ui';
 
 type Tab = 'rent_roll' | 'arrears' | 'occupancy' | 'collections';
 
@@ -104,7 +118,7 @@ export default function ReportsPage() {
                 }
               }}
             >
-              <Icon name="download" className="h-4 w-4" />
+              <Download className="h-4 w-4" />
               {t('reports.export_csv')}
             </Button>
           </>

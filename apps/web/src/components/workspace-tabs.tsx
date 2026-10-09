@@ -2,13 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { X } from 'lucide-react';
 import { roleHasPermission, type Role } from '@pms/shared';
 import { api } from '@/lib/api';
 import { useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { closeWorkspaceTab, useWorkspaceTabs } from '@/lib/workspace-tabs';
 import { cn } from '@/lib/utils';
-import { Icon } from '@/components/ui';
 
 const ROUTE_LABEL_KEYS: Record<string, string> = {
   '/dashboard': 'nav.dashboard',
@@ -94,7 +94,7 @@ export function WorkspaceTabs() {
                     : 'text-slate-400 hover:bg-slate-200 hover:text-slate-700',
                 )}
               >
-                <Icon name="close" className="h-3.5 w-3.5" />
+                <X className="h-3.5 w-3.5" aria-hidden="true" />
               </button>
             </li>
           );
