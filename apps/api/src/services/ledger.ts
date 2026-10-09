@@ -88,6 +88,14 @@ export interface ReverseEntryInput {
  * The reversing entry carries the negated amount and points at the original, so
  * the net effect is zero while both rows remain visible. An entry can only be
  * reversed once — reversing twice would double the refund.
+ *
+ * The reversal also **syncs the world the entry came from**, which is what used
+ * to desync here:
+ * - reversing a `charge` entry cancels that billing: the charge line becomes
+ *   `written_off` so it leaves arrears, allocation and reminders;
+ * - reversing a `payment` entry returns the charges it allocated to their
+ *   previous paid state and marks the Payment `reversed`;
+ * - reversing a `waiver`/`write_off` entry makes the charge collectible again.
  */
 export async function reverseEntry(tx: PrismaLike, input: ReverseEntryInput) {
   const original = await tx.ledgerEntry.findFirst({
@@ -98,7 +106,7 @@ export async function reverseEntry(tx: PrismaLike, input: ReverseEntryInput) {
   const alreadyReversed = await tx.ledgerEntry.findFirst({ where: { reversesEntryId: original.id } });
   if (alreadyReversed) throw conflict('This entry has already been reversed');
 
-  return postLedgerEntry(tx, {
+  const reversal = await postLedgerEntry(tx, {
     organizationId: original.organizationId,
     leaseId: original.leaseId,
     chargeId: original.chargeId,
@@ -111,6 +119,66 @@ export async function reverseEntry(tx: PrismaLike, input: ReverseEntryInput) {
     createdById: input.actorUserId ?? null,
     reversesEntryId: original.id,
   });
+
+  // --- sync the payment that the entry recorded -----------------------------
+  if (original.kind === 'payment' && original.paymentId) {
+    const payment = await tx.payment.findFirst({
+      where: { id: original.paymentId, organizationId: original.organizationId },
+      include: { allocations: true },
+    });
+    if (payment && payment.status !== 'reversed') {
+      for (const allocation of payment.allocations) {
+        const charge = await tx.charge.findUnique({ where: { id: allocation.chargeId } });
+        if (!charge) continue;
+        const newPaid = charge.paidMinor - allocation.amountMinor;
+        await tx.charge.update({
+          where: { id: charge.id },
+          data: {
+            paidMinor: newPaid < 0n ? 0n : newPaid,
+            status: newPaid <= 0n ? 'open' : newPaid >= charge.amountMinor ? 'paid' : 'partial',
+          },
+        });
+      }
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: {
+          status: 'reversed',
+          notes: [payment.notes, `Reversed: ${input.reason}`].filter(Boolean).join('\n'),
+        },
+      });
+    }
+  }
+
+  // --- sync the charge line the entry belongs to ----------------------------
+  if (original.chargeId) {
+    const charge = await tx.charge.findFirst({
+      where: { id: original.chargeId, organizationId: original.organizationId },
+    });
+    if (charge) {
+      if (original.kind === 'charge') {
+        // The billing itself was undone: the line must stop being collectible.
+        await tx.charge.update({
+          where: { id: charge.id },
+          data: {
+            status: charge.paidMinor > 0n ? 'partial' : 'written_off',
+            waiverReason: charge.waiverReason ?? `Reversed: ${input.reason}`,
+          },
+        });
+      } else if (original.kind === 'waiver' || original.kind === 'write_off') {
+        // The forgiveness was undone: whatever is still unpaid is owed again.
+        const collectible = charge.amountMinor - charge.paidMinor;
+        await tx.charge.update({
+          where: { id: charge.id },
+          data: {
+            status: collectible <= 0n ? 'paid' : charge.paidMinor > 0n ? 'partial' : 'open',
+            waiverReason: null,
+          },
+        });
+      }
+    }
+  }
+
+  return reversal;
 }
 
 export interface StatementLine {

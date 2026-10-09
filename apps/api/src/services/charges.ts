@@ -36,6 +36,7 @@ import { money, prorateMoney, type BillingFrequency } from '@pms/shared';
 
 import { businessRule, conflict, notFound } from '../lib/errors.js';
 import { postLedgerEntry } from './ledger.js';
+import { applyLeaseCreditInTx } from './payments.js';
 import { recordAudit } from './audit.js';
 
 export type PrismaLike = PrismaClient | Prisma.TransactionClient;
@@ -61,6 +62,8 @@ export interface LeaseForCharging {
   gracePeriodDays: number;
   lateFeePercent: number | null;
   lateFeeFixedMinor: bigint | null;
+  escalationPercent: number | null;
+  escalationEveryMonths: number | null;
 }
 
 export interface ChargeGenerationResult {
@@ -96,6 +99,39 @@ export function isChargingPeriod(
 }
 
 /**
+ * Rent for a period after the lease's agreed escalations.
+ *
+ * The escalation fields (`escalationPercent`, `escalationEveryMonths`) existed on
+ * the lease but were never applied — rent stayed flat forever. Escalation steps
+ * are counted in the lease's own billing calendar from the start date and the
+ * increase compounds once per step, rounded per step so minor units never drift.
+ */
+export function escalatedRent(
+  lease: Pick<
+    LeaseForCharging,
+    'billingCalendar' | 'startDate' | 'rentAmountMinor' | 'escalationPercent' | 'escalationEveryMonths'
+  >,
+  period: BillingPeriod,
+): bigint {
+  const percent = lease.escalationPercent ?? null;
+  const every = lease.escalationEveryMonths ?? null;
+  if (!percent || percent <= 0 || !every || every <= 0) return lease.rentAmountMinor;
+
+  const calendar = calendarOf(lease as LeaseForCharging);
+  const startPeriod = periodForDate(utcDateToCivil(lease.startDate, calendar));
+  const monthsIn = monthsBetweenPeriods(startPeriod, period);
+  const steps = Math.floor(monthsIn / every);
+  if (monthsIn <= 0 || steps <= 0) return lease.rentAmountMinor;
+
+  const factorBps = BigInt(Math.round((1 + percent / 100) * 10_000));
+  let rent = lease.rentAmountMinor;
+  for (let step = 0; step < steps; step += 1) {
+    rent = (rent * factorBps) / 10_000n;
+  }
+  return rent;
+}
+
+/**
  * Amount to charge for a period.
  *
  * A lease that starts part-way through a period — or ends part-way through one —
@@ -105,7 +141,14 @@ export function isChargingPeriod(
 export function amountForPeriod(
   lease: Pick<
     LeaseForCharging,
-    'billingCalendar' | 'billingFrequency' | 'rentAmountMinor' | 'currency' | 'startDate' | 'endDate'
+    | 'billingCalendar'
+    | 'billingFrequency'
+    | 'rentAmountMinor'
+    | 'currency'
+    | 'startDate'
+    | 'endDate'
+    | 'escalationPercent'
+    | 'escalationEveryMonths'
   >,
   period: BillingPeriod,
 ): bigint {
@@ -114,7 +157,7 @@ export function amountForPeriod(
     lease.billingFrequency === 'custom'
       ? 1
       : (MONTHS_PER_CHARGE[lease.billingFrequency as Exclude<BillingFrequency, 'custom'>] ?? 1);
-  const full = lease.rentAmountMinor * BigInt(months);
+  const full = escalatedRent(lease, period) * BigInt(months);
 
   const dayMs = 86_400_000;
   const periodFirst: CivilDate = periodStart(period);
@@ -240,6 +283,26 @@ export async function generateCharges(
             createdById: options.actorUserId ?? null,
           });
 
+          // Keep the escalation tracker current: the next date rent is due to
+          // rise, in the lease's own calendar. Read by dashboards via the
+          // (organizationId, billingCalendar, nextEscalationDate) index.
+          if (
+            (lease.escalationPercent ?? 0) > 0 &&
+            (lease.escalationEveryMonths ?? 0) > 0
+          ) {
+            const startPeriod = periodForDate(utcDateToCivil(lease.startDate, calendar));
+            const monthsIn = monthsBetweenPeriods(startPeriod, period);
+            const every = lease.escalationEveryMonths ?? 0;
+            if (monthsIn >= 0 && every > 0) {
+              const nextStep = (Math.floor(monthsIn / every) + 1) * every;
+              const nextPeriodStart = periodStart(shiftPeriod(startPeriod, nextStep));
+              await tx.lease.update({
+                where: { id: lease.id },
+                data: { nextEscalationDate: toUtcDate(nextPeriodStart) },
+              });
+            }
+          }
+
           await recordAudit(tx, {
             organizationId: lease.organizationId,
             actorUserId: options.actorUserId ?? null,
@@ -270,6 +333,25 @@ export async function generateCharges(
         }
         throw error;
       }
+    }
+  }
+
+  // New charges are settled immediately from stranded credit: a tenant with an
+  // overpayment must not sit in arrears on rent their credit already covers.
+  const touchedLeases = [...new Set(result.charges.map((charge) => charge.leaseId))];
+  for (const leaseId of touchedLeases) {
+    try {
+      await prisma.$transaction(async (tx) => {
+        await applyLeaseCreditInTx(tx, {
+          organizationId: options.organizationId,
+          leaseId,
+          actorUserId: options.actorUserId ?? null,
+          now: options.now ?? new Date(),
+        });
+      });
+    } catch {
+      // Credit application is best-effort here; the next payment or a retry
+      // applies it. Never fail charge generation because of it.
     }
   }
 
