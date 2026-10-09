@@ -22,8 +22,8 @@ with its own properties, staff, roles, settings, language and calendar.
 ## Quick start (clean clone)
 
 ```bash
-# 1. Requirements: Node 20+, pnpm 9 (corepack enable), Docker (or any PostgreSQL 15+)
-corepack enable && corepack prepare pnpm@9.15.4 --activate
+# 1. Requirements: Node 20+, pnpm 10 (corepack enable), Docker (or any PostgreSQL 15+)
+corepack enable && corepack prepare pnpm@10.34.6 --activate
 
 # 2. Clone and install
 git clone https://github.com/michaeltsige/property-management-system-et.git

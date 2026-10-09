@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Commercial property management system for property owners and landlords in Ethiopia",
   "license": "UNLICENSED",
-  "packageManager": "pnpm@9.15.4",
+  "packageManager": "pnpm@10.34.6",
   "engines": {
     "node": ">=20.0.0"
   },
@@ -14,7 +14,7 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "test": "node --test scripts/test-pool.test.mjs scripts/build-workspaces.test.mjs && turbo run test --concurrency=2",
+    "test": "node --test scripts/test-pool.test.mjs scripts/build-workspaces.test.mjs scripts/dev-ports.test.mjs && turbo run test --concurrency=2",
     "db:generate": "node scripts/with-env.mjs pnpm --filter @pms/api db:generate",
     "db:migrate": "node scripts/with-env.mjs pnpm --filter @pms/api db:migrate",
     "db:deploy": "node scripts/with-env.mjs pnpm exec turbo run db:deploy",
@@ -38,12 +38,5 @@
     "turbo": "^2.11.7",
     "typescript": "5.9.3",
     "typescript-eslint": "^8.46.0"
-  },
-  "pnpm": {
-    "overrides": {
-      "postcss@<8.5.23": "^8.5.23",
-      "deepmerge-ts@<8.0.0": "^8.0.0",
-      "vitest>tinypool": "2.1.2"
-    }
   }
 }
