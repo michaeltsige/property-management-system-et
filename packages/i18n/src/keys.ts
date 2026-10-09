@@ -423,6 +423,7 @@ export const EN_CATALOG = {
   'dashboard.rent_this_period': 'Expected vs collected',
   // Non-English entries are unreviewed machine drafts.
   'dashboard.collection_rate': '{rate}% of expected this period',
+  'dashboard.delta_completed_periods': 'vs previous full period',
   'dashboard.advance_payments': 'Includes advance payments',
   'reports.title': 'Reports',
   'reports.rent_roll': 'Rent roll',

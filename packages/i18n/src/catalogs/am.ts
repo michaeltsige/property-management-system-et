@@ -453,6 +453,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'dashboard.collections_trend': 'የመጨረሻ ወራት ገቢ',
   'dashboard.rent_this_period': 'የሚጠበቅ እና የተሰበሰበ',
   'dashboard.collection_rate': 'ከዚህ ወቅት የሚጠበቀው {rate}%',
+  'dashboard.delta_completed_periods': 'ከቀዳሚው ሙሉ ወቅት ጋር ሲነጻጸር',
   'dashboard.advance_payments': 'ቅድመ ክፍያዎችን ያካትታል',
   'reports.title': 'ሪፖርቶች',
   'reports.rent_roll': 'የኪራይ ዝርዝር',

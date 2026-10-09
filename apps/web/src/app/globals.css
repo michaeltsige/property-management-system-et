@@ -10,6 +10,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Ethiopic:wght@400;500;600;700&display=swap');
 
 @theme {
+  /*
+   * Type scale (Major Third, 1.25): 12 → 14 → 16 → 20 → 24 → 30.
+   * Tailwind's default steps are used as-is: text-xs (12) for captions and
+   * table meta, text-sm (14) as the body workhorse of this dense console,
+   * text-base (16) for prose, text-xl (20) reserved for the one h1 per page,
+   * text-2xl (24) for section leads, text-3xl (30) for the dashboard's hero
+   * KPI figure only — 2.5x the 12px caption it sits above. Money values
+   * always add `tabular` so digits align down a column.
+   */
+
   /* Palette: deep Ethiopian green with a gold accent, on neutral slate. */
   --color-brand-50: #eef7f3;
   --color-brand-100: #d3ebe1;
@@ -56,7 +66,7 @@ body {
 
 /* The one place brand color appears as a surface: text selection. */
 ::selection {
-  background: var(--color-brand-100);
+  background: var(--color-brand-200);
 }
 
 /* Amharic/Tigrinya text is a little taller than Latin; give it room to breathe. */
@@ -99,10 +109,7 @@ tbody tr:hover {
   }
 }
 
-::selection {
-  background: var(--color-brand-200);
-}
-
+/* Money, dates and counts align down their column: digits share one width. */
 .tabular {
   font-variant-numeric: tabular-nums;
 }
