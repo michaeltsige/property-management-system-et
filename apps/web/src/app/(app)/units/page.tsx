@@ -276,7 +276,7 @@ export default function UnitsPage() {
                 setForm((current) => ({ ...current, propertyId: event.target.value, buildingId: '' }))
               }
             >
-              <option value="">—</option>
+              <option value="">{t('common.select')}</option>
               {properties.data?.properties.map((property) => (
                 <option key={property.id} value={property.id}>
                   {property.name}
@@ -398,7 +398,7 @@ export default function UnitsPage() {
               value={rentTypeForm.propertyId}
               onChange={(event) => setRentTypeForm({ propertyId: event.target.value, typeLabel: '' })}
             >
-              <option value="">—</option>
+              <option value="">{t('common.select')}</option>
               {properties.data?.properties.map((property) => (
                 <option key={property.id} value={property.id}>
                   {property.name}
@@ -418,7 +418,7 @@ export default function UnitsPage() {
                 setRentTypeForm((current) => ({ ...current, typeLabel: event.target.value }))
               }
             >
-              <option value="">—</option>
+              <option value="">{t('common.select')}</option>
               {typesInProperty.map((type) => (
                 <option key={type} value={type}>
                   {type}

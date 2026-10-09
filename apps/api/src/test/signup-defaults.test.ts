@@ -10,6 +10,8 @@ const base = {
   password: 'StrongPass123',
   phone: '0911234567',
 };
+// Uniquified per test case: email is globally unique across the shared test DB.
+const withEmail = (email: string) => ({ ...base, email });
 describe('signup billing defaults', () => {
   it('stores display and billing calendars independently with exact fee inputs', async () => {
     const r = await request(app)
@@ -48,8 +50,19 @@ describe('signup billing defaults', () => {
     expect(await getPrisma().ledgerEntry.count()).toBe(0);
     expect(await getPrisma().property.count()).toBe(0);
   });
+  it('accepts a chosen currency and stores it on the organization (USD demo)', async () => {
+    const r = await request(app)
+      .post('/api/v1/auth/register')
+      .send(withEmail('usd@example.test'))
+      .send({ currency: 'USD' })
+      .expect(201);
+    const org = await getPrisma().organization.findUniqueOrThrow({ where: { id: r.body.organization.id } });
+    expect(org.currency).toBe('USD');
+  });
   it.each([
-    { currency: 'USD' },
+    // Unsupported currency codes are rejected; ETB/USD/EUR are the supported set.
+    { currency: 'GBP' },
+    { currency: 'yen' },
     { billing: { dueDay: 29 } },
     { billing: { lateFeeBps: 1.5 } },
     { billing: { acceptedPaymentMethods: ['cash', 'cash'] } },
@@ -58,12 +71,17 @@ describe('signup billing defaults', () => {
   ])('rejects invalid signup settings %o', async (extra) => {
     await request(app)
       .post('/api/v1/auth/register')
-      .send({ ...base, ...extra })
+      .send({ ...base, email: `invalid-${Math.random().toString(36).slice(2)}@example.test`, ...extra })
       .expect(400);
     expect(await getPrisma().organization.count()).toBe(0);
   });
-  it('keeps old clients valid with conservative defaults', async () => {
-    const r = await request(app).post('/api/v1/auth/register').send(base).expect(201);
+  it('keeps old clients valid with conservative defaults (ETB currency)', async () => {
+    const r = await request(app)
+      .post('/api/v1/auth/register')
+      .send(withEmail('defaults@example.test'))
+      .expect(201);
+    const org = await getPrisma().organization.findUniqueOrThrow({ where: { id: r.body.organization.id } });
+    expect(org.currency).toBe('ETB');
     const row = await getPrisma().organizationSetting.findUniqueOrThrow({
       where: { organizationId_key: { organizationId: r.body.organization.id, key: 'lateFeeEnabled' } },
     });

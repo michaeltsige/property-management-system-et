@@ -244,7 +244,7 @@ export default function PaymentsPage() {
               value={form.leaseId}
               onChange={(event) => setForm((current) => ({ ...current, leaseId: event.target.value }))}
             >
-              <option value="">—</option>
+              <option value="">{t('common.select')}</option>
               {(leases.data?.leases ?? [])
                 .filter((lease) => lease.status === 'active')
                 .map((lease) => (

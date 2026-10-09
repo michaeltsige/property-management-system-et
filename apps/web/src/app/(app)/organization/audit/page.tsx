@@ -27,10 +27,7 @@ export default function AuditPage() {
   const [query, setQuery] = useState('');
 
   const canRead = roleHasPermission(session?.role as Role, 'audit.read');
-  const logs = useAsync(
-    () => (canRead ? api.auditLogs(query) : Promise.resolve(null)),
-    [canRead, query],
-  );
+  const logs = useAsync(() => (canRead ? api.auditLogs(query) : Promise.resolve(null)), [canRead, query]);
 
   if (!canRead) {
     return (
@@ -58,7 +55,7 @@ export default function AuditPage() {
           }}
           className="max-w-44"
         >
-          <option value="">{t('audit.action')}: —</option>
+          <option value="">{t('common.select')}</option>
           {ACTIONS.map((option) => (
             <option key={option} value={option}>
               {option}

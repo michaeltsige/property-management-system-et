@@ -293,7 +293,7 @@ export default function TenantsPage() {
               value={form.idType}
               onChange={(event) => setForm((current) => ({ ...current, idType: event.target.value }))}
             >
-              <option value="">—</option>
+              <option value="">{t('common.select')}</option>
               {(idTypes.data?.idTypes ?? []).map((type) => (
                 <option key={type.id} value={type.code}>
                   {type.label}

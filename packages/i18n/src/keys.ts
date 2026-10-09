@@ -169,6 +169,8 @@ export const EN_CATALOG = {
   'auth.email': 'Email',
   'auth.password': 'Password',
   'auth.register_organization': 'Create an account for your organization',
+  // Tenant portal door on the staff login screen; non-English is a machine draft.
+  'auth.tenant_portal': 'Renting? Sign in to the tenant portal',
   'auth.invalid_credentials': 'Email or password is incorrect',
   'auth.session_expired': 'Your session has expired. Please sign in again.',
   'auth.too_many_attempts': 'Too many attempts. Please try again in {minutes} minutes.',
@@ -227,7 +229,12 @@ export const EN_CATALOG = {
   'org.name': 'Organization',
   'org.settings': 'Organization settings',
   'org.default_currency': 'Default currency',
+  'org.default_currency_hint': 'The currency your books are kept in; leases and charges use it.',
   'org.default_calendar': 'Default calendar',
+  // The personal display calendar; the switcher lives here, not in the top bar.
+  'org.display_calendar': 'Display calendar (yours)',
+  'org.display_calendar_hint':
+    'How dates are shown for you. Rent schedules follow the billing calendar below.',
   'org.billing_calendar': 'Billing calendar',
   'org.billing_calendar_hint': 'Every new lease is billed in this calendar. Existing leases keep theirs.',
   'org.default_language': 'Default language',
@@ -397,6 +404,7 @@ export const EN_CATALOG = {
   'common.delete': 'Delete',
   'common.loading': 'Loading…',
   'common.retry': 'Try again',
+  'common.select': 'Select…',
   'common.none': 'None',
   'common.total': 'Total',
   'common.optional': 'Optional',

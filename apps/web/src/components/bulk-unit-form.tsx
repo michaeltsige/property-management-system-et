@@ -61,7 +61,7 @@ export function BulkUnitForm({
           setBuilding('');
         }}
       >
-        <option value="">—</option>
+        <option value="">{t('common.select')}</option>
         {properties.map((p) => (
           <option key={p.id} value={p.id}>
             {p.name}
