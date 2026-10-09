@@ -2,12 +2,14 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as apiModule from '@/lib/api';
+
 import { AppShell } from '@/components/app-shell';
 
 // The shell now mounts the task panel, global search and property switcher,
 // which would otherwise hit the network in every shell test.
 vi.mock('@/lib/api', async (importOriginal) => {
-  const original = await importOriginal<typeof import('@/lib/api')>();
+  const original = await importOriginal<typeof apiModule>();
   return {
     ...original,
     api: {

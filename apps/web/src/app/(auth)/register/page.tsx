@@ -98,7 +98,7 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
-          <h1 className="text-lg font-semibold text-slate-900">{t('auth.register_organization')}</h1>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900">{t('auth.register_organization')}</h1>
           <p className="text-xs text-slate-500">{t('app.tagline')}</p>
         </div>
 

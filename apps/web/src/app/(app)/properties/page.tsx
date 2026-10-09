@@ -1,6 +1,5 @@
 'use client';
 
-import { Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { ETHIOPIAN_REGIONS, PROPERTY_TYPES, roleHasPermission, type Role } from '@pms/shared';
@@ -12,21 +11,7 @@ import { usePreferences } from '@/lib/preferences';
 import { OwnerEditor, BlockEditor, feeText } from '@/components/hierarchy-controls';
 import { PageHeader } from '@/components/app-shell';
 import { Modal } from '@/components/modal';
-import {
-  Alert,
-  Badge,
-  Button,
-  Card,
-  CardContent,
-  EmptyState,
-  Input,
-  Label,
-  Select,
-  Skeleton,
-  Table,
-  Td,
-  Th,
-} from '@/components/ui';
+import { Alert, Badge, Button, Card, CardContent, EmptyState, Icon, Input, Label, Select, Skeleton, Table, Td, Th } from '@/components/ui';
 
 const EMPTY_FORM = {
   ownerId: '',
@@ -100,7 +85,7 @@ export default function PropertiesPage() {
             disabled={!canWrite || (canReadOwners && (owners.loading || !!owners.error))}
             onClick={() => setOpen(true)}
           >
-            <Plus className="h-4 w-4" />
+            <Icon name="plus" className="h-4 w-4" />
             {t('common.create')}
           </Button>
         }

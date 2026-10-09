@@ -131,7 +131,7 @@ export default function PortalPage() {
       </header>
 
       <main className="mx-auto max-w-3xl space-y-4 px-4 py-6">
-        <h1 className="text-lg font-semibold text-slate-900">
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900">
           {t('portal.welcome', { name: me.data?.tenant.fullName ?? session.user.fullName })}
         </h1>
 

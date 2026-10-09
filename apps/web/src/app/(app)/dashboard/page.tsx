@@ -3,7 +3,6 @@
 import { useCalendarPeriod } from '@/lib/use-calendar-period';
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { Building2, CalendarPlus, UserPlus, Wallet } from 'lucide-react';
 
 import { formatAmount, formatPeriodKey } from '@/lib/format';
 import { useAsync } from '@/lib/hooks';
@@ -16,14 +15,17 @@ import { PeriodPicker } from '@/components/form-controls';
 import { StatCard } from '@/components/stat-card';
 import {
   Alert,
+  Badge,
   Button,
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   EmptyState,
+  Icon,
   Skeleton,
 } from '@/components/ui';
+import type { IconName } from '@/components/ui';
 
 /**
  * The four things a landlord does most often. Each link opens the screen with
@@ -31,12 +33,12 @@ import {
  * work, not just a place to read numbers. Recording money is the daily action
  * and gets the one primary button on this screen; the rest stay quiet.
  */
-const QUICK_ACTIONS = [
-  { href: '/payments?new=1', labelKey: 'money.record_payment', icon: Wallet, primary: true },
-  { href: '/leases?new=1', labelKey: 'dashboard.quick.lease', icon: CalendarPlus, primary: false },
-  { href: '/tenants?new=1', labelKey: 'dashboard.quick.tenant', icon: UserPlus, primary: false },
-  { href: '/properties?new=1', labelKey: 'dashboard.onboarding_cta', icon: Building2, primary: false },
-] as const;
+const QUICK_ACTIONS: { href: string; labelKey: string; icon: IconName; primary: boolean }[] = [
+  { href: '/payments?new=1', labelKey: 'money.record_payment', icon: 'wallet', primary: true },
+  { href: '/leases?new=1', labelKey: 'dashboard.quick.lease', icon: 'calendar-plus', primary: false },
+  { href: '/tenants?new=1', labelKey: 'dashboard.quick.tenant', icon: 'user-plus', primary: false },
+  { href: '/properties?new=1', labelKey: 'dashboard.onboarding_cta', icon: 'building', primary: false },
+];
 
 export default function DashboardPage() {
   const { t, language, calendar, session } = usePreferences();
@@ -81,6 +83,25 @@ export default function DashboardPage() {
   const rentDueMinor = Number(money?.expectedMinor ?? 0) - Number(money?.collectedMinor ?? 0);
   const isEmptyPortfolio = !summary.loading && (summary.data?.portfolio.properties ?? 0) === 0;
 
+  /*
+   * Trend context for the collections chart: the LAST row of the series is the
+   * period still in progress, so comparing it to a finished month would read as
+   * a slump every early month. The honest like-for-like pair is the two most
+   * recent COMPLETE periods — and the chip says exactly that.
+   */
+  const trendDelta = useMemo(() => {
+    const values = collectionSeries.values;
+    if (values.length < 3) return null;
+    const current = values[values.length - 2];
+    const previous = values[values.length - 3];
+    if (!Number.isFinite(current) || !Number.isFinite(previous) || previous <= 0) return null;
+    const shift = ((current - previous) / previous) * 100;
+    return {
+      value: `${shift > 0 ? '+' : ''}${shift.toFixed(1)}%`,
+      direction: shift > 0.05 ? ('up' as const) : shift < -0.05 ? ('down' as const) : ('flat' as const),
+    };
+  }, [collectionSeries]);
+
   return (
     <div>
       {setup.data?.settings.onboardingStatus === 'portfolio_pending' && (
@@ -107,7 +128,6 @@ export default function DashboardPage() {
         <h2 id="quick-actions" className="sr-only">{t('dashboard.quick_actions')}</h2>
         <div className="flex flex-wrap gap-2">
           {QUICK_ACTIONS.map((action) => {
-            const Icon = action.icon;
             return (
               <Button
                 key={action.href}
@@ -116,8 +136,8 @@ export default function DashboardPage() {
                 asChild
               >
                 <Link href={action.href}>
-                  <Icon className="h-4 w-4" aria-hidden="true" />
-                  {t(action.labelKey)}
+                  <Icon name={action.icon} className="h-4 w-4" />
+                  {t(action.labelKey as never)}
                 </Link>
               </Button>
             );
@@ -141,7 +161,7 @@ export default function DashboardPage() {
             <div className="flex justify-center pb-6">
               <Button asChild>
                 <Link href="/properties?new=1">
-                  <Building2 className="h-4 w-4" aria-hidden="true" />
+                  <Icon name="building" className="h-4 w-4" />
                   {t('dashboard.onboarding_cta')}
                 </Link>
               </Button>
@@ -150,14 +170,15 @@ export default function DashboardPage() {
         </Card>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {/*
+       * The money row has ONE lead: collected this period renders double-wide
+       * with the largest figure on the screen, so the eye lands there first and
+       * the three supporting metrics read as context, not as three rivals.
+       */}
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         <StatCard
-          label={t('dashboard.expected_rent')}
-          value={formatAmount(money?.expectedMinor ?? '0', currency, language)}
-          tone="brand"
-          loading={summary.loading}
-        />
-        <StatCard
+          size="hero"
+          className="sm:col-span-2 xl:col-span-2"
           label={t('dashboard.collected')}
           value={formatAmount(money?.collectedMinor ?? '0', currency, language)}
           tone="brand"
@@ -175,6 +196,11 @@ export default function DashboardPage() {
                 ? t('dashboard.advance_payments')
                 : t('dashboard.collection_rate', { rate: money.collectionRate })
           }
+          loading={summary.loading}
+        />
+        <StatCard
+          label={t('dashboard.expected_rent')}
+          value={formatAmount(money?.expectedMinor ?? '0', currency, language)}
           loading={summary.loading}
         />
         <StatCard
@@ -262,7 +288,26 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>{t('dashboard.collections_trend')}</CardTitle>
+            <CardTitle className="flex flex-wrap items-center gap-2">
+              {t('dashboard.collections_trend')}
+              {/* Like-for-like trend context: the two most recent COMPLETE
+                  periods (the chip text spells that out). Hidden while the
+                  series is still loading so nothing claims an unmeasured
+                  number. */}
+              {trendDelta && !collections.loading ? (
+                <Badge
+                  tone={trendDelta.direction === 'up' ? 'brand' : trendDelta.direction === 'down' ? 'danger' : 'neutral'}
+                  className="gap-1 tabular"
+                >
+                  <Icon
+                    name={trendDelta.direction === 'down' ? 'trend-down' : 'trend-up'}
+                    size="sm"
+                    className="h-3 w-3"
+                  />
+                  {trendDelta.value} {t('dashboard.delta_completed_periods')}
+                </Badge>
+              ) : null}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {collections.loading ? (
