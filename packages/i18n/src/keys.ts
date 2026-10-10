@@ -425,6 +425,7 @@ export const EN_CATALOG = {
   'dashboard.rent_this_period': 'Expected vs collected',
   'dashboard.charges_by_status': 'Charges by status',
   'dashboard.charges_this_period': 'charges this period',
+  'dashboard.total_collected': 'total collected',
   // Non-English entries are unreviewed machine drafts.
   'dashboard.collection_rate': '{rate}% of expected this period',
   'dashboard.delta_completed_periods': 'vs previous full period',

@@ -468,6 +468,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'dashboard.rent_this_period': 'Yaalamu fi waliigale',
   'dashboard.charges_by_status': 'Kaffaltiin haalaan',
   'dashboard.charges_this_period': 'kaffaltii yeroon kanaa',
+  'dashboard.total_collected': 'waliigala walitti qabame',
   'dashboard.collection_rate': 'Kana yaalamu kiraa irraa {rate}%',
   'dashboard.delta_completed_periods': 'Yaalamu guutuu duraatti waliin',
   'dashboard.advance_payments': 'Kaffalaa duraa dabalata',

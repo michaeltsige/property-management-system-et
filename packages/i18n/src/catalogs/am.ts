@@ -456,6 +456,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'dashboard.rent_this_period': 'የሚጠበቅ እና የተሰበሰበ',
   'dashboard.charges_by_status': 'ክፍያዎች በሁኔታ',
   'dashboard.charges_this_period': 'ክፍያዎች በዚህ ወቅት',
+  'dashboard.total_collected': 'ጠቅላላ የተሰበሰበ',
   'dashboard.collection_rate': 'ከዚህ ወቅት የሚጠበቀው {rate}%',
   'dashboard.delta_completed_periods': 'ከቀዳሚው ሙሉ ወቅት ጋር ሲነጻጸር',
   'dashboard.advance_payments': 'ቅድመ ክፍያዎችን ያካትታል',

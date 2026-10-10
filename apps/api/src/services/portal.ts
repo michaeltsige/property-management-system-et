@@ -62,12 +62,23 @@ export async function requestPortalCode(
   const tenant = await findEnrolledTenantByPhone(prisma, phone);
   if (!tenant?.user) {
     // Anti-enumeration: production stays silent. Development logs a hint, because
-    // a silent `ok: true` is indistinguishable from a broken SMS provider there.
+    // a silent `ok: true` is indistinguishable from a broken SMS provider there —
+    // and the hint names the phones that WOULD have worked.
     if (getConfig().isDevelopment) {
+      const enrolled = await prisma.tenant.findMany({
+        where: { deletedAt: null, userId: { not: null }, user: { isActive: true } },
+        select: { phone: true, altPhone: true },
+        take: 20,
+      });
+      const enrolledPhones = enrolled
+        .flatMap((row) => [row.phone, row.altPhone].filter(Boolean))
+        .slice(0, 20)
+        .join(', ');
       logger.info(
         { phone },
         'DEV demo: portal code requested for a phone with no enrolled, active tenant — nothing sent. ' +
-          'Use a phone that is enrolled for portal access (the seeded demo phone is printed by `pnpm db:seed`).',
+          `Phones that are enrolled for portal access: ${enrolledPhones || '(none — run `pnpm db:seed`)'}. ` +
+          'Seeded demo phones are also printed by `pnpm db:seed`.',
       );
     }
     return { ok: true };
