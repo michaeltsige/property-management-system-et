@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Poppins } from 'next/font/google';
+import { Poppins, Plus_Jakarta_Sans, Lexend, Inter, DM_Sans } from 'next/font/google';
 
 import { PreferencesProvider } from '@/lib/preferences';
 import { PwaRegister } from '@/components/pwa-register';
@@ -17,6 +17,20 @@ const poppins = Poppins({
   variable: '--font-poppins',
   display: 'swap',
 });
+
+/**
+ * Typeface trial (owner request): the four portfolio entries in the sidebar
+ * rail are each rendered in a candidate family — pick the winner and it
+ * becomes the one UI face; the losing variables are then removed.
+ *   Properties → Plus Jakarta Sans (`--font-jakarta`)
+ *   Units      → Lexend            (`--font-lexend`)
+ *   Tenants    → Inter             (`--font-inter`)
+ *   Leases     → DM Sans           (`--font-dm-sans`)
+ */
+const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta', display: 'swap' });
+const lexend = Lexend({ subsets: ['latin'], variable: '--font-lexend', display: 'swap' });
+const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
+const dmSans = DM_Sans({ subsets: ['latin'], variable: '--font-dm-sans', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'Property Management',
@@ -51,7 +65,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={poppins.variable}>
+      <body className={[poppins.variable, jakarta.variable, lexend.variable, inter.variable, dmSans.variable].join(' ')}>
         <PreferencesProvider>{children}</PreferencesProvider>
         <PwaRegister />
       </body>

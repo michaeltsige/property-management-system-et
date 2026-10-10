@@ -345,62 +345,151 @@ export function OccupancyChart({
   );
 }
 
-/** Arrears aging: how old the unpaid rent is. */
+/** Compact axis numbers: 12,500 → 12.5k, 4,300,000 → 4.3M — money-scale
+ * rent figures do not fit as raw strings across a card. */
+function compactNumber(value: number): string {
+  if (Math.abs(value) >= 1_000_000) {
+    const millions = value / 1_000_000;
+    return `${millions.toFixed(millions >= 10 ? 0 : 1).replace(/\.0$/, '')}M`;
+  }
+  if (Math.abs(value) >= 1_000) {
+    const thousands = value / 1_000;
+    return `${thousands.toFixed(thousands >= 10 ? 0 : 1).replace(/\.0$/, '')}k`;
+  }
+  return `${Math.round(value)}`;
+}
+
+/** Arrears aging: how old the unpaid rent is.
+ *
+ * Rebuilt from a bare bar plot into an aging picture that reads at a glance
+ * (and matches the dashboard's donut-stat language): the total outstanding
+ * stands above the plot, each bucket is a rounded, gradient-filled bar over a
+ * soft full-height track with its amount spelled out on top, and a legend
+ * below gives every bucket's share of the debt. Severity still carries the
+ * color — the older the debt, the hotter the bar (gold → amber → red). */
 export function ArrearsChart({
   buckets,
   ariaLabel,
   bucketLabel,
   currencyLabel,
   chartDataLabel,
+  totalLabel = 'Total outstanding',
 }: {
   buckets: { label: string; value: number }[];
   ariaLabel: string;
   bucketLabel: string;
   currencyLabel: string;
   chartDataLabel: string;
+  /** Label beside the summed debt, e.g. "total outstanding". */
+  totalLabel?: string;
 }) {
+  const total = buckets.reduce((sum, bucket) => sum + bucket.value, 0);
+  // One gradient per severity: the top of each bar is a lighter step of the
+  // same hue, so the bars read as solid objects rather than flat strips.
+  const severityStyle = (index: number) => {
+    const [base, top] =
+      index === 0
+        ? ['#e8b22b', '#f3cf6b']
+        : index >= buckets.length - 2
+          ? ['#dc2626', '#f87171']
+          : ['#f59e0b', '#fcd34d'];
+    return {
+      type: 'linear' as const,
+      x: 0,
+      y: 0,
+      x2: 0,
+      y2: 1,
+      colorStops: [
+        { offset: 0, color: top },
+        { offset: 1, color: base },
+      ],
+    };
+  };
+
   return (
-    <EChart
-      ariaLabel={ariaLabel}
-      summary={{
-        caption: chartDataLabel,
-        columns: [bucketLabel, currencyLabel],
-        rows: buckets.map((bucket) => [bucket.label, bucket.value.toLocaleString()]),
-      }}
-      option={{
-        grid: { left: 8, right: 8, top: 24, bottom: 8, containLabel: true },
-        tooltip: { trigger: 'axis', valueFormatter: (value) => Number(value).toLocaleString() },
-        xAxis: {
-          type: 'category',
-          data: buckets.map((bucket) => bucket.label),
-          axisLabel: { ...AXIS_LABEL, hideOverlap: true },
-          axisLine: { lineStyle: { color: CHART_COLORS.axisLine } },
-        },
-        yAxis: {
-          type: 'value',
-          axisLabel: { ...AXIS_LABEL, formatter: (value: number) => value.toLocaleString() },
-          splitLine: { lineStyle: { color: CHART_COLORS.grid } },
-        },
-        series: [
-          {
-            type: 'bar',
-            barWidth: '50%',
-            data: buckets.map((bucket, index) => ({
-              value: bucket.value,
-              // The only place color carries meaning: the older the debt, the
-              // hotter the bar (gold → amber → red).
-              itemStyle: {
-                color:
-                  index === 0
-                    ? CHART_COLORS.gold
-                    : index >= 3
-                      ? CHART_COLORS.danger
-                      : CHART_COLORS.warning,
-              },
-            })),
+    <div>
+      <div className="mb-1 flex items-baseline justify-end gap-2">
+        <span className="text-[11px] text-slate-500">{totalLabel}</span>
+        <span className="tabular text-sm font-semibold text-slate-900">
+          {currencyLabel} {Math.round(total).toLocaleString()}
+        </span>
+      </div>
+      <EChart
+        ariaLabel={`${ariaLabel} — ${chartDataLabel}: ${buckets
+          .map((bucket) => `${bucket.label} ${bucket.value.toLocaleString()}`)
+          .join('; ')}`}
+        summary={{
+          caption: chartDataLabel,
+          columns: [bucketLabel, currencyLabel],
+          rows: buckets.map((bucket) => [bucket.label, bucket.value.toLocaleString()]),
+        }}
+        option={{
+          grid: { left: 8, right: 8, top: 28, bottom: 8, containLabel: true },
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(15, 23, 42, 0.04)' } },
+            valueFormatter: (value) => `${currencyLabel} ${Number(value).toLocaleString()}`,
           },
-        ],
-      }}
-    />
+          xAxis: {
+            type: 'category',
+            data: buckets.map((bucket) => bucket.label),
+            axisTick: { show: false },
+            axisLabel: { ...AXIS_LABEL, hideOverlap: true, fontWeight: 500 },
+            axisLine: { lineStyle: { color: CHART_COLORS.axisLine } },
+          },
+          yAxis: {
+            type: 'value',
+            axisLabel: { ...AXIS_LABEL, formatter: (value: number) => compactNumber(value) },
+            splitLine: { lineStyle: { color: CHART_COLORS.grid } },
+          },
+          series: [
+            {
+              type: 'bar',
+              barWidth: 26,
+              barCategoryGap: '35%',
+              data: buckets.map((bucket, index) => ({
+                value: bucket.value,
+                itemStyle: {
+                  color: severityStyle(index),
+                  borderRadius: [8, 8, 3, 3],
+                },
+              })),
+              // The full-height track makes small buckets readable against the
+              // scale of the largest one.
+              showBackground: true,
+              backgroundStyle: { color: '#f1f5f9', borderRadius: [8, 8, 3, 3] },
+              label: {
+                show: true,
+                position: 'top',
+                // `unknown` keeps the ECharts formatter callback happy while the
+                // payload stays the plain number we passed in.
+                formatter: (params: unknown) => {
+                  const value = (params as { value: number }).value;
+                  return value > 0 ? compactNumber(Number(value)) : '';
+                },
+                color: CHART_COLORS.axisLabel,
+                fontSize: 10,
+                fontWeight: 600,
+              },
+            },
+          ],
+        }}
+      />
+      <ul className="mt-3 space-y-1.5">
+        {buckets.map((bucket, index) => (
+          <li key={bucket.label} className="flex items-center gap-2 text-xs">
+            <span
+              aria-hidden="true"
+              className="h-2.5 w-2.5 shrink-0 rounded-[4px]"
+              style={{ background: index === 0 ? CHART_COLORS.gold : index >= buckets.length - 2 ? CHART_COLORS.danger : CHART_COLORS.warning }}
+            />
+            <span className="truncate text-slate-600">{bucket.label}</span>
+            <span className="ml-auto shrink-0 font-medium text-slate-900 tabular">
+              {total > 0 ? `${Math.round((bucket.value / total) * 100)}%` : '0%'}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

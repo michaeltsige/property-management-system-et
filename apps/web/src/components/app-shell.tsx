@@ -13,11 +13,14 @@
  * a quiet top bar, and dense tables doing the work — no decorative surfaces.
  *
  * Layout rules:
+ * - The shell is one screen tall (`h-screen`, no body scroll). The rail is a
+ *   fixed column that never moves; only the content column scrolls. The rail
+ *   therefore has the same length on every page (owner request).
  * - `lg` and up: a permanent sidebar. The property scope sits at its top (it
  *   reframes every list below it, so it belongs above the navigation, in the
  *   workspace-switcher spot) and the account card at its bottom (the Slack/
- *   Linear convention) — it leads to Organization, which is where an
- *   owner-admin's account and organization settings live together.
+ *   Linear convention) — it opens the account menu with Organization settings
+ *   and Sign out.
  * - below `lg`: the same navigation in a modal drawer, because a phone user who
  *   cannot reach any other screen cannot do the job (see ADR-0023).
  * Both copies render the same `NavLinks`; only one is ever reachable, and the
@@ -29,10 +32,12 @@ import Link from 'next/link';
 import { Logo } from './logo';
 import { usePathname, useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import {
-  ArrowRight2,
+  ArrowDown2,
+  ArrowUp2,
   Building3,
   Calendar2,
   Chart,
@@ -46,9 +51,10 @@ import {
   People,
   Profile2User,
   ReceiptItem,
+  Setting2,
   Setting3,
   Wallet3,
-} from 'iconsax-react';
+} from './icons';
 
 import { api } from '@/lib/api';
 import { todayFor } from '@/lib/format';
@@ -67,6 +73,8 @@ interface NavItem {
   href: string;
   labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
+  /** Typeface trial: a one-off family for the portfolio entries (owner picks). */
+  style?: React.CSSProperties;
 }
 
 const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
@@ -76,11 +84,34 @@ const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
   },
   {
     labelKey: 'nav.group.portfolio',
+    // Typeface trial (owner request): each entry renders in one candidate
+    // family — Plus Jakarta Sans, Lexend, Inter, DM Sans — so the winner can
+    // be picked from the rail itself. Remove the `style` when decided.
     items: [
-      { href: '/properties', labelKey: 'nav.properties', icon: Building3 },
-      { href: '/units', labelKey: 'nav.units', icon: Home2 },
-      { href: '/tenants', labelKey: 'nav.tenants', icon: Profile2User },
-      { href: '/leases', labelKey: 'nav.leases', icon: Calendar2 },
+      {
+        href: '/properties',
+        labelKey: 'nav.properties',
+        icon: Building3,
+        style: { fontFamily: 'var(--font-jakarta), var(--font-poppins), sans-serif' },
+      },
+      {
+        href: '/units',
+        labelKey: 'nav.units',
+        icon: Home2,
+        style: { fontFamily: 'var(--font-lexend), var(--font-poppins), sans-serif' },
+      },
+      {
+        href: '/tenants',
+        labelKey: 'nav.tenants',
+        icon: Profile2User,
+        style: { fontFamily: 'var(--font-inter), var(--font-poppins), sans-serif' },
+      },
+      {
+        href: '/leases',
+        labelKey: 'nav.leases',
+        icon: Calendar2,
+        style: { fontFamily: 'var(--font-dm-sans), var(--font-poppins), sans-serif' },
+      },
     ],
   },
   {
@@ -153,7 +184,9 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                     )}
                   >
                     <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-white' : 'text-slate-400')} />
-                    <span className="truncate">{t(item.labelKey as never)}</span>
+                    <span className="truncate" style={item.style}>
+                      {t(item.labelKey as never)}
+                    </span>
                   </Link>
                 </li>
               );
@@ -165,24 +198,22 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   );
 }
 
-function initialsOf(fullName: string): string {
-  return fullName
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
-}
-
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { session, t, calendar, signOut, ready } = usePreferences();
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // A signed-out visitor never sees organization data.
+  // A signed-out visitor never sees organization data, and the staff shell is
+  // staff-only: a tenant session lands here only by typing a staff URL, and it
+  // belongs in its own portal.
   useEffect(() => {
-    if (ready && !session) router.replace('/login');
+    if (!ready) return;
+    if (!session) {
+      router.replace('/login');
+    } else if (session.role === 'tenant') {
+      router.replace('/portal');
+    }
   }, [ready, session, router]);
 
   // A drawer left open during navigation would cover the page it just opened.
@@ -204,9 +235,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const today = todayFor(calendar);
-  const todayLabel = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}${
-    calendar === 'ethiopian' ? ' E.C.' : ' G.C.'
-  }`;
 
   async function handleSignOut() {
     try {
@@ -219,62 +247,96 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const brand = (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <Logo size={34} className="shrink-0" />
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold text-white">{t('app.name')}</p>
-        <p className="truncate text-xs text-slate-400">{session.organization.name}</p>
-      </div>
+    <div className="flex min-w-0 items-center gap-3">
+      <Logo size={42} className="shrink-0" />
+      <p className="truncate text-base font-semibold text-white">{t('app.name')}</p>
     </div>
   );
 
   /**
-   * The account card: a thin strip at the bottom of the rail — real name and
-   * email like the reference rail, a chevron pointing at Organization (the
-   * whole card leads there), and sign-out one click away on its right edge.
+   * The account card, per the owner's reference rail: a darker rounded box
+   * holding the brand tile with a presence dot, the organization name and the
+   * signed-in email, and an up/down chevron pair. It opens the account menu —
+   * Organization settings and a labelled, always-readable Sign out (the icon
+   * button this replaces was invisible when icons did not render).
    */
-  const accountCard = (onNavigate?: () => void) => {
+  const accountCard = () => {
     const accountActive = pathname === '/organization' || pathname.startsWith('/organization/');
     return (
-      <div className="flex items-center gap-1 border-t border-white/10 px-2 py-2.5">
-        <Link
-          href="/organization"
-          aria-current={accountActive ? 'page' : undefined}
-          onClick={onNavigate}
-          title={t('nav.organization')}
-          className={cn(
-            'flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/5',
-            accountActive && 'bg-white/10',
-          )}
-        >
-          <span
-            aria-hidden="true"
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-[11px] font-semibold text-brand-800"
+      <DropdownMenu.Root>
+        <DropdownMenu.Trigger asChild>
+          <button
+            type="button"
+            aria-label={`${t('nav.organization')} — ${session.user.fullName}`}
+            aria-haspopup="menu"
+            className={cn(
+              'flex w-full cursor-pointer items-center gap-3 rounded-xl bg-white/[0.07] p-2.5 text-left outline-none transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-brand-400/70',
+              accountActive && 'bg-white/10',
+            )}
           >
-            {initialsOf(session.user.fullName)}
-          </span>
-          <span className="min-w-0 flex-1 text-left">
-            <span className="block truncate text-xs font-medium text-white">{session.user.fullName}</span>
-            <span className="block truncate text-[11px] text-slate-400">{session.user.email}</span>
-          </span>
-          <ArrowRight2 className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
-        </Link>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-slate-400 hover:bg-white/10 hover:text-white"
-          aria-label={t('auth.sign_out')}
-          title={t('auth.sign_out')}
-          onClick={handleSignOut}
-        >
-          <Logout className="h-4 w-4" />
-        </Button>
-      </div>
+            <span className="relative shrink-0">
+              <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-ink-800 ring-1 ring-white/10">
+                <Logo size={30} />
+              </span>
+              <span
+                aria-hidden="true"
+                className="absolute -bottom-0.5 -left-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 ring-2 ring-ink-900"
+              />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-white">
+                {session.organization.name}
+              </span>
+              <span className="block truncate text-xs text-slate-400">{session.user.email}</span>
+            </span>
+            <span aria-hidden="true" className="flex shrink-0 flex-col text-slate-500">
+              <ArrowUp2 size={12} />
+              <ArrowDown2 size={12} />
+            </span>
+          </button>
+        </DropdownMenu.Trigger>
+        <DropdownMenu.Portal>
+          <DropdownMenu.Content
+            side="top"
+            align="start"
+            sideOffset={8}
+            className="z-50 w-64 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
+          >
+            <DropdownMenu.Label className="px-2.5 py-2">
+              <span className="block truncate text-sm font-semibold text-slate-900">
+                {session.user.fullName}
+              </span>
+              <span className="block truncate text-xs text-slate-500">
+                {t(`role.${session.role}` as never)}
+              </span>
+            </DropdownMenu.Label>
+            <DropdownMenu.Separator className="my-1 h-px bg-slate-100" />
+            <DropdownMenu.Item asChild>
+              <Link
+                href="/organization"
+                className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-slate-700 outline-none transition-colors hover:bg-slate-100 focus:bg-slate-100"
+              >
+                <Setting2 className="h-4 w-4 text-slate-500" aria-hidden="true" />
+                {t('nav.organization')}
+              </Link>
+            </DropdownMenu.Item>
+            <DropdownMenu.Item
+              onSelect={() => {
+                void handleSignOut();
+              }}
+              className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-red-600 outline-none transition-colors hover:bg-red-50 focus:bg-red-50"
+            >
+              <Logout className="h-4 w-4" aria-hidden="true" />
+              {t('auth.sign_out')}
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu.Portal>
+      </DropdownMenu.Root>
     );
   };
 
   return (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-slate-50">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-brand-800 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -286,13 +348,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           scope sits at the top (it reframes every list below it) and the
           account card at the bottom, so the rail reads top-to-bottom as:
           workspace → navigation → account. */}
-      <aside className="hidden w-72 shrink-0 flex-col bg-ink-900 lg:flex">
+      <aside className="hidden h-full w-72 shrink-0 flex-col bg-ink-900 lg:flex">
         <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-3.5">{brand}</div>
         <div className="border-b border-white/10 px-3 py-3">
           <PropertySwitcher id="sidebar-property-context" />
         </div>
         <NavLinks pathname={pathname} />
-        {accountCard()}
+        <div className="border-t border-white/10 p-3">{accountCard()}</div>
       </aside>
 
       {/* The same navigation on small screens, in a drawer (ADR-0023). */}
@@ -320,12 +382,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="border-t border-white/10 px-3 py-3">
               <PropertySwitcher id="drawer-property-context" />
             </div>
-            {accountCard(() => setMenuOpen(false))}
+            <div className="border-t border-white/10 p-3">{accountCard()}</div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex h-full min-w-0 flex-1 flex-col">
         {/* The top bar carries no border: the gradient hairline under it does
             that job with a little brand warmth. */}
         <header className="flex items-center gap-3 bg-white px-4 py-2.5">
@@ -343,13 +405,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="truncate text-sm font-semibold text-slate-900 lg:hidden">{t('app.name')}</span>
           <div className="flex min-w-0 flex-1 justify-center md:px-6">
             <GlobalSearch />
-          </div>
-          <div
-            title={todayLabel}
-            className="hidden shrink-0 items-center gap-2 rounded-lg border border-brand-100 bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-800 sm:flex"
-          >
-            <Calendar2 className="h-4 w-4 text-brand-600" aria-hidden="true" />
-            <span className="tabular">{todayLabel}</span>
           </div>
         </header>
         <div aria-hidden="true" className="h-px bg-gradient-to-r from-brand-600 via-brand-300/60 to-transparent" />

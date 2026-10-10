@@ -122,7 +122,10 @@ describe('AppShell', () => {
     renderShell();
     await screen.findByText('page content');
 
-    expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+    // The account card is the only icon-bearing control cluster in the rail;
+    // its menu items are labelled (the old icon-only sign-out was invisible
+    // whenever icons failed to render).
+    expect(screen.getByRole('button', { name: /Organization — Demo Owner/i })).toBeInTheDocument();
   });
 
   it('shows the organization it is serving', async () => {
@@ -135,24 +138,27 @@ describe('AppShell', () => {
   });
 });
 
-it('ends the rail with an account card that leads to the organization settings', async () => {
+it('ends the rail with an account card whose menu reaches organization settings and sign-out', async () => {
+  const user = userEvent.setup();
   renderShell();
   await screen.findByText('page content');
 
-  // Account and organization are one surface for an owner-admin: the card in
-  // the rail's bottom edge IS the Organization link, sign-out sits beside it.
-  const account = screen.getByRole('link', { name: /Demo Owner/ });
-  expect(account).toHaveAttribute('href', '/organization');
-  expect(screen.getByRole('button', { name: 'Sign out' })).toBeInTheDocument();
+  // The reference-rail card: organization name + email in the box, menu below.
+  const card = screen.getByRole('button', { name: /Organization — Demo Owner/i });
+  await user.click(card);
+
+  const menu = await screen.findByRole('menu');
+  const settings = within(menu).getByRole('menuitem', { name: 'Organization' });
+  expect(settings).toHaveAttribute('href', '/organization');
+  expect(within(menu).getByRole('menuitem', { name: 'Sign out' })).toBeInTheDocument();
 });
 
-it('renders the served day in the header badge and footer with its calendar era', async () => {
+it('renders the served day in the footer with its calendar era', async () => {
   const { todayIn } = await import('@pms/calendar');
   renderShell();
   await screen.findByText('page content');
   const today = todayIn('ethiopian');
   const expected = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')} E.C.`;
-  // The date legitimately appears twice now — the brand calendar badge in the
-  // top bar and the footer line — so assert on all occurrences.
+  // The header pill was removed (owner request); the footer keeps the date.
   expect(screen.getAllByText(expected).length).toBeGreaterThanOrEqual(1);
 });

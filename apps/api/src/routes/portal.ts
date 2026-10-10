@@ -226,6 +226,165 @@ portalRouter.get('/portal/me', requireAuth, requirePermission('portal.use'), asy
   }
 });
 
+// --- rent account statement --------------------------------------------------
+
+/**
+ * The tenant's rent account: their charges (rent, utilities, late fees) with
+ * what has been paid against each. This is the ledger behind the due balance —
+ * showing the lines rather than only the total answers "what am I paying for?"
+ * without exposing anyone else's records.
+ */
+portalRouter.get('/portal/charges', requireAuth, requirePermission('portal.use'), async (req, res, next) => {
+  try {
+    const prisma = getPrisma();
+    const tenant = await portalTenant(prisma, req);
+    const charges = await prisma.charge.findMany({
+      where: { tenantId: tenant.id, organizationId: tenant.organizationId },
+      orderBy: [{ dueDate: 'desc' }, { createdAt: 'desc' }],
+      take: 48,
+      select: {
+        id: true,
+        type: true,
+        description: true,
+        periodKey: true,
+        periodCalendar: true,
+        dueDate: true,
+        amountMinor: true,
+        paidMinor: true,
+        status: true,
+        currency: true,
+      },
+    });
+    res.json({
+      items: charges.map((charge) => ({
+        id: charge.id,
+        type: charge.type,
+        description: charge.description,
+        periodKey: charge.periodKey,
+        periodCalendar: charge.periodCalendar,
+        dueDate: charge.dueDate.toISOString().slice(0, 10),
+        amountMinor: charge.amountMinor.toString(),
+        paidMinor: charge.paidMinor.toString(),
+        status: charge.status,
+        currency: charge.currency,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// --- payment history (tenant-visible) ----------------------------------------
+
+/** Every payment recorded against this tenant, newest first — manual records,
+ * online payments and portal payments alike. Receipts download per payment. */
+portalRouter.get('/portal/payments', requireAuth, requirePermission('portal.pay'), async (req, res, next) => {
+  try {
+    const prisma = getPrisma();
+    const tenant = await portalTenant(prisma, req);
+    const payments = await prisma.payment.findMany({
+      where: { tenantId: tenant.id, organizationId: tenant.organizationId, status: 'succeeded' },
+      orderBy: { paidAt: 'desc' },
+      take: 60,
+      select: {
+        id: true,
+        amountMinor: true,
+        currency: true,
+        method: true,
+        status: true,
+        paidAt: true,
+        reference: true,
+        receiptNumber: true,
+        notes: true,
+      },
+    });
+    res.json({
+      items: payments.map((payment) => ({
+        id: payment.id,
+        amountMinor: payment.amountMinor.toString(),
+        currency: payment.currency,
+        method: payment.method,
+        status: payment.status,
+        paidAt: payment.paidAt.toISOString(),
+        reference: payment.reference,
+        receiptNumber: payment.receiptNumber,
+        notes: payment.notes,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/** The receipt PDF for one of the tenant's own payments. */
+portalRouter.get(
+  '/portal/payments/by-id/:paymentId/receipt.pdf',
+  requireAuth,
+  requirePermission('portal.pay'),
+  validate({ params: z.object({ paymentId: uuidSchema }) }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      // Scope check before the bytes move: only this tenant's payments.
+      const payment = await prisma.payment.findFirst({
+        where: {
+          id: String(req.params.paymentId ?? ''),
+          tenantId: tenant.id,
+          organizationId: tenant.organizationId,
+        },
+        select: { id: true },
+      });
+      if (!payment) throw notFound('Payment not found');
+      const receipt = await buildPaymentReceipt(getPrisma(), {
+        organizationId: tenant.organizationId,
+        paymentId: payment.id,
+      });
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${receipt.filename}"`);
+      await renderReceiptPdf(receipt.data, res);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// --- notices (in-app, tenant-visible) -----------------------------------------
+
+/**
+ * In-app notices for the signed-in tenant: rent reminders, receipts and
+ * announcements the organization sent them. Body text lives on the i18n layer —
+ * the web client translates `templateKey` with `payload` as values, the same
+ * contract the SMS renderer uses.
+ */
+portalRouter.get('/portal/notices', requireAuth, requirePermission('portal.use'), async (req, res, next) => {
+  try {
+    const prisma = getPrisma();
+    const tenant = await portalTenant(prisma, req);
+    const notices = await prisma.notification.findMany({
+      where: {
+        organizationId: tenant.organizationId,
+        recipientUserId: req.auth?.userId,
+        channel: 'in_app',
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 12,
+      select: { id: true, templateKey: true, payload: true, createdAt: true, status: true },
+    });
+    res.json({
+      items: notices.map((notice) => ({
+        id: notice.id,
+        templateKey: notice.templateKey,
+        payload: notice.payload,
+        createdAt: notice.createdAt,
+        status: notice.status,
+      })),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // --- payments (tenant-initiated, provider-confirmed) ------------------------
 
 /**

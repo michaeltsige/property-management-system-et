@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { SearchNormal1 } from 'iconsax-react';
+import { SearchNormal1 } from './icons';
 import { roleHasPermission, type Role } from '@pms/shared';
 import { api } from '@/lib/api';
 import { usePreferences } from '@/lib/preferences';

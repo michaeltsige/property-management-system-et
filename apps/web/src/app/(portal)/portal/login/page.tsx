@@ -68,7 +68,7 @@ export default function PortalLoginPage() {
       <div aria-hidden="true" className="absolute inset-0 bg-ink-950/60" />
       <div className="relative w-full max-w-sm">
         <div className="mb-6 text-center">
-          <Logo size={52} className="mx-auto mb-3" />
+          <Logo size={64} className="mx-auto mb-3" />
           <h1 className="text-xl font-semibold tracking-tight text-white">{t('portal.title')}</h1>
           <p className="mt-1 text-xs text-white/70">{t('portal.login_hint')}</p>
         </div>

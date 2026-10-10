@@ -368,6 +368,7 @@ export default function DashboardPage() {
                 bucketLabel={t('reports.period')}
                 currencyLabel={currency}
                 chartDataLabel={t('a11y.chart_data')}
+                totalLabel={t('reports.total_outstanding')}
               />
             )}
           </CardContent>

@@ -370,6 +370,42 @@ export interface PortalMe {
   currency?: string;
 }
 
+/** One line of the tenant's rent account (their statement). */
+export interface PortalCharge {
+  id: string;
+  type: string;
+  description: string | null;
+  periodKey: string | null;
+  periodCalendar: string | null;
+  dueDate: string;
+  amountMinor: string;
+  paidMinor: string;
+  status: string;
+  currency: string;
+}
+
+/** A payment the tenant made, visible in their payment history. */
+export interface PortalPayment {
+  id: string;
+  amountMinor: string;
+  currency: string;
+  method: string;
+  status: string;
+  paidAt: string;
+  reference: string | null;
+  receiptNumber: string | null;
+  notes: string | null;
+}
+
+/** An in-app notice: the client translates templateKey with payload values. */
+export interface PortalNotice {
+  id: string;
+  templateKey: string;
+  payload: Record<string, string>;
+  createdAt: string;
+  status: string;
+}
+
 /** A lease paper or receipt the tenant can open from the portal. */
 export interface PortalDocument {
   id: string;
