@@ -70,7 +70,7 @@ function MockCheckout() {
     <div className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3">
-          <Logo size={30} />
+          <Logo size={34} onDark={false} />
           <p className="text-sm font-semibold text-slate-900">{t('portal.mock_title')}</p>
         </div>
       </header>

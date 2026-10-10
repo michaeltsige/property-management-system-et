@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { api } from '@/lib/api';
 import type { Tenant } from '@/lib/types';
 import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
-import { LANGUAGES, usePreferences } from '@/lib/preferences';
+import { usePreferences } from '@/lib/preferences';
 
 import { PageHeader } from '@/components/app-shell';
 import { ExportCsvButton } from '@/components/export-csv-button';
@@ -45,7 +45,6 @@ export default function TenantsPage() {
     employer: '',
     emergencyContactName: '',
     emergencyContactPhone: '',
-    language: 'am',
     idType: '',
     idNumber: '',
   });
@@ -74,7 +73,6 @@ export default function TenantsPage() {
         employer: form.employer || undefined,
         emergencyContactName: form.emergencyContactName || undefined,
         emergencyContactPhone: form.emergencyContactPhone || undefined,
-        language: form.language,
         // The number is encrypted at rest by the API; only the last four digits
         // are ever returned to a browser.
         idDocuments:
@@ -87,7 +85,6 @@ export default function TenantsPage() {
         employer: '',
         emergencyContactName: '',
         emergencyContactPhone: '',
-        language: 'am',
         idType: '',
         idNumber: '',
       });
@@ -141,7 +138,6 @@ export default function TenantsPage() {
                   <Th>{t('tenant.phone')}</Th>
                   <Th>{t('tenant.employer')}</Th>
                   <Th>{t('tenant.emergency_contact')}</Th>
-                  <Th>{t('preferences.language')}</Th>
                   {canManagePortal ? <Th>{t('tenant.portal')}</Th> : null}
                 </tr>
               </thead>
@@ -158,12 +154,6 @@ export default function TenantsPage() {
                           {tenant.emergencyContactPhone}
                         </span>
                       ) : null}
-                    </Td>
-                    <Td>
-                      <Badge>
-                        {LANGUAGES.find((option) => option.code === tenant.language)?.label ??
-                          tenant.language}
-                      </Badge>
                     </Td>
                     {canManagePortal ? (
                       <Td>
@@ -247,21 +237,6 @@ export default function TenantsPage() {
               value={form.employer}
               onChange={(event) => setForm((current) => ({ ...current, employer: event.target.value }))}
             />
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="language">{t('preferences.language')}</Label>
-            <Select
-              id="language"
-              value={form.language}
-              onChange={(event) => setForm((current) => ({ ...current, language: event.target.value }))}
-            >
-              {LANGUAGES.map((option) => (
-                <option key={option.code} value={option.code}>
-                  {option.label}
-                </option>
-              ))}
-            </Select>
           </div>
 
           <div className="space-y-1">

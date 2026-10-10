@@ -36,8 +36,11 @@ import type {
   Payment,
   PaymentProof,
   PortalCompletedPayment,
+  PortalCharge,
   PortalDocument,
   PortalMe,
+  PortalNotice,
+  PortalPayment,
   PortalPaymentIntent,
   Property,
   RentRoll,
@@ -391,6 +394,15 @@ export const api = {
   workOrder: (id: string) => apiFetch<{ workOrder: WorkOrder }>(`/work-orders/${id}`),
   addWorkOrderNote: (id: string, body: { body: string; internal?: boolean }) =>
     apiFetch<{ note: WorkOrderNote }>(`/work-orders/${id}/notes`, { method: 'POST', body }),
+  /** The tenant's rent account statement (charges with what was paid). */
+  portalCharges: () => apiFetch<{ items: PortalCharge[] }>('/portal/charges'),
+  /** The tenant's payment history. */
+  portalPayments: () => apiFetch<{ items: PortalPayment[] }>('/portal/payments'),
+  /** Receipt PDF for one of the tenant's own payments. */
+  portalReceiptUrl: (paymentId: string) =>
+    `/api/v1/portal/payments/by-id/${encodeURIComponent(paymentId)}/receipt.pdf`,
+  /** In-app notices for the signed-in tenant. */
+  portalNotices: () => apiFetch<{ items: PortalNotice[] }>('/portal/notices'),
   portalMaintenanceRequests: () => apiFetch<{ items: WorkOrder[] }>('/portal/maintenance-requests'),
   createPortalMaintenanceRequest: (body: { title: string; description?: string }) =>
     apiFetch<{ workOrder: WorkOrder }>('/portal/maintenance-requests', { method: 'POST', body }),

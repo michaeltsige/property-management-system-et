@@ -450,7 +450,10 @@ async function nextReceiptNumber(
     where: {
       organizationId,
       receiptNumber: { not: null },
-      createdAt: { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) },
+      // Count within the SAME clock the receipt year comes from (`paidAt`, not
+      // `createdAt`): a backfilled payment is dated in its paid year, and the
+      // sequence must continue that year's series, not "now"'s.
+      paidAt: { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) },
     },
   });
   let attempt = count + 1;
