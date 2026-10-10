@@ -1,51 +1,38 @@
+import { cn } from '@/lib/utils';
+
 /**
- * The product logo, drawn as vector so it stays crisp from a 24 px favicon-sized
- * mark up to the login hero. One geometry everywhere: staff app, tenant portal,
- * login screens.
+ * The product logo — the user-designed Rentalo mark (three teal towers over
+ * the white "Rentalo" lettering), served as a static SVG and drawn inside a
+ * white tile so the lettering keeps its contrast on dark rails and on light
+ * pages alike. One asset everywhere: staff app, tenant portal, login screens.
  *
- * Mark: a gabled roof over walls with an arched open door — home, plainly.
- * The tile uses the brand color via `currentColor` so dark/light contexts can
- * re-tone it without a second asset.
+ * `size` is the tile edge; the mark sits at ~84% of it with a little breathing
+ * room, the way an app icon does.
  */
 export function Logo({
   size = 40,
-  tileClass = 'text-brand-700',
   className,
 }: {
   size?: number;
-  /** Tailwind text-color class applied to the tile (mark uses currentColor). */
-  tileClass?: string;
   className?: string;
 }) {
   return (
-    <svg
-      viewBox="0 0 48 48"
-      width={size}
-      height={size}
-      className={className}
+    <span
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-slate-900/10',
+        className,
+      )}
+      style={{ width: size, height: size }}
       role="img"
-      aria-label="Logo"
-      focusable="false"
+      aria-label="Rentalo"
     >
-      <rect width="48" height="48" rx="11" className={tileClass} fill="currentColor" />
-      {/* Roof */}
-      <path
-        d="M11 25.5 24 13l13 12.5"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="3.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/brand/rentalo-mark.svg"
+        alt=""
+        draggable={false}
+        style={{ width: size * 0.84, height: size * 0.84 }}
       />
-      {/* Walls with an arched open door */}
-      <path
-        d="M15 24.5V36h6.8v-6a2.7 2.7 0 0 1 5.4 0v6H33V24.5"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="3.4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    </span>
   );
 }

@@ -30,29 +30,30 @@ import { Logo } from './logo';
 import { usePathname, useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import { useEffect, useState } from 'react';
+import { X } from 'lucide-react';
 import {
-  BarChart3,
-  Building2,
-  CalendarDays,
-  FileText,
-  Home,
-  Languages,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  Receipt,
-  ScrollText,
-  Users,
-  Wallet,
-  Wrench,
-  X,
-} from 'lucide-react';
+  ArrowRight2,
+  Building3,
+  Calendar2,
+  Chart,
+  ClipboardText,
+  DocumentText,
+  Element3,
+  Home2,
+  LanguageSquare,
+  Logout,
+  Menu as MenuIcon,
+  People,
+  Profile2User,
+  ReceiptItem,
+  Setting3,
+  Wallet3,
+} from 'iconsax-react';
 
 import { api } from '@/lib/api';
 import { todayFor } from '@/lib/format';
 import { useDocumentTitle } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
-import { ROLE_LABEL_FALLBACK } from '@/lib/roles';
 import { cn } from '@/lib/utils';
 
 import { Button } from './ui';
@@ -71,30 +72,30 @@ interface NavItem {
 const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
   {
     labelKey: 'nav.group.overview',
-    items: [{ href: '/dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard }],
+    items: [{ href: '/dashboard', labelKey: 'nav.dashboard', icon: Element3 }],
   },
   {
     labelKey: 'nav.group.portfolio',
     items: [
-      { href: '/properties', labelKey: 'nav.properties', icon: Building2 },
-      { href: '/units', labelKey: 'nav.units', icon: Home },
-      { href: '/tenants', labelKey: 'nav.tenants', icon: Users },
-      { href: '/leases', labelKey: 'nav.leases', icon: CalendarDays },
+      { href: '/properties', labelKey: 'nav.properties', icon: Building3 },
+      { href: '/units', labelKey: 'nav.units', icon: Home2 },
+      { href: '/tenants', labelKey: 'nav.tenants', icon: Profile2User },
+      { href: '/leases', labelKey: 'nav.leases', icon: Calendar2 },
     ],
   },
   {
     labelKey: 'nav.group.money',
     items: [
-      { href: '/charges', labelKey: 'nav.charges', icon: Receipt },
-      { href: '/payments', labelKey: 'nav.payments', icon: Wallet },
-      { href: '/reports', labelKey: 'nav.reports', icon: BarChart3 },
+      { href: '/charges', labelKey: 'nav.charges', icon: ReceiptItem },
+      { href: '/payments', labelKey: 'nav.payments', icon: Wallet3 },
+      { href: '/reports', labelKey: 'nav.reports', icon: Chart },
     ],
   },
   {
     labelKey: 'nav.group.operations',
     items: [
-      { href: '/maintenance', labelKey: 'nav.maintenance', icon: Wrench },
-      { href: '/documents', labelKey: 'nav.documents', icon: FileText },
+      { href: '/maintenance', labelKey: 'nav.maintenance', icon: Setting3 },
+      { href: '/documents', labelKey: 'nav.documents', icon: DocumentText },
     ],
   },
   {
@@ -103,9 +104,9 @@ const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
       // /organization itself lives in the account card at the bottom of the
       // rail — account and organization settings are the same surface for an
       // owner-admin, so the rail does not repeat it.
-      { href: '/organization/team', labelKey: 'org.team', icon: Users },
-      { href: '/organization/audit', labelKey: 'nav.audit', icon: ScrollText },
-      { href: '/organization/translations', labelKey: 'nav.translations', icon: Languages },
+      { href: '/organization/team', labelKey: 'org.team', icon: People },
+      { href: '/organization/audit', labelKey: 'nav.audit', icon: ClipboardText },
+      { href: '/organization/translations', labelKey: 'nav.translations', icon: LanguageSquare },
     ],
   },
 ];
@@ -125,14 +126,16 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   const activeHref = activeHrefFor(pathname);
 
   return (
-    <nav aria-label={t('nav.menu')} className="flex-1 space-y-4 overflow-y-auto py-3">
+    <nav aria-label={t('nav.menu')} className="flex-1 space-y-5 overflow-y-auto py-4">
       <TaskPanel />
       {NAV_GROUPS.map((group) => (
         <div key={group.labelKey}>
-          <p className="px-4 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+          {/* Lowercase quiet group label, per the reference rail: hierarchy via
+              size and tone, not caps. */}
+          <p className="px-4 pb-1.5 text-[11px] font-medium tracking-wide text-slate-500">
             {t(group.labelKey as never)}
           </p>
-          <ul className="space-y-0.5 px-2">
+          <ul className="space-y-1 px-3">
             {group.items.map((item) => {
               const active = item.href === activeHref;
               const Icon = item.icon;
@@ -143,15 +146,13 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                     aria-current={active ? 'page' : undefined}
                     onClick={onNavigate}
                     className={cn(
-                      'flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-sm transition-colors',
+                      'flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors',
                       active
-                        ? // The inset bar stands in for a left border so text
-                          // never shifts when the selection moves.
-                          'bg-white/10 font-medium text-white shadow-[inset_2px_0_0_var(--color-brand-400)]'
+                        ? 'bg-white/10 font-medium text-white'
                         : 'text-slate-300 hover:bg-white/5 hover:text-white',
                     )}
                   >
-                    <Icon className={cn('h-4 w-4 shrink-0', active ? 'text-brand-300' : 'text-slate-400')} />
+                    <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-white' : 'text-slate-400')} />
                     <span className="truncate">{t(item.labelKey as never)}</span>
                   </Link>
                 </li>
@@ -203,8 +204,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   const today = todayFor(calendar);
-  // An empty role would show the raw key ("role.undefined") in the header.
-  const roleLabel = session.role ? t(`role.${session.role}` as never) : ROLE_LABEL_FALLBACK;
+  const todayLabel = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}${
+    calendar === 'ethiopian' ? ' E.C.' : ' G.C.'
+  }`;
 
   async function handleSignOut() {
     try {
@@ -218,7 +220,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const brand = (
     <div className="flex min-w-0 items-center gap-2.5">
-      <Logo size={32} className="shrink-0" />
+      <Logo size={34} className="shrink-0" />
       <div className="min-w-0">
         <p className="truncate text-sm font-semibold text-white">{t('app.name')}</p>
         <p className="truncate text-xs text-slate-400">{session.organization.name}</p>
@@ -227,35 +229,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   );
 
   /**
-   * The account card: a thin rectangular strip at the bottom of the rail. The
-   * whole card leads to Organization — for an owner-admin the account and the
-   * organization it manages are the same settings surface — and sign-out stays
-   * one click away on its right edge.
+   * The account card: a thin strip at the bottom of the rail — real name and
+   * email like the reference rail, a chevron pointing at Organization (the
+   * whole card leads there), and sign-out one click away on its right edge.
    */
   const accountCard = (onNavigate?: () => void) => {
     const accountActive = pathname === '/organization' || pathname.startsWith('/organization/');
     return (
-      <div className="flex items-center gap-1 border-t border-white/10 px-2 py-2">
+      <div className="flex items-center gap-1 border-t border-white/10 px-2 py-2.5">
         <Link
           href="/organization"
           aria-current={accountActive ? 'page' : undefined}
           onClick={onNavigate}
           title={t('nav.organization')}
           className={cn(
-            'flex min-w-0 flex-1 items-center gap-2.5 rounded-md px-2 py-1.5 transition-colors hover:bg-white/5',
+            'flex min-w-0 flex-1 items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-white/5',
             accountActive && 'bg-white/10',
           )}
         >
           <span
             aria-hidden="true"
-            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-brand-100 text-[11px] font-semibold text-brand-800"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand-100 text-[11px] font-semibold text-brand-800"
           >
             {initialsOf(session.user.fullName)}
           </span>
-          <span className="min-w-0 text-left">
+          <span className="min-w-0 flex-1 text-left">
             <span className="block truncate text-xs font-medium text-white">{session.user.fullName}</span>
-            <span className="block truncate text-[11px] text-slate-400">{roleLabel}</span>
+            <span className="block truncate text-[11px] text-slate-400">{session.user.email}</span>
           </span>
+          <ArrowRight2 className="h-4 w-4 shrink-0 text-slate-500" aria-hidden="true" />
         </Link>
         <Button
           variant="ghost"
@@ -265,7 +267,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           title={t('auth.sign_out')}
           onClick={handleSignOut}
         >
-          <LogOut className="h-4 w-4" />
+          <Logout className="h-4 w-4" />
         </Button>
       </div>
     );
@@ -284,7 +286,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           scope sits at the top (it reframes every list below it) and the
           account card at the bottom, so the rail reads top-to-bottom as:
           workspace → navigation → account. */}
-      <aside className="hidden w-64 shrink-0 flex-col bg-ink-900 lg:flex">
+      <aside className="hidden w-72 shrink-0 flex-col bg-ink-900 lg:flex">
         <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-3.5">{brand}</div>
         <div className="border-b border-white/10 px-3 py-3">
           <PropertySwitcher id="sidebar-property-context" />
@@ -324,7 +326,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Dialog.Root>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-2.5">
+        {/* The top bar carries no border: the gradient hairline under it does
+            that job with a little brand warmth. */}
+        <header className="flex items-center gap-3 bg-white px-4 py-2.5">
           <Button
             variant="ghost"
             size="icon"
@@ -334,13 +338,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             aria-haspopup="dialog"
             onClick={() => setMenuOpen(true)}
           >
-            <Menu className="h-5 w-5" />
+            <MenuIcon className="h-5 w-5" />
           </Button>
           <span className="truncate text-sm font-semibold text-slate-900 lg:hidden">{t('app.name')}</span>
           <div className="flex min-w-0 flex-1 justify-center md:px-6">
             <GlobalSearch />
           </div>
+          <div
+            title={todayLabel}
+            className="hidden shrink-0 items-center gap-2 rounded-lg border border-brand-100 bg-brand-50 px-2.5 py-1.5 text-xs font-medium text-brand-800 sm:flex"
+          >
+            <Calendar2 className="h-4 w-4 text-brand-600" aria-hidden="true" />
+            <span className="tabular">{todayLabel}</span>
+          </div>
         </header>
+        <div aria-hidden="true" className="h-px bg-gradient-to-r from-brand-600 via-brand-300/60 to-transparent" />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <WorkspaceTabs />

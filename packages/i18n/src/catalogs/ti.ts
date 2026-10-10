@@ -454,6 +454,7 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'dashboard.rent_this_period': 'ዝጽበን እተኣከበን',
   'dashboard.charges_by_status': 'ክፍልታት ብኣታት',
   'dashboard.charges_this_period': 'ክፍልታት ኣብዚ እዋን',
+  'dashboard.total_collected': 'ጠቕላላ ዝተኣከበ',
   'dashboard.collection_rate': 'ካብዚ እዋን ዝጽበ ኪራይ {rate}%',
   'dashboard.delta_completed_periods': 'ምስ ቀዳማይ ምሉእ እዋን',
   'dashboard.advance_payments': 'ናይ ቅድሚ ክፍሊታት ይሓትት',

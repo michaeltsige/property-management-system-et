@@ -235,12 +235,23 @@ async function main(): Promise<void> {
   });
 
   // --- tenants (fake names and fake ID numbers) ----------------------------
+  // All fourteen demo tenants are enrolled for the OTP portal at the end of
+  // this seed, so any of these phones signs in at /portal/login.
   const tenantSeed = [
     { fullName: 'Almaz Bekele (demo)', phone: '+251911000001', language: 'am' },
     { fullName: 'Dawit Haile (demo)', phone: '+251911000002', language: 'am' },
     { fullName: 'Fatuma Ahmed (demo)', phone: '+251911000003', language: 'om' },
     { fullName: 'Gebre Tesfay (demo)', phone: '+251911000004', language: 'ti' },
     { fullName: 'Hanna Girma (demo)', phone: '+251911000005', language: 'en' },
+    { fullName: 'Kebede Alemu (demo)', phone: '+251911000006', language: 'am' },
+    { fullName: 'Selam Tadesse (demo)', phone: '+251911000007', language: 'om' },
+    { fullName: 'Yonas Mekonnen (demo)', phone: '+251911000008', language: 'ti' },
+    { fullName: 'Meron Assefa (demo)', phone: '+251911000009', language: 'en' },
+    { fullName: 'Tewodros Bekele (demo)', phone: '+251911000010', language: 'am' },
+    { fullName: 'Aster Girma (demo)', phone: '+251911000011', language: 'om' },
+    { fullName: 'Solomon Haile (demo)', phone: '+251911000012', language: 'ti' },
+    { fullName: 'Rahel Worku (demo)', phone: '+251911000013', language: 'en' },
+    { fullName: 'Bekelech Tessema (demo)', phone: '+251911000014', language: 'am' },
   ];
 
   const tenants = [];
@@ -383,15 +394,18 @@ async function main(): Promise<void> {
   }
 
   // --- tenant portal demo ---------------------------------------------------
-  // Enroll the first tenant so the tenant side can be tried immediately:
-  // /portal/login with the phone number; the one-time code is printed by the
-  // worker in dev (mock SMS).
+  // Every demo tenant is enrolled, so any seeded phone (+251911000001 … 014,
+  // or the local 0911… form) works at /portal/login: request a code, read it
+  // from the [worker] log (mock SMS in dev), sign in. Local form (09…) and
+  // international form (+2519…) resolve to the same tenant.
   const ownerUser = await prisma.user.findUniqueOrThrow({ where: { email: 'owner@demo.test' } });
-  await enrollTenantPortal(prisma, {
-    organizationId: organization.id,
-    actorUserId: ownerUser.id,
-    tenantId: tenants[0]!.id,
-  });
+  for (const tenant of tenants) {
+    await enrollTenantPortal(prisma, {
+      organizationId: organization.id,
+      actorUserId: ownerUser.id,
+      tenantId: tenant.id,
+    });
+  }
 
   console.warn(
     [
@@ -399,10 +413,11 @@ async function main(): Promise<void> {
       'Demo seed complete.',
       `  Organization : ${organization.name} (slug: ${DEMO_SLUG})`,
       `  Sign in with : owner@demo.test / ${DEMO_PASSWORD}  (also manager@, accountant@, maintenance@)`,
-      `  Tenant portal: ${tenants[0]!.fullName} — open /portal/login, phone ${tenants[0]!.phone}`,
+      '  Tenant portal: all 14 demo tenants are enrolled — any of these phones',
+      `                 works at /portal/login: ${tenants.map((tenant) => tenant.phone).join(', ')}`,
       '                 (no password: the one-time code is printed in the [worker] log)',
       `  Properties   : 2 (${units.length + 1} units)`,
-      `  Tenants      : ${tenants.length}`,
+      `  Tenants      : ${tenants.length} (all portal-enrolled)`,
       `  Leases       : 3 (all billed in the org calendar — Ethiopian; 1 quarterly)`,
       `  Charges      : ${ethiopianResult.created + secondResult.created} generated`,
       '  All names, phone numbers and ID numbers are fictional.',

@@ -49,9 +49,11 @@
   --color-ink-800: #1a2d25;
   --color-ink-700: #243a30;
 
+  /* Poppins first (loaded by next/font as --font-poppins): it has no Ge'ez
+     glyphs, so Ethiopic text falls through to Noto Sans Ethiopic. */
   --font-sans:
-    'Noto Sans Ethiopic', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
-    Arial, sans-serif;
+    var(--font-poppins), 'Poppins', 'Noto Sans Ethiopic', ui-sans-serif, system-ui, -apple-system,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 

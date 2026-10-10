@@ -284,6 +284,7 @@ export default function DashboardPage() {
                 partialLabel={t('charge.status.partial')}
                 paidLabel={t('charge.status.paid')}
                 countLabel={t('dashboard.charges_this_period')}
+                totalLabel={t('dashboard.total_collected')}
               />
             )}
           </CardContent>

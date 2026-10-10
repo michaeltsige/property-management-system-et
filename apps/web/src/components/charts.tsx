@@ -62,20 +62,47 @@ export function EChart({
   const container = useRef<HTMLDivElement | null>(null);
   const chart = useRef<echarts.ECharts | null>(null);
 
+  // ECharts draws text on a canvas, which never inherits the CSS font stack:
+  // read the composed family from the container (Poppins via --font-poppins on
+  // <body>) and set it as the global ECharts default. Per-element styles keep
+  // their own sizes/colors and inherit this family.
+  const fontAwareOption = (next: EChartsOption): EChartsOption => {
+    const el = container.current;
+    if (!el) return next;
+    const fontFamily = window.getComputedStyle(el).fontFamily;
+    return fontFamily ? { ...next, textStyle: { fontFamily } } : next;
+  };
+
   useEffect(() => {
     if (!container.current) return;
-    chart.current = echarts.init(container.current, undefined, { renderer: 'canvas' });
+    const instance = echarts.init(container.current, undefined, { renderer: 'canvas' });
+    chart.current = instance;
     const observer = new ResizeObserver(() => chart.current?.resize());
     observer.observe(container.current);
+    // Web fonts land after first paint; redraw once they do, so canvas text is
+    // measured with Poppins rather than the fallback it was laid out with.
+    document.fonts?.ready
+      .then(() => {
+        if (chart.current && container.current) {
+          chart.current.setOption(fontAwareOption(latestOption.current), true);
+          chart.current.resize();
+        }
+      })
+      .catch(() => undefined);
     return () => {
       observer.disconnect();
-      chart.current?.dispose();
+      instance.dispose();
       chart.current = null;
     };
   }, []);
 
+  // Keep the latest option in a ref so the font-ready redraw (above) and the
+  // update effect below share one code path.
+  const latestOption = useRef(option);
+  latestOption.current = option;
+
   useEffect(() => {
-    chart.current?.setOption(option, true);
+    chart.current?.setOption(fontAwareOption(option), true);
   }, [option]);
 
   // The summary rides inside the image's accessible name instead of a hidden
@@ -90,9 +117,13 @@ export function EChart({
 
 /**
  * Rent-roll composition for the period: billed amount per charge status, as a
- * donut (three parts — under the four where a donut stays readable, and the
- * house rules ban standard pies). The ring center carries the charge count so
- * the summary number sits with the picture.
+ * donut in the donut-stat pattern (shadcn/charts): a thick, rounded ring with
+ * the period total standing in the exact center, and the share of each status
+ * spelled out in an HTML legend — the numbers are permanent, not hover-only.
+ *
+ * The center text and the legend are DOM, not canvas: DOM can be perfectly
+ * centered over the ring regardless of device pixel ratio, and it inherits
+ * the app's font. The canvas below draws only the ring itself.
  */
 export function ChargesByStatusChart({
   openMinor,
@@ -106,6 +137,7 @@ export function ChargesByStatusChart({
   partialLabel,
   paidLabel,
   countLabel,
+  totalLabel = 'Total collected',
 }: {
   openMinor: string;
   partialMinor: string;
@@ -118,6 +150,8 @@ export function ChargesByStatusChart({
   partialLabel: string;
   paidLabel: string;
   countLabel: string;
+  /** Label under the centered total, e.g. "total collected". */
+  totalLabel?: string;
 }) {
   const parts = [
     { name: paidLabel, value: Number(paidMinor) / 100, color: CHART_COLORS.brand },
@@ -131,48 +165,65 @@ export function ChargesByStatusChart({
     total > 0
       ? parts.map((part) => ({ name: part.name, value: part.value, itemStyle: { color: part.color } }))
       : [{ name: '', value: 1, itemStyle: { color: '#f1f5f9' }, tooltip: { show: false } }];
+  const share = (value: number) =>
+    total > 0 ? `${Math.round((value / total) * 100)}%` : '0%';
 
   return (
-    <EChart
-      ariaLabel={ariaLabel}
-      summary={{
-        caption: chartDataLabel,
-        columns: ['', currencyLabel],
-        rows: parts.map((part) => [part.name, part.value.toLocaleString()]),
-      }}
-      option={{
-        tooltip: {
-          trigger: 'item',
-          valueFormatter: (value) => `${currencyLabel} ${Number(value).toLocaleString()}`,
-        },
-        legend: {
-          bottom: 0,
-          itemWidth: 10,
-          itemHeight: 10,
-          textStyle: { fontSize: 11, color: CHART_COLORS.axisLabel },
-        },
-        title: {
-          text: String(count),
-          subtext: countLabel,
-          left: 'center',
-          top: '38%',
-          textStyle: { fontSize: 24, fontWeight: 600, color: '#0f172a' },
-          subtextStyle: { fontSize: 11, color: CHART_COLORS.axisLabel },
-        },
-        series: [
-          {
-            type: 'pie',
-            radius: ['62%', '82%'],
-            center: ['50%', '44%'],
-            padAngle: total > 0 ? 1.5 : 0,
-            itemStyle: { borderRadius: 4, borderColor: '#fff', borderWidth: 2 },
-            label: { show: false },
-            emphasis: { scale: false },
-            data,
-          },
-        ],
-      }}
-    />
+    <div>
+      <div className="relative">
+        <EChart
+          height={216}
+          ariaLabel={ariaLabel}
+          summary={{
+            caption: chartDataLabel,
+            columns: ['', currencyLabel],
+            rows: parts.map((part) => [part.name, part.value.toLocaleString()]),
+          }}
+          option={{
+            tooltip: {
+              trigger: 'item',
+              valueFormatter: (value) => `${currencyLabel} ${Number(value).toLocaleString()}`,
+            },
+            series: [
+              {
+                type: 'pie',
+                // Thick ring, dead center of its box: the DOM overlay below
+                // relies on the ring being exactly centered.
+                radius: ['58%', '82%'],
+                center: ['50%', '50%'],
+                padAngle: total > 0 ? 2 : 0,
+                itemStyle: { borderRadius: 6 },
+                label: { show: false },
+                emphasis: { scale: false },
+                data,
+              },
+            ],
+          }}
+        />
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+          <p className="text-lg font-semibold tracking-tight text-slate-900 tabular">
+            {currencyLabel} {Math.round(total).toLocaleString()}
+          </p>
+          <p className="text-[11px] text-slate-500">{totalLabel}</p>
+        </div>
+      </div>
+      <ul className="mt-3 space-y-1.5">
+        {parts.map((part) => (
+          <li key={part.name} className="flex items-center gap-2 text-xs">
+            <span
+              aria-hidden="true"
+              className="h-2.5 w-2.5 shrink-0 rounded-[4px]"
+              style={{ background: part.color }}
+            />
+            <span className="truncate text-slate-600">{part.name}</span>
+            <span className="ml-auto shrink-0 font-medium text-slate-900 tabular">{share(part.value)}</span>
+          </li>
+        ))}
+        <li className="flex items-center gap-2 border-t border-slate-100 pt-1.5 text-[11px] text-slate-500">
+          <span className="truncate">{`${count} ${countLabel}`}</span>
+        </li>
+      </ul>
+    </div>
   );
 }
 

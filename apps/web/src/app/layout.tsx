@@ -1,9 +1,22 @@
 import type { Metadata, Viewport } from 'next';
+import { Poppins } from 'next/font/google';
 
 import { PreferencesProvider } from '@/lib/preferences';
 import { PwaRegister } from '@/components/pwa-register';
 
 import './globals.css';
+
+/**
+ * Poppins is the UI face (geometric, single-story `a` — reads as the product
+ * brand). Ethiopic text has no glyphs in Poppins, so the stack falls through
+ * to Noto Sans Ethiopic loaded in globals.css; Ge'ez still renders everywhere.
+ */
+const poppins = Poppins({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-poppins',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Property Management',
@@ -38,7 +51,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body>
+      <body className={poppins.variable}>
         <PreferencesProvider>{children}</PreferencesProvider>
         <PwaRegister />
       </body>

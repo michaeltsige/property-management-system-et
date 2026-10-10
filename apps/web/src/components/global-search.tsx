@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Search } from 'lucide-react';
+import { SearchNormal1 } from 'iconsax-react';
 import { roleHasPermission, type Role } from '@pms/shared';
 import { api } from '@/lib/api';
 import { usePreferences } from '@/lib/preferences';
@@ -28,6 +28,24 @@ export function GlobalSearch() {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const rootRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [shortcutHint, setShortcutHint] = useState('Ctrl K');
+
+  // The honest platform hint: ⌘K on Apple keyboards, Ctrl K elsewhere. The
+  // listener itself is global so the shortcut works before the box is focused.
+  useEffect(() => {
+    const ua = navigator.platform || navigator.userAgent || '';
+    setShortcutHint(/mac|iphone|ipad/i.test(ua) ? '⌘K' : 'Ctrl K');
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && (event.key === 'k' || event.key === 'K')) {
+        event.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }
+    }
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const role = session?.role as Role;
   const canProperties = roleHasPermission(role, 'properties.read');
@@ -124,11 +142,12 @@ export function GlobalSearch() {
 
   return (
     <div ref={rootRef} className="relative w-full max-w-md">
-      <Search
-        className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400"
+      <SearchNormal1
+        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
         aria-hidden="true"
       />
       <input
+        ref={inputRef}
         type="search"
         role="combobox"
         aria-expanded={open && hits.length > 0}
@@ -136,7 +155,7 @@ export function GlobalSearch() {
         aria-activedescendant={hits[active] ? `search-hit-${hits[active].id}` : undefined}
         aria-label={t('search.placeholder')}
         placeholder={t('search.placeholder')}
-        className="h-9 w-full rounded-md border border-slate-200 bg-white pl-8 pr-2 text-sm focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
+        className="h-9 w-full rounded-full border border-slate-200 bg-slate-50 pl-9 pr-16 text-sm transition-colors focus-visible:border-brand-500 focus-visible:bg-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
         value={query}
         onChange={(event) => {
           setQuery(event.target.value);
@@ -157,6 +176,12 @@ export function GlobalSearch() {
           }
         }}
       />
+      <kbd
+        aria-hidden="true"
+        className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-sans text-[10px] font-medium text-slate-500 sm:block"
+      >
+        {shortcutHint}
+      </kbd>
       {open && query.trim() && (
         <ul
           id="global-search-results"

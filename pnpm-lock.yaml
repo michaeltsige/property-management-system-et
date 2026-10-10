@@ -188,6 +188,9 @@ importers:
       echarts:
         specifier: ^6.1.0
         version: 6.1.0
+      iconsax-react:
+        specifier: ^0.0.8
+        version: 0.0.8(react@19.3.0)
       lucide-react:
         specifier: ^0.575.0
         version: 0.575.0(react@19.3.0)
@@ -3086,6 +3089,11 @@ packages:
     resolution: {integrity: sha512-5gs5ytaNjBrh5Ow3zrvdUUY+0VxIuWVL4i9irt6friV+BqdCfmV11CQTWMiBYWHbXhco+J1kHfTOUkePhCDvMA==}
     engines: {node: '>=18'}
     hasBin: true
+
+  iconsax-react@0.0.8:
+    resolution: {integrity: sha512-l3dVk4zGtkkJHgvNYqAf0wDKqnKxXykee5/DoESGo2JvSYwaxajJUHSX2YrPRXSov8Hd8ClGFwJxCEaEjrFD1Q==}
+    peerDependencies:
+      react: '*'
 
   iconv-lite@0.6.3:
     resolution: {integrity: sha512-4fCk79wshMdzMp2rH06qWrJE4iolqLhCUH+OiuIgU++RB0+94NlDL81atO7GX55uUKueo0txHNtvEyI6D7WdMw==}
@@ -7310,6 +7318,11 @@ snapshots:
       - supports-color
 
   husky@9.1.7: {}
+
+  iconsax-react@0.0.8(react@19.3.0):
+    dependencies:
+      prop-types: 15.8.1
+      react: 19.3.0
 
   iconv-lite@0.6.3:
     dependencies:
