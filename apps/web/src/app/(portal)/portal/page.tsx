@@ -118,7 +118,7 @@ export default function PortalPage() {
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
           <div className="flex items-center gap-2">
-            <Logo size={30} />
+            <Logo size={34} onDark={false} />
             <div>
               <p className="text-sm font-semibold text-slate-900">{t('portal.title')}</p>
               <p className="text-xs text-slate-500">{session.user.fullName}</p>

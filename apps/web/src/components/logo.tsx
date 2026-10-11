@@ -6,14 +6,16 @@ import { cn } from '@/lib/utils';
  * background: no white tile, the mark is the whole logo (owner request).
  *
  * Two tones:
- * - `onDark` (default): the original SVG with its white lettering — sidebar
- *   rails, dark headers.
- * - `onLight`: the derived ink variant (`rentalo-mark-ink.svg`), whose
- *   lettering is the brand's near-black so it survives on white pages —
- *   login screens, portal headers.
+ * - `onDark` (default): the light variant (`rentalo-mark-light.svg`) — white
+ *   wordmark over lifted shadows, trimmed to the ink of the mark so it reads
+ *   big and legible on dark rails and hero overlays (owner request: the
+ *   wordmark used to disappear on dark backgrounds).
+ * - `onLight`: the ink variant (`rentalo-mark-ink.svg`), whose lettering is
+ *   the brand's near-black so it survives on white pages — portal headers,
+ *   light surfaces.
  *
- * The source SVG's viewBox is trimmed to the ink of the mark, so at equal
- * width the drawing is substantially larger than the padded original.
+ * Both variants share the trimmed viewBox, so at equal width the drawing is
+ * substantially larger than the padded original.
  */
 export function Logo({
   size = 40,
@@ -28,7 +30,7 @@ export function Logo({
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
-      src={onDark ? '/brand/rentalo-mark.svg' : '/brand/rentalo-mark-ink.svg'}
+      src={onDark ? '/brand/rentalo-mark-light.svg' : '/brand/rentalo-mark-ink.svg'}
       alt="Rentalo"
       role="img"
       draggable={false}

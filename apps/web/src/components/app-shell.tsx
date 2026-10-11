@@ -34,10 +34,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 import {
-  ArrowDown2,
-  ArrowUp2,
   Building3,
   Calendar2,
   Chart,
@@ -157,7 +155,10 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
   const activeHref = activeHrefFor(pathname);
 
   return (
-    <nav aria-label={t('nav.menu')} className="flex-1 space-y-5 overflow-y-auto py-4">
+    <nav
+      aria-label={t('nav.menu')}
+      className="flex-1 space-y-5 overflow-y-auto py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
       <TaskPanel />
       {NAV_GROUPS.map((group) => (
         <div key={group.labelKey}>
@@ -248,7 +249,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const brand = (
     <div className="flex min-w-0 items-center gap-3">
-      <Logo size={42} className="shrink-0" />
+      <Logo size={48} className="shrink-0" />
       <p className="truncate text-base font-semibold text-white">{t('app.name')}</p>
     </div>
   );
@@ -256,9 +257,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   /**
    * The account card, per the owner's reference rail: a darker rounded box
    * holding the brand tile with a presence dot, the organization name and the
-   * signed-in email, and an up/down chevron pair. It opens the account menu —
-   * Organization settings and a labelled, always-readable Sign out (the icon
-   * button this replaces was invisible when icons did not render).
+   * signed-in email, and a sideways chevron (owner request — replaces the
+   * up/down arrow pair; it turns downward while the menu is open). It opens
+   * the account menu — Organization settings and a labelled, always-readable
+   * Sign out (the icon button this replaces was invisible when icons did not
+   * render).
    */
   const accountCard = () => {
     const accountActive = pathname === '/organization' || pathname.startsWith('/organization/');
@@ -270,13 +273,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             aria-label={`${t('nav.organization')} — ${session.user.fullName}`}
             aria-haspopup="menu"
             className={cn(
-              'flex w-full cursor-pointer items-center gap-3 rounded-xl bg-white/[0.07] p-2.5 text-left outline-none transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-brand-400/70',
+              'group flex w-full cursor-pointer items-center gap-3 rounded-xl bg-white/[0.07] p-2.5 text-left outline-none transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-brand-400/70',
               accountActive && 'bg-white/10',
             )}
           >
             <span className="relative shrink-0">
               <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-ink-800 ring-1 ring-white/10">
-                <Logo size={30} />
+                <Logo size={34} />
               </span>
               <span
                 aria-hidden="true"
@@ -289,10 +292,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
               <span className="block truncate text-xs text-slate-400">{session.user.email}</span>
             </span>
-            <span aria-hidden="true" className="flex shrink-0 flex-col text-slate-500">
-              <ArrowUp2 size={12} />
-              <ArrowDown2 size={12} />
-            </span>
+            <ChevronRight
+              aria-hidden="true"
+              className="h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200 group-data-[state=open]:rotate-90"
+            />
           </button>
         </DropdownMenu.Trigger>
         <DropdownMenu.Portal>
