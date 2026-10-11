@@ -226,6 +226,32 @@ portalRouter.get('/portal/me', requireAuth, requirePermission('portal.use'), asy
   }
 });
 
+/**
+ * The tenant's own language preference. Persisted on the tenant record so the
+ * portal, SMS and letters all follow it; the session cache on the client is
+ * refreshed by the caller.
+ */
+portalRouter.patch(
+  '/portal/me/language',
+  requireAuth,
+  requirePermission('portal.use'),
+  validate({ body: z.object({ language: z.enum(['en', 'am', 'om', 'ti']) }) }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      const updated = await prisma.tenant.update({
+        where: { id: tenant.id },
+        data: { language: req.body.language },
+        select: { id: true, language: true },
+      });
+      res.json({ tenant: updated });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 // --- rent account statement --------------------------------------------------
 
 /**

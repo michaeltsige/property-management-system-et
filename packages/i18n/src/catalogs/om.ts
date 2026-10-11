@@ -80,6 +80,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.reference': 'Ilallachaa',
   'portal.paid_on': 'Guyyaa kaffeefame',
   'portal.profile_title': 'Suufii',
+  'portal.language_saved': 'Afaan olkaa’ameera — portalii filannoo kee hordofa.',
+  'portal.language_hint': 'Ammaa portalii fi ergaa SMSiin qabeenyaan kee hordofa.',
   'portal.signed_in_as': 'Seene kan',
   'portal.emergency_contact': 'Qunnamtii balaa',
   'portal.no_active_lease': 'Waliigalaa sochii hin jiru — abbaa mana kee wajjin qunnam.',

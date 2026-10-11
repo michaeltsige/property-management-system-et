@@ -4,7 +4,7 @@
  * The tenant portal shell — the owner/admin rail, in the tenant's register.
  *
  * Same dark rail, same brand mark, same account card pattern and the same
- * Poppins/ink/brand system as the staff side (owner request: one theme across
+ * Plus Jakarta Sans/ink/brand system as the staff side (owner request: one theme across
  * the two sides), but only the six things a tenant needs: overview, payments,
  * their rent account, maintenance, documents and profile. Everything under
  * this layout requires a tenant session; a signed-out visitor is sent to
@@ -16,10 +16,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { ChevronRight, X } from 'lucide-react';
 import {
-  ArrowDown2,
-  ArrowUp2,
   DocumentText,
   Element3,
   Logout,
@@ -159,7 +157,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           type="button"
           aria-label={`${session.user.fullName} — ${t('auth.sign_out')}`}
           aria-haspopup="menu"
-          className="flex w-full cursor-pointer items-center gap-3 rounded-xl bg-white/[0.07] p-2.5 text-left outline-none transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-brand-400/70"
+          className="group flex w-full cursor-pointer items-center gap-3 rounded-xl bg-white/[0.07] p-2.5 text-left outline-none transition-colors hover:bg-white/10 focus-visible:ring-2 focus-visible:ring-brand-400/70"
         >
           <span className="relative shrink-0">
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-100 text-sm font-semibold text-brand-800">
@@ -176,10 +174,10 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             </span>
             <span className="block truncate text-xs text-slate-400">{t('role.tenant')}</span>
           </span>
-          <span aria-hidden="true" className="flex shrink-0 flex-col text-slate-500">
-            <ArrowUp2 size={12} />
-            <ArrowDown2 size={12} />
-          </span>
+          <ChevronRight
+            aria-hidden="true"
+            className="h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200 group-data-[state=open]:rotate-90"
+          />
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>

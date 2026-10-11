@@ -78,6 +78,8 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.reference': 'ማጣቀሻ',
   'portal.paid_on': 'የተከፈለበት ቀን',
   'portal.profile_title': 'መገለጫ',
+  'portal.language_saved': 'ቋንቋ ተቀምጧል — ፖርታሉ የእርስዎን ምርጫ ይከተላል።',
+  'portal.language_hint': 'አሁን ለፖርታሉም ለአደጋ ጊዜ መልእክቶችም ይሠራል።',
   'portal.signed_in_as': 'የገቡት በ',
   'portal.emergency_contact': 'የአስቸኳይ አደጋ ተቆጣጣሪ',
   'portal.no_active_lease': 'ንቁ ውል የለም — ከባለቤትዎ ጋር ያግኙ።',

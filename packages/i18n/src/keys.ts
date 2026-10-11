@@ -242,6 +242,8 @@ export const EN_CATALOG = {
   'portal.reference': 'Reference',
   'portal.paid_on': 'Paid on',
   'portal.profile_title': 'Profile',
+  'portal.language_saved': 'Language saved — the portal now follows your choice.',
+  'portal.language_hint': 'Applies to the portal now and to SMS and letters from your landlord.',
   'portal.signed_in_as': 'Signed in as',
   'portal.emergency_contact': 'Emergency contact',
   'portal.no_active_lease': 'No active lease — contact your landlord.',

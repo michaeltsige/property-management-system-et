@@ -78,6 +78,8 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.reference': 'መዋዕል',
   'portal.paid_on': 'ዝተኸፍለሉም ዕለት',
   'portal.profile_title': 'መገለጫ',
+  'portal.language_saved': 'ቋንቋ ተዓዲሉ — ብሔርቲ ኣብ መሰረት ምርጫኩም ይኸውን።',
+  'portal.language_hint': 'ሕጂ ንብሔርቲን ኣብ ዕለት መልእኽትታትን ይምልኣስ።',
   'portal.signed_in_as': 'ዝኣተወሉ ብ',
   'portal.emergency_contact': 'ናይ ስደት ርክብ',
   'portal.no_active_lease': 'ንጡፍ ኪራይ የሎን — ምስ ባልዕኻ ተራክብ።',

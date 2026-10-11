@@ -321,6 +321,12 @@ export const api = {
     apiFetch<{ enrolled: boolean }>(`/tenants/${tenantId}/portal`, { method: 'DELETE' }),
   /** What a signed-in tenant sees on their portal page. */
   portalMe: () => apiFetch<PortalMe>('/portal/me'),
+  /** Persist the tenant's own language preference (portal, SMS, letters). */
+  updateTenantLanguage: (language: string) =>
+    apiFetch<{ tenant: { id: string; language: string } }>('/portal/me/language', {
+      method: 'PATCH',
+      body: JSON.stringify({ language }),
+    }),
   /** Lease papers, receipts and anything else filed for this tenant. */
   portalDocuments: () => apiFetch<{ items: PortalDocument[] }>('/portal/documents'),
   /** Same-origin download URL — the session cookie authorizes it. */
