@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
+import { usePropertyContext } from '@/lib/property-context';
 
 import { PageHeader } from '@/components/app-shell';
 import { Modal } from '@/components/modal';
@@ -38,6 +39,9 @@ export default function DocumentsPage() {
   const documents = useAsync(() => api.documents('?pageSize=100'), []);
   const leases = useAsync(() => api.leases(), []);
   const tenants = useAsync(() => api.tenants(), []);
+  // The sidebar property scope: documents tagged with a property follow it;
+  // organization-wide documents (no property) stay visible in every scope.
+  const [propertyContext] = usePropertyContext();
   const fileInput = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
   const [category, setCategory] = useState<(typeof DOCUMENT_CATEGORIES)[number]>('lease_agreement');
@@ -96,7 +100,9 @@ export default function DocumentsPage() {
     URL.revokeObjectURL(url);
   }
 
-  const rows = documents.data?.items ?? [];
+  const rows = (documents.data?.items ?? []).filter(
+    (document) => propertyContext === null || document.propertyId === null || document.propertyId === propertyContext,
+  );
 
   return (
     <div>

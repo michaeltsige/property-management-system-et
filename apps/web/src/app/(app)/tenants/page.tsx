@@ -3,12 +3,13 @@
 import { roleHasPermission, type Role } from '@pms/shared';
 import { CsvImport } from '@/components/csv-import';
 import { Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { api } from '@/lib/api';
 import type { Tenant } from '@/lib/types';
 import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
+import { usePropertyContext } from '@/lib/property-context';
 
 import { PageHeader } from '@/components/app-shell';
 import { ExportCsvButton } from '@/components/export-csv-button';
@@ -36,6 +37,22 @@ export default function TenantsPage() {
   );
   const tenants = useAsync(() => api.tenants(search || undefined), [search]);
   const idTypes = useAsync(() => api.idTypes(), []);
+  // The sidebar property scope: a tenant belongs to a property through their
+  // leases (lease → unit → property), so map it once and filter the table.
+  const [propertyContext] = usePropertyContext();
+  const leases = useAsync(
+    () => (propertyContext ? api.leases() : Promise.resolve(null)),
+    [propertyContext],
+  );
+  const tenantsInScope = useMemo(() => {
+    if (propertyContext === null) return tenants.data?.tenants ?? [];
+    const scopedTenantIds = new Set(
+      (leases.data?.leases ?? [])
+        .filter((lease) => lease.unit.property.id === propertyContext)
+        .map((lease) => lease.tenant.id),
+    );
+    return (tenants.data?.tenants ?? []).filter((tenant) => scopedTenantIds.has(tenant.id));
+  }, [propertyContext, leases.data, tenants.data]);
   const [open, setOpen] = useState(false);
   useAutoOpenModal(() => setOpen(true));
   const [form, setForm] = useState({
@@ -128,7 +145,7 @@ export default function TenantsPage() {
             <div className="p-4">
               <Alert tone="danger">{tenants.error}</Alert>
             </div>
-          ) : (tenants.data?.tenants.length ?? 0) === 0 ? (
+          ) : tenantsInScope.length === 0 ? (
             <EmptyState title={t('common.no_results')} description={t('tenant.full_name')} />
           ) : (
             <Table>
@@ -142,7 +159,7 @@ export default function TenantsPage() {
                 </tr>
               </thead>
               <tbody>
-                {tenants.data?.tenants.map((tenant) => (
+                {tenantsInScope.map((tenant) => (
                   <tr key={tenant.id}>
                     <Td className="font-medium text-slate-900">{tenant.fullName}</Td>
                     <Td className="tabular">{tenant.phone ?? '—'}</Td>

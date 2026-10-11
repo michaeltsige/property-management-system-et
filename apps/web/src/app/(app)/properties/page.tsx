@@ -8,6 +8,7 @@ import { ETHIOPIAN_REGIONS, PROPERTY_TYPES, roleHasPermission, type Role } from 
 import { api } from '@/lib/api';
 import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
+import { usePropertyContext } from '@/lib/property-context';
 
 import { OwnerEditor, BlockEditor, feeText } from '@/components/hierarchy-controls';
 import { PageHeader } from '@/components/app-shell';
@@ -51,6 +52,12 @@ export default function PropertiesPage() {
   const managed = owners.data?.portfolioMode === 'managed';
   const [detailsId, setDetailsId] = useState<string | null>(null);
   const properties = useAsync(() => api.properties(), []);
+  // The sidebar property scope reframes this list too: one property selected
+  // shows just that property (display filter, never an authorization change).
+  const [propertyContext] = usePropertyContext();
+  const visibleProperties = (properties.data?.properties ?? []).filter(
+    (property) => propertyContext === null || property.id === propertyContext,
+  );
   const selectedProperty = properties.data?.properties.find((p) => p.id === detailsId);
   const [open, setOpen] = useState(false);
   useAutoOpenModal(() => setOpen(true));
@@ -147,7 +154,7 @@ export default function PropertiesPage() {
             <div className="p-4">
               <Alert tone="danger">{properties.error}</Alert>
             </div>
-          ) : (properties.data?.properties.length ?? 0) === 0 ? (
+          ) : visibleProperties.length === 0 ? (
             <EmptyState title={t('common.no_results')} description={t('property.name')} />
           ) : (
             <Table>
@@ -164,7 +171,7 @@ export default function PropertiesPage() {
                 </tr>
               </thead>
               <tbody>
-                {properties.data?.properties.map((property) => (
+                {visibleProperties.map((property) => (
                   <tr key={property.id}>
                     <Td className="font-medium text-slate-900">{property.name}</Td>
                     {managed && <Td>{property.owner?.name ?? '—'}</Td>}

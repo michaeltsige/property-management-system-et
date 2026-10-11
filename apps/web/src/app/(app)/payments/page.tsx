@@ -1,7 +1,7 @@
 'use client';
 
 import { Plus } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { MANUAL_PAYMENT_METHODS, PAYMENT_METHODS } from '@pms/shared';
 
@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { formatAmount, formatDate } from '@/lib/format';
 import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
+import { usePropertyContext } from '@/lib/property-context';
 
 import { PageHeader } from '@/components/app-shell';
 import { ExportCsvButton } from '@/components/export-csv-button';
@@ -104,7 +105,20 @@ export default function PaymentsPage() {
     URL.revokeObjectURL(url);
   }
 
-  const rows = payments.data?.items ?? [];
+  // The sidebar property scope: a payment lands in a property through its
+  // lease (lease → unit → property), so map it once and filter the table.
+  const [propertyContext] = usePropertyContext();
+  const leaseProperty = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const lease of leases.data?.leases ?? []) map.set(lease.id, lease.unit.property.id);
+    return map;
+  }, [leases.data]);
+
+  const rows = (payments.data?.items ?? []).filter(
+    (payment) =>
+      propertyContext === null ||
+      (payment.leaseId !== null && leaseProperty.get(payment.leaseId) === propertyContext),
+  );
 
   return (
     <div>

@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { formatAmount, formatDate, statusTone } from '@/lib/format';
 import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
+import { usePropertyContext } from '@/lib/property-context';
 import { cn } from '@/lib/utils';
 
 import { PageHeader } from '@/components/app-shell';
@@ -41,6 +42,8 @@ import {
 export default function MaintenancePage() {
   const { t, language, calendar } = usePreferences();
   const [status, setStatus] = useState('');
+  // The sidebar property scope: work orders carry their property directly.
+  const [propertyContext] = usePropertyContext();
   const board = useAsync(() => api.workOrders(`?pageSize=100${status ? `&status=${status}` : ''}`), [status]);
   const vendors = useAsync(() => api.vendors(), []);
   const [vendorFor, setVendorFor] = useState<string | null>(null);
@@ -96,7 +99,9 @@ export default function MaintenancePage() {
     }).catch(() => undefined);
   }
 
-  const rows = board.data?.items ?? [];
+  const rows = (board.data?.items ?? []).filter(
+    (order) => propertyContext === null || order.property?.id === propertyContext,
+  );
   const order = detail.data?.workOrder ?? null;
 
   return (

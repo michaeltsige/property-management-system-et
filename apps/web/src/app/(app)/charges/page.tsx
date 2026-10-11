@@ -1,7 +1,7 @@
 'use client';
 
 import { PlayCircle } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
 import { useCalendarPeriod } from '@/lib/use-calendar-period';
 
@@ -9,6 +9,7 @@ import { api } from '@/lib/api';
 import { formatAmount, formatDate, formatPeriodKey, statusTone } from '@/lib/format';
 import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
+import { usePropertyContext } from '@/lib/property-context';
 import { cn } from '@/lib/utils';
 
 import { PageHeader } from '@/components/app-shell';
@@ -47,6 +48,20 @@ export default function ChargesPage() {
 
   const query = `?periodKey=${periodKey}&calendar=${calendar}${status ? `&status=${status}` : ''}&pageSize=100`;
   const charges = useAsync(() => api.charges(query), [query]);
+  // The sidebar property scope: a charge lands in a property through its lease
+  // (lease → unit → property), so map it once and filter the table.
+  const [propertyContext] = usePropertyContext();
+  const leases = useAsync(() => (propertyContext ? api.leases() : Promise.resolve(null)), [propertyContext]);
+  const leaseProperty = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const lease of leases.data?.leases ?? []) map.set(lease.id, lease.unit.property.id);
+    return map;
+  }, [leases.data]);
+  const rows = (charges.data?.items ?? []).filter(
+    (charge) =>
+      propertyContext === null ||
+      (charge.leaseId !== null && leaseProperty.get(charge.leaseId) === propertyContext),
+  );
 
   async function generate() {
     await run(async () => {
@@ -71,8 +86,6 @@ export default function ChargesPage() {
       charges.reload();
     }).catch(() => undefined);
   }
-
-  const rows = charges.data?.items ?? [];
 
   return (
     <div>
