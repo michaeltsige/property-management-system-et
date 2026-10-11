@@ -272,11 +272,10 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'user.role': 'ሚና',
   'user.invite': 'ተጠቃሚ ጋብዝ',
   'user.invited': 'ግብዣ ወደ {email} ተልኳል',
+  'user.invite_hint': 'የተጋበዙ ባለሙያዎች እንደ ንብረት አስተዳዳሪ ይቀላቀላሉ — ሚናዎች ከተመደቡ በኋላ አይለወጡም።',
 
   'role.owner_admin': 'ባለቤት / አስተዳዳሪ',
   'role.manager': 'የንብረት ሥራ አስኪያጅ',
-  'role.accountant': 'ሒሳብ ባለሙያ',
-  'role.maintenance': 'ጥገና',
   'role.tenant': 'ተከራይ',
 
   'property.name': 'የንብረት ስም',

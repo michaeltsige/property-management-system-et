@@ -271,11 +271,10 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'user.role': 'ግደ',
   'user.invite': 'ተጠቃሚ ዓድም',
   'user.invited': 'ዕድመት ናብ {email} ተላኢኹ',
+  'user.invite_hint': 'እቶም ዝተዕደመው መሻቕሕቲ ከም ኣመሓዳሪ ነብሲ ይወዓሉ — ተመሓላልፈታት ሓሊፉ ኣይቅየርን እዩ።',
 
   'role.owner_admin': 'ዋና ባለቤት / ኣማሓዳሪ',
   'role.manager': 'ኣማሓዳሪ ንብረት',
-  'role.accountant': 'ሕሳብ ተቖጻጻሪ',
-  'role.maintenance': 'ጽገና',
   'role.tenant': 'ተኻራይ',
 
   'property.name': 'ስም ንብረት',

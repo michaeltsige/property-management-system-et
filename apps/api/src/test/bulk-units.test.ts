@@ -89,10 +89,10 @@ describe('bulk units', () => {
       .set(a.h)
       .send({ propertyId: a.propertyId, naming: { ...naming, count: 201 } })
       .expect(400);
-    const accountant = await createOrganizationFixture('accountant', 'accountant');
+    const noRole = await createOrganizationFixture('no-perm', 'tenant');
     await request(app)
       .post('/api/v1/units/bulk')
-      .set(authHeader(accountant))
+      .set(authHeader(noRole))
       .send({ propertyId: a.propertyId, naming })
       .expect(403);
     await request(app).post('/api/v1/units/bulk').send({ propertyId: a.propertyId, naming }).expect(401);

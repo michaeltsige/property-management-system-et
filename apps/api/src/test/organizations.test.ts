@@ -71,10 +71,10 @@ describe('organization profile', () => {
     });
     expect(audit.action).toBe('update');
 
-    const accountant = await createOrganizationFixture('profile-acct', 'accountant');
+    const manager = await createOrganizationFixture('profile-acct', 'manager');
     await request(app)
       .patch('/api/v1/organizations/profile')
-      .set(authHeader(accountant))
+      .set(authHeader(manager))
       .send({ name: 'Not allowed' })
       .expect(403);
     await request(app).patch('/api/v1/organizations/profile').send({ name: 'Anonymous' }).expect(401);

@@ -12,17 +12,17 @@ import { hashPassword } from '../lib/crypto.js';
 import { issueTokens } from '../services/auth.service.js';
 import { authHeader, createOrganizationFixture, type Fixture } from './helpers.js';
 
-/** Add an accountant member to an existing organization and return its header. */
-async function accountantIn(organizationId: string): Promise<Record<string, string>> {
+/** Add a tenant member to an existing organization and return its header. */
+async function tenantIn(organizationId: string): Promise<Record<string, string>> {
   const prisma = getPrisma();
-  const email = `acct-${Math.random().toString(36).slice(2, 10)}@test.local`;
+  const email = `tenant-${Math.random().toString(36).slice(2, 10)}@test.local`;
   const user = await prisma.user.create({
-    data: { email, fullName: 'Accountant', passwordHash: await hashPassword('TestPass123') },
+    data: { email, fullName: 'Demo Tenant', passwordHash: await hashPassword('TestPass123') },
   });
   await prisma.membership.create({
-    data: { organizationId, userId: user.id, role: 'accountant', status: 'active', acceptedAt: new Date() },
+    data: { organizationId, userId: user.id, role: 'tenant', status: 'active', acceptedAt: new Date() },
   });
-  const tokens = await issueTokens(user.id, organizationId, 'accountant', email, false);
+  const tokens = await issueTokens(user.id, organizationId, 'tenant', email, false);
   return { Authorization: `Bearer ${tokens.accessToken}` };
 }
 
@@ -81,17 +81,21 @@ describe('tenant ID documents', () => {
     expect(JSON.stringify(audit)).not.toContain(ID_NUMBER);
   });
 
-  it('refuses the reveal for roles without tenants.ids.read even inside the org', async () => {
-    // Accountants can read tenant records but never identity numbers.
-    const accountant = await accountantIn(owner.organizationId);
-    await request(app).get(`/api/v1/tenants/${tenantId}/id-documents`).set(accountant).expect(200);
+  it('refuses identity documents for tenants even inside the org', async () => {
+    // With three roles the read-but-cannot-reveal staff case is gone: managers
+    // hold tenants.ids.read, so the only in-org denial is the tenant role.
+    const tenantMember = await tenantIn(owner.organizationId);
+    await request(app)
+      .get(`/api/v1/tenants/${tenantId}/id-documents`)
+      .set(tenantMember)
+      .expect(403);
     await request(app)
       .get(`/api/v1/tenants/${tenantId}/id-documents/${documentId}`)
-      .set(accountant)
+      .set(tenantMember)
       .expect(403);
     await request(app)
       .post(`/api/v1/tenants/${tenantId}/id-documents/${documentId}/verification`)
-      .set(accountant)
+      .set(tenantMember)
       .send({ verified: true })
       .expect(403);
   });

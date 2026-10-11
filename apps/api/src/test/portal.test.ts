@@ -48,8 +48,8 @@ describe('tenant portal enrollment', () => {
   });
   it('requires tenants.write and organization scope', async () => {
     const f = await setupTenant();
-    const accountant = await createOrganizationFixture('accountant', 'accountant');
-    await request(app).post(`/api/v1/tenants/${f.tenantId}/portal`).set(authHeader(accountant)).expect(403);
+    const noRole = await createOrganizationFixture('no-perm', 'tenant');
+    await request(app).post(`/api/v1/tenants/${f.tenantId}/portal`).set(authHeader(noRole)).expect(403);
     const other = await createOrganizationFixture();
     await request(app).post(`/api/v1/tenants/${f.tenantId}/portal`).set(authHeader(other)).expect(400);
     await request(app).post(`/api/v1/tenants/${f.tenantId}/portal`).expect(401);

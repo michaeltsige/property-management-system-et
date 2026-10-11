@@ -168,7 +168,9 @@ organizationsRouter.patch(
         organizationId: organizationIdOf(req),
         actorUserId: req.auth?.userId ?? '',
         membershipId: pstr(req, 'membershipId'),
-        patch: { role: req.body.role as Role | undefined, status: req.body.status },
+        // Roles are fixed at invite time — the schema rejects role changes, so
+        // only status (suspend/restore) can be patched here.
+        patch: { status: req.body.status },
       });
       res.json({ membership });
     } catch (error) {

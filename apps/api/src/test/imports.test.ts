@@ -98,7 +98,7 @@ describe('portfolio CSV imports', () => {
         .expect(200);
       expect(r.body.imported).toBe(1);
     }
-    const f = await createOrganizationFixture('accountant', 'accountant');
+    const f = await createOrganizationFixture('no-perm', 'tenant');
     await request(app).post('/api/v1/imports/tenants').set(authHeader(f)).send({ csv }).expect(403);
     await request(app).post('/api/v1/imports/tenants').send({ csv }).expect(401);
     await request(app)

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { ROLES, roleHasPermission, type Role } from '@pms/shared';
+import { roleHasPermission, type Role } from '@pms/shared';
 
 import { api } from '@/lib/api';
 import { useAction, useAsync } from '@/lib/hooks';
@@ -20,7 +20,6 @@ import {
   EmptyState,
   Input,
   Label,
-  Select,
   Skeleton,
   Table,
   Td,
@@ -28,13 +27,15 @@ import {
 } from '@/components/ui';
 
 /**
- * The organization's people: invite staff, change roles, activate or disable
- * accounts. Every change is an audited membership update.
+ * The organization's people: invite staff, activate or disable accounts.
+ * Roles are fixed at creation — there are exactly three (owner/admin, property
+ * manager, tenant) and they are not transferable, so this screen has no role
+ * selector; a member's role is read-only context.
  */
 export default function TeamPage() {
   const { t, session } = usePreferences();
   const members = useAsync(() => api.members(), []);
-  const [invite, setInvite] = useState({ email: '', fullName: '', role: 'manager' });
+  const [invite, setInvite] = useState({ email: '', fullName: '' });
   const { pending, error, message, setMessage, run } = useAction();
   const canManage = roleHasPermission(session?.role as Role, 'users.manage');
 
@@ -45,17 +46,10 @@ export default function TeamPage() {
         templateKey: 'notification.invite_user',
         channel: 'in_app',
         recipientEmail: invite.email,
-        values: { email: invite.email, role: invite.role, name: invite.fullName },
+        values: { email: invite.email, role: 'manager', name: invite.fullName },
       });
       setMessage(t('user.invited', { email: invite.email }));
-      setInvite({ email: '', fullName: '', role: 'manager' });
-      members.reload();
-    }).catch(() => undefined);
-  }
-
-  async function changeRole(membershipId: string, role: string) {
-    await run(async () => {
-      await api.updateMembership(membershipId, { role });
+      setInvite({ email: '', fullName: '' });
       members.reload();
     }).catch(() => undefined);
   }
@@ -80,7 +74,7 @@ export default function TeamPage() {
             <CardTitle>{t('user.invite')}</CardTitle>
           </CardHeader>
           <CardContent>
-            <form className="grid gap-3 sm:grid-cols-3" onSubmit={sendInvite}>
+            <form className="grid gap-3 sm:grid-cols-2" onSubmit={sendInvite}>
               <div className="space-y-1">
                 <Label htmlFor="invite-email">{t('auth.email')}</Label>
                 <Input
@@ -99,21 +93,10 @@ export default function TeamPage() {
                   onChange={(event) => setInvite((current) => ({ ...current, fullName: event.target.value }))}
                 />
               </div>
-              <div className="space-y-1">
-                <Label htmlFor="invite-role">{t('user.role')}</Label>
-                <Select
-                  id="invite-role"
-                  value={invite.role}
-                  onChange={(event) => setInvite((current) => ({ ...current, role: event.target.value }))}
-                >
-                  {[...ROLES].map((role) => (
-                    <option key={role} value={role}>
-                      {t(`role.${role}` as never)}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="sm:col-span-3">
+              <p className="sm:col-span-2 text-xs text-slate-500">
+                {t('user.invite_hint')}
+              </p>
+              <div className="sm:col-span-2">
                 <Button type="submit" disabled={pending}>
                   {pending ? t('app.loading') : t('user.invite')}
                 </Button>
@@ -151,22 +134,9 @@ export default function TeamPage() {
                     <Td className="font-medium text-slate-900">{member.fullName}</Td>
                     <Td className="text-xs">{member.email}</Td>
                     <Td>
-                      {canManage ? (
-                        <Select
-                          aria-label={t('user.role')}
-                          className="h-8 w-36"
-                          value={member.role}
-                          onChange={(event) => void changeRole(member.id, event.target.value)}
-                        >
-                          {[...ROLES].map((role) => (
-                            <option key={role} value={role}>
-                              {t(`role.${role}` as never)}
-                            </option>
-                          ))}
-                        </Select>
-                      ) : (
-                        t(`role.${member.role}` as never)
-                      )}
+                      <Badge tone={member.role === 'owner_admin' ? 'brand' : 'neutral'}>
+                        {t(`role.${member.role}` as never)}
+                      </Badge>
                     </Td>
                     <Td>
                       <Badge tone={member.status === 'active' ? 'brand' : 'neutral'}>{member.status}</Badge>

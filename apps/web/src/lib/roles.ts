@@ -5,7 +5,7 @@
  * arrived without a role would otherwise see the raw key — `role.undefined` —
  * in the header and the drawer, which is how this file came to exist.
  */
-export const ROLE_KEYS = ['owner_admin', 'manager', 'accountant', 'maintenance', 'tenant'] as const;
+export const ROLE_KEYS = ['owner_admin', 'manager', 'tenant'] as const;
 
 export type RoleCode = (typeof ROLE_KEYS)[number];
 

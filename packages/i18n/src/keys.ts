@@ -283,11 +283,10 @@ export const EN_CATALOG = {
   'user.role': 'Role',
   'user.invite': 'Invite user',
   'user.invited': 'Invitation sent to {email}',
+  'user.invite_hint': 'Invited teammates join as property managers — roles are fixed once assigned.',
 
   'role.owner_admin': 'Owner / Admin',
   'role.manager': 'Property Manager',
-  'role.accountant': 'Accountant',
-  'role.maintenance': 'Maintenance',
   'role.tenant': 'Tenant',
 
   // --- properties, units, tenants, leases --------------------------------

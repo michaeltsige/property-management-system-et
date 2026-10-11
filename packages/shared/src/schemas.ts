@@ -25,7 +25,6 @@ import {
   PAYMENT_PROOF_STATUSES,
   PROPERTY_TYPES,
   RENT_DUE_DAY_MAX,
-  ROLES,
   TAX_RULE_CODES,
   UNIT_STATUSES,
   WORK_ORDER_PRIORITIES,
@@ -219,14 +218,20 @@ export const acceptInviteSchema = z
   .object({ token: z.string().min(20).max(200), password: passwordSchema })
   .strict();
 
+/**
+ * Invites are staff-only (tenants enroll themselves through the portal) and a
+ * member's role is fixed at invite time — there is no role-change surface.
+ * New staff default to `manager`; pass `owner_admin` explicitly to add a
+ * co-owner.
+ */
 export const inviteUserSchema = z.object({
   email: emailSchema,
-  role: z.enum(ROLES as unknown as [string, ...string[]]),
+  role: z.enum(['owner_admin', 'manager']).default('manager'),
   fullName: z.string().trim().min(2).max(120).optional(),
 });
 
+/** Membership updates can suspend or restore — never change a role. */
 export const updateMembershipSchema = z.object({
-  role: z.enum(ROLES as unknown as [string, ...string[]]).optional(),
   status: z.enum(['active', 'disabled']).optional(),
 });
 

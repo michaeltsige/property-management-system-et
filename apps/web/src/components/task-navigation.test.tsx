@@ -96,7 +96,10 @@ describe('task panel', () => {
     expect(api.charges).toHaveBeenCalledWith('?status=overdue&pageSize=1');
   });
   it('never asks for money data without charges.read', () => {
-    context.role = 'maintenance';
+    // A session without a known role has no permissions at all (the guard in
+    // roleHasPermission) — with three roles every real role can read charges,
+    // so the guard is exercised with a malformed role value.
+    context.role = 'unknown' as never;
     vi.mocked(api.workOrders).mockResolvedValue({
       items: [],
       total: 1,
@@ -106,7 +109,7 @@ describe('task panel', () => {
     render(<TaskPanel />);
     expect(api.charges).not.toHaveBeenCalled();
     expect(api.arrears).not.toHaveBeenCalled();
-    expect(roleHasPermission('maintenance', 'charges.read')).toBe(false);
+    expect(roleHasPermission('unknown' as never, 'charges.read')).toBe(false);
   });
 });
 

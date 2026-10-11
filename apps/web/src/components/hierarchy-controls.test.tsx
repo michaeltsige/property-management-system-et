@@ -139,8 +139,10 @@ describe('hierarchy controls', () => {
       expect(api.createProperty).toHaveBeenCalledWith(expect.objectContaining({ ownerId: 'o1' })),
     );
   });
-  it('does not offer write actions to accountants', async () => {
-    context.role = 'accountant';
+  it('does not offer write actions without properties.write', async () => {
+    // With three roles, the tenant role reads nothing here either — the page
+    // renders from mocked data and the write affordances stay disabled.
+    context.role = 'tenant';
     render(<PropertiesPage />);
     await screen.findByText('Demo property');
     expect(screen.getByRole('button', { name: 'Create' })).toBeDisabled();

@@ -16,14 +16,19 @@
 // Roles and access
 // ---------------------------------------------------------------------------
 
-export const ROLES = ['owner_admin', 'manager', 'accountant', 'maintenance', 'tenant'] as const;
+export const ROLES = ['owner_admin', 'manager', 'tenant'] as const;
 export type Role = (typeof ROLES)[number];
 
+/**
+ * Exactly three roles (owner decision): the owner/admin who runs the
+ * organization, the property managers they invite, and the tenants who use the
+ * portal. Roles are not transferable — a tenant can never become staff and
+ * vice versa — so the product has no role-change surface; a member's role is
+ * fixed when their account is created.
+ */
 export const ROLE_LABELS: Record<Role, string> = {
   owner_admin: 'Owner / Admin',
   manager: 'Property Manager',
-  accountant: 'Accountant',
-  maintenance: 'Maintenance',
   tenant: 'Tenant',
 };
 

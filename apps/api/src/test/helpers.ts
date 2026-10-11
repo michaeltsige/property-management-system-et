@@ -29,7 +29,7 @@ export interface Fixture {
 
 export async function createOrganizationFixture(
   label = 'org',
-  role: 'owner_admin' | 'manager' | 'accountant' | 'maintenance' | 'tenant' = 'owner_admin',
+  role: 'owner_admin' | 'manager' | 'tenant' = 'owner_admin',
 ): Promise<Fixture> {
   const prisma = getPrisma();
   const passwordHash = await hashPassword(TEST_PASSWORD);

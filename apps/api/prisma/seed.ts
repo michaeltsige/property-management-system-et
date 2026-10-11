@@ -168,11 +168,12 @@ async function main(): Promise<void> {
     },
   });
 
+  // Three roles only (owner decision): the owner/admin and the property
+  // managers they invite on the staff side; tenants enroll via the portal.
   const staff = [
     { email: 'owner@demo.test', fullName: 'Demo Owner', role: 'owner_admin' },
     { email: 'manager@demo.test', fullName: 'Demo Manager', role: 'manager' },
-    { email: 'accountant@demo.test', fullName: 'Demo Accountant', role: 'accountant' },
-    { email: 'maintenance@demo.test', fullName: 'Demo Technician', role: 'maintenance' },
+    { email: 'ops@demo.test', fullName: 'Demo Operations Manager', role: 'manager' },
   ];
 
   for (const person of staff) {
@@ -1044,7 +1045,7 @@ async function main(): Promise<void> {
       '',
       'Demo seed complete — a living, 13-period portfolio.',
       `  Organization : ${organization.name} (slug: ${DEMO_SLUG})`,
-      `  Sign in with : owner@demo.test / ${DEMO_PASSWORD}  (also manager@, accountant@, maintenance@)`,
+      `  Sign in with : owner@demo.test / ${DEMO_PASSWORD}  (also manager@, ops@)`,
       '  Tenant portal: all 14 demo tenants are enrolled — any of these phones',
       `                 works at /portal/login: ${tenants.map((tenant) => tenant.phone).join(', ')}`,
       '                 (no password: the one-time code is printed in the [worker] log)',

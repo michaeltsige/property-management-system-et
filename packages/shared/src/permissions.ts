@@ -67,24 +67,15 @@ export const PERMISSIONS = [
 
 export type Permission = (typeof PERMISSIONS)[number];
 
-const READ_ONLY_PORTFOLIO: readonly Permission[] = [
-  'org.read',
-  'properties.read',
-  'units.read',
-  'leases.read',
-  'charges.read',
-  'payments.read',
-  'maintenance.read',
-  'documents.read',
-];
-
 /**
  * Role -> permissions.
  *
- * `owner_admin` deliberately receives every permission; `maintenance` sees
- * property/unit context but no financial data (they need to know where to go,
- * not what the rent is); `tenant` only reaches the portal surface and their own
- * records, which the API additionally filters by tenancy.
+ * `owner_admin` deliberately receives every permission. The manager is the
+ * owner's operational right hand and inherits the full money desk (waive,
+ * reconcile, refund, reverse) — the former accountant role was folded into it
+ * when the role model was reduced to three roles. `tenant` only reaches the
+ * portal surface and their own records, which the API additionally filters by
+ * tenancy.
  */
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   owner_admin: PERMISSIONS,
@@ -107,8 +98,12 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'leases.approve',
     'charges.read',
     'charges.write',
+    'charges.waive',
     'payments.read',
     'payments.record',
+    'payments.reconcile',
+    'payments.refund',
+    'payments.reverse',
     'ledger.read',
     'reports.read',
     'reports.export',
@@ -122,38 +117,6 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'notifications.read',
     'notifications.send',
     'audit.read',
-  ],
-  accountant: [
-    'owners.read',
-    'org.read',
-    ...READ_ONLY_PORTFOLIO.filter((p) => p !== 'documents.read' && p !== 'maintenance.read'),
-    'leases.read',
-    'charges.write',
-    'charges.waive',
-    'payments.record',
-    'payments.reconcile',
-    'payments.refund',
-    'payments.reverse',
-    'ledger.read',
-    'reports.read',
-    'reports.export',
-    'documents.read',
-    'documents.write',
-    'notifications.read',
-    'tenants.read',
-    'audit.read',
-  ],
-  maintenance: [
-    'org.read',
-    'properties.read',
-    'units.read',
-    'maintenance.read',
-    'maintenance.write',
-    'vendors.read',
-    'documents.read',
-    'documents.write',
-    'notifications.read',
-    'tenants.read',
   ],
   tenant: [
     'org.read',
@@ -180,4 +143,4 @@ export function isRole(value: string): value is Role {
 }
 
 /** Permissions that only make sense for staff working inside an organization. */
-export const STAFF_ROLES: readonly Role[] = ['owner_admin', 'manager', 'accountant', 'maintenance'];
+export const STAFF_ROLES: readonly Role[] = ['owner_admin', 'manager'];

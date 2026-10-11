@@ -279,11 +279,10 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'user.role': 'Gahee',
   'user.invite': 'Fayyadamaa affeeri',
   'user.invited': 'Affeerraan gara {email} ergameera',
+  'user.invite_hint': 'Waamatoonni haaraa akka bulchaa qabeenyaatti seenu — gahee yeroo tokkotti murtaa2019a.',
 
   'role.owner_admin': 'Abbaa qabeenyaa / Bulchaa',
   'role.manager': 'Bulchaa qabeenyaa',
-  'role.accountant': 'Herregaa',
-  'role.maintenance': 'Suphaa',
   'role.tenant': 'Kireeffamaa',
 
   'property.name': 'Maqaa qabeenyaa',

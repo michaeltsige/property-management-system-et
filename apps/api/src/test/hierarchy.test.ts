@@ -204,7 +204,7 @@ describe('owner hierarchy', () => {
 
   it('enforces role checks and authentication', async () => {
     await request(app).get('/api/v1/owners').expect(401);
-    for (const role of ['tenant', 'maintenance', 'accountant'] as const) {
+    for (const role of ['tenant'] as const) {
       const f = await createOrganizationFixture(role, role);
       await request(app)
         .post('/api/v1/owners')
