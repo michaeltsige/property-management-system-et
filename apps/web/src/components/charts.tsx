@@ -63,8 +63,8 @@ export function EChart({
   const chart = useRef<echarts.ECharts | null>(null);
 
   // ECharts draws text on a canvas, which never inherits the CSS font stack:
-  // read the composed family from the container (Poppins via --font-poppins on
-  // <body>) and set it as the global ECharts default. Per-element styles keep
+  // read the composed family from the container (Plus Jakarta Sans via
+  // --font-sans on <body>) and set it as the global ECharts default.
   // their own sizes/colors and inherit this family.
   const fontAwareOption = (next: EChartsOption): EChartsOption => {
     const el = container.current;
@@ -80,7 +80,7 @@ export function EChart({
     const observer = new ResizeObserver(() => chart.current?.resize());
     observer.observe(container.current);
     // Web fonts land after first paint; redraw once they do, so canvas text is
-    // measured with Poppins rather than the fallback it was laid out with.
+    // measured with the web font rather than the fallback it was laid out with.
     document.fonts?.ready
       .then(() => {
         if (chart.current && container.current) {

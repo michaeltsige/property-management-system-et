@@ -49,11 +49,12 @@
   --color-ink-800: #1a2d25;
   --color-ink-700: #243a30;
 
-  /* Poppins first (loaded by next/font as --font-poppins): it has no Ge'ez
+  /* Plus Jakarta Sans first (loaded by next/font as --font-jakarta) — the
+     owner's pick from the typeface trial, now the one UI face. It has no Ge'ez
      glyphs, so Ethiopic text falls through to Noto Sans Ethiopic. */
   --font-sans:
-    var(--font-poppins), 'Poppins', 'Noto Sans Ethiopic', ui-sans-serif, system-ui, -apple-system,
-    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    var(--font-jakarta), 'Plus Jakarta Sans', 'Noto Sans Ethiopic', ui-sans-serif, system-ui,
+    -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -64,6 +65,27 @@ body {
 
 body {
   @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/*
+ * Typographic hierarchy (researched: Material type scale, design-system
+ * guides): one family, one modular scale; headings carry tighter tracking and
+ * leading so large text reads calmer; body copy stays 1.5 line-height; four
+ * weights total (400 regular, 500 medium labels/buttons, 600 semibold card &
+ * table headers, 700/800 page titles and hero figures). Paragraph spacing is
+ * at least 2x the body size — the spacing scale already guarantees that at
+ * space-y-3 and up for 14px text.
+ */
+h1,
+h2,
+h3,
+h4 {
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 /* The one place brand color appears as a surface: text selection. */

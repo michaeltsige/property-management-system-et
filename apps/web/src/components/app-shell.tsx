@@ -71,8 +71,6 @@ interface NavItem {
   href: string;
   labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
-  /** Typeface trial: a one-off family for the portfolio entries (owner picks). */
-  style?: React.CSSProperties;
 }
 
 const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
@@ -82,34 +80,11 @@ const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
   },
   {
     labelKey: 'nav.group.portfolio',
-    // Typeface trial (owner request): each entry renders in one candidate
-    // family — Plus Jakarta Sans, Lexend, Inter, DM Sans — so the winner can
-    // be picked from the rail itself. Remove the `style` when decided.
     items: [
-      {
-        href: '/properties',
-        labelKey: 'nav.properties',
-        icon: Building3,
-        style: { fontFamily: 'var(--font-jakarta), var(--font-poppins), sans-serif' },
-      },
-      {
-        href: '/units',
-        labelKey: 'nav.units',
-        icon: Home2,
-        style: { fontFamily: 'var(--font-lexend), var(--font-poppins), sans-serif' },
-      },
-      {
-        href: '/tenants',
-        labelKey: 'nav.tenants',
-        icon: Profile2User,
-        style: { fontFamily: 'var(--font-inter), var(--font-poppins), sans-serif' },
-      },
-      {
-        href: '/leases',
-        labelKey: 'nav.leases',
-        icon: Calendar2,
-        style: { fontFamily: 'var(--font-dm-sans), var(--font-poppins), sans-serif' },
-      },
+      { href: '/properties', labelKey: 'nav.properties', icon: Building3 },
+      { href: '/units', labelKey: 'nav.units', icon: Home2 },
+      { href: '/tenants', labelKey: 'nav.tenants', icon: Profile2User },
+      { href: '/leases', labelKey: 'nav.leases', icon: Calendar2 },
     ],
   },
   {
@@ -185,9 +160,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                     )}
                   >
                     <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-white' : 'text-slate-400')} />
-                    <span className="truncate" style={item.style}>
-                      {t(item.labelKey as never)}
-                    </span>
+                    <span className="truncate">{t(item.labelKey as never)}</span>
                   </Link>
                 </li>
               );
