@@ -18,7 +18,14 @@ import { PrismaClient } from '@prisma/client';
 import { enrollTenantPortal } from '../src/services/portal.js';
 import { postLedgerEntry } from '../src/services/ledger.js';
 
-import { periodForDate, shiftPeriod, utcDateToCivil } from '@pms/calendar';
+import {
+  civilToUtcDate,
+  parsePeriodKey,
+  periodForDate,
+  periodStart,
+  shiftPeriod,
+  utcDateToCivil,
+} from '@pms/calendar';
 import { DEFAULT_ORG_SETTINGS, ETHIOPIAN_REGIONS, UNVERIFIED_TAX_DEFAULTS } from '@pms/shared';
 
 import { encryptField, lastFour, hashPassword } from '../src/lib/crypto.js';
@@ -425,7 +432,7 @@ async function main(): Promise<void> {
   const currentPeriod = periodForDate(ethiopianToday);
   const periodKeyOf = (shift: number) => shiftPeriod(currentPeriod, shift).key;
   const periodStartUtc = (shift: number) =>
-    new Date(`${periodKeyOf(shift)}-01T00:00:00.000Z`);
+    civilToUtcDate(periodStart(parsePeriodKey(periodKeyOf(shift), 'ethiopian')));
   const BACKFILL_SHIFT = -12; // thirteen periods of history, current included
 
   type LeaseSeed = {
