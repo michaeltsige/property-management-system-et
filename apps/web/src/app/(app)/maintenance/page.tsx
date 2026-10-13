@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-import { WORK_ORDER_STATUSES } from '@pms/shared';
+import { WORK_ORDER_STATUSES, roleHasPermission, type Role } from '@pms/shared';
 
 import { api } from '@/lib/api';
 import { formatAmount, formatDate, statusTone } from '@/lib/format';
@@ -12,6 +12,7 @@ import { usePropertyContext } from '@/lib/property-context';
 import { cn } from '@/lib/utils';
 
 import { PageHeader } from '@/components/app-shell';
+import { MoneyInput } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
 import {
   Alert,
@@ -20,6 +21,7 @@ import {
   Card,
   CardContent,
   EmptyState,
+  Input,
   Label,
   Select,
   Skeleton,
@@ -40,14 +42,16 @@ import {
  * tenants never see.
  */
 export default function MaintenancePage() {
-  const { t, language, calendar } = usePreferences();
+  const { t, language, calendar, session } = usePreferences();
+  // The owner decides people and money; managers progress the work and estimate.
+  const canDecide = roleHasPermission((session?.role ?? 'tenant') as Role, 'maintenance.assign');
   const [status, setStatus] = useState('');
   // The sidebar property scope: work orders carry their property directly.
   const [propertyContext] = usePropertyContext();
   const board = useAsync(() => api.workOrders(`?pageSize=100${status ? `&status=${status}` : ''}`), [status]);
   const vendors = useAsync(() => api.vendors(), []);
-  const [vendorFor, setVendorFor] = useState<string | null>(null);
-  const [vendorId, setVendorId] = useState('');
+  const [assignFor, setAssignFor] = useState<string | null>(null);
+  const [maintainerName, setMaintainerName] = useState('');
   const { pending, error, run } = useAction();
 
   // Detail drawer state: which request is open, plus a version bump so adding
@@ -62,15 +66,37 @@ export default function MaintenancePage() {
   const [noteInternal, setNoteInternal] = useState(false);
   const [closeFor, setCloseFor] = useState<{ id: string; status: 'completed' | 'cancelled' } | null>(null);
   const [closingNote, setClosingNote] = useState('');
+  const [closingCost, setClosingCost] = useState<number | null>(null);
+  const [estimate, setEstimate] = useState<number | null>(null);
+  // Follow the stored estimate so reopening (or saving) shows the real value
+  // and clearing it sticks.
+  useEffect(() => {
+    const stored = detail.data?.workOrder.estimatedCostMinor;
+    setEstimate(stored ? Number(stored) : null);
+  }, [detail.data]);
 
-  async function advance(id: string, nextStatus: string, nextVendorId?: string) {
+  async function advance(id: string, nextStatus: string, nextMaintainer?: string) {
     await run(async () => {
       await api.updateWorkOrder(id, {
         status: nextStatus,
-        ...(nextVendorId ? { vendorId: nextVendorId } : {}),
+        ...(nextMaintainer ? { maintainerName: nextMaintainer } : {}),
       });
-      setVendorFor(null);
+      setAssignFor(null);
+      setMaintainerName('');
       board.reload();
+    }).catch(() => undefined);
+  }
+
+  async function saveEstimate() {
+    if (!detailFor) return;
+    const order = detail.data?.workOrder;
+    if (!order) return;
+    await run(async () => {
+      await api.updateWorkOrder(detailFor, {
+        estimatedCost:
+          estimate === null ? null : { amountMinor: estimate, currency: order.currency },
+      });
+      setDetailVersion((version) => version + 1);
     }).catch(() => undefined);
   }
 
@@ -87,13 +113,19 @@ export default function MaintenancePage() {
 
   async function closeOrder() {
     if (!closeFor) return;
+    const order = detail.data?.workOrder;
     await run(async () => {
       await api.updateWorkOrder(closeFor.id, {
         status: closeFor.status,
         resolutionNotes: closingNote.trim(),
+        // Owner-only server-side; only sent when the owner filed an amount.
+        ...(canDecide && closingCost !== null && order
+          ? { actualCost: { amountMinor: closingCost, currency: order.currency } }
+          : {}),
       });
       setCloseFor(null);
       setClosingNote('');
+      setClosingCost(null);
       setDetailFor(null);
       board.reload();
     }).catch(() => undefined);
@@ -154,7 +186,7 @@ export default function MaintenancePage() {
                   <Th>{t('nav.properties')}</Th>
                   <Th>{t('maintenance.reported_by')}</Th>
                   <Th>{t('maintenance.priority')}</Th>
-                  <Th>{t('maintenance.assign_vendor')}</Th>
+                  <Th>{t('maintenance.maintainer')}</Th>
                   <Th>{t('money.amount')}</Th>
                   <Th>{t('unit.status')}</Th>
                   <Th />
@@ -194,7 +226,7 @@ export default function MaintenancePage() {
                         {t(`work_order.priority.${row.priority}` as never)}
                       </Badge>
                     </Td>
-                    <Td>{row.vendor?.name ?? '—'}</Td>
+                    <Td>{row.maintainerName ?? row.vendor?.name ?? '—'}</Td>
                     <Td className="tabular">
                       {(row.actualCostMinor ?? row.estimatedCostMinor)
                         ? formatAmount(
@@ -211,9 +243,16 @@ export default function MaintenancePage() {
                     </Td>
                     <Td className="whitespace-nowrap">
                       <span onClick={(event) => event.stopPropagation()}>
-                        {row.status === 'open' ? (
-                          <Button variant="ghost" size="sm" onClick={() => setVendorFor(row.id)}>
-                            {t('maintenance.assign_vendor')}
+                        {row.status === 'open' && canDecide ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setMaintainerName('');
+                              setAssignFor(row.id);
+                            }}
+                          >
+                            {t('maintenance.assign_maintainer')}
                           </Button>
                         ) : null}
                         {row.status === 'assigned' ? (
@@ -259,17 +298,17 @@ export default function MaintenancePage() {
       </Card>
 
       <Modal
-        open={vendorFor !== null}
-        onOpenChange={(value) => (value ? undefined : setVendorFor(null))}
-        title={t('maintenance.assign_vendor')}
+        open={assignFor !== null}
+        onOpenChange={(value) => (value ? undefined : setAssignFor(null))}
+        title={t('maintenance.assign_maintainer')}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setVendorFor(null)}>
+            <Button variant="secondary" onClick={() => setAssignFor(null)}>
               {t('common.cancel')}
             </Button>
             <Button
-              disabled={pending || !vendorId}
-              onClick={() => vendorFor && void advance(vendorFor, 'assigned', vendorId)}
+              disabled={pending || maintainerName.trim().length === 0}
+              onClick={() => assignFor && void advance(assignFor, 'assigned', maintainerName.trim())}
             >
               {pending ? t('app.loading') : t('common.save')}
             </Button>
@@ -277,21 +316,22 @@ export default function MaintenancePage() {
         }
       >
         <div className="space-y-2">
-          <Label htmlFor="vendorId">{t('maintenance.assign_vendor')}</Label>
-          <Select id="vendorId" value={vendorId} onChange={(event) => setVendorId(event.target.value)}>
-            <option value="">{t('common.select')}</option>
-            {vendors.data?.vendors.map((vendor) => (
-              <option key={vendor.id} value={vendor.id}>
-                {vendor.name}
-                {vendor.category ? ` · ${vendor.category}` : ''}
-              </option>
+          <Label htmlFor="maintainerName">{t('maintenance.maintainer')}</Label>
+          {/* Free text, suggestions only: a person, a company, whoever shows up. */}
+          <Input
+            id="maintainerName"
+            list="maintainer-options"
+            value={maintainerName}
+            onChange={(event) => setMaintainerName(event.target.value)}
+            placeholder={t('maintenance.maintainer_hint')}
+            autoComplete="off"
+          />
+          <datalist id="maintainer-options">
+            {(vendors.data?.vendors ?? []).map((vendor) => (
+              <option key={vendor.id} value={vendor.name} />
             ))}
-          </Select>
-          {(vendors.data?.vendors.length ?? 0) === 0 ? (
-            <p className="text-xs text-slate-500">
-              No vendors yet — add a plumber or electrician from the API (`POST /vendors`) or the mobile app.
-            </p>
-          ) : null}
+          </datalist>
+          <p className="text-xs text-slate-500">{t('maintenance.maintainer_hint')}</p>
           {error ? <Alert tone="danger">{error}</Alert> : null}
         </div>
       </Modal>
@@ -310,14 +350,15 @@ export default function MaintenancePage() {
         footer={
           order ? (
             <>
-              {order.status === 'open' ? (
+              {order.status === 'open' && canDecide ? (
                 <Button
                   variant="secondary"
                   onClick={() => {
-                    setVendorFor(order.id);
+                    setMaintainerName(order.maintainerName ?? '');
+                    setAssignFor(order.id);
                   }}
                 >
-                  {t('maintenance.assign_vendor')}
+                  {t('maintenance.assign_maintainer')}
                 </Button>
               ) : null}
               {order.status === 'assigned' ? (
@@ -371,7 +412,26 @@ export default function MaintenancePage() {
               <span className="font-medium text-slate-700">{t('maintenance.reported_by')}:</span>{' '}
               {order.tenant?.fullName ?? t('common.none')}
               {order.tenant?.phone ? ` · ${order.tenant.phone}` : ''}
+              <span className="mx-2 text-slate-300">|</span>
+              <span className="font-medium text-slate-700">{t('maintenance.maintainer')}:</span>{' '}
+              {order.maintainerName ?? order.vendor?.name ?? t('common.none')}
             </div>
+
+            {!['completed', 'cancelled'].includes(order.status) ? (
+              <div className="rounded-lg border border-slate-200 px-3 py-3">
+                <MoneyInput
+                  label={t('maintenance.estimate')}
+                  value={estimate}
+                  onChange={setEstimate}
+                />
+                <div className="mt-2 flex items-center justify-between gap-3">
+                  <p className="text-[11px] text-slate-500">{t('maintenance.estimate_hint')}</p>
+                  <Button size="sm" variant="secondary" disabled={pending} onClick={() => void saveEstimate()}>
+                    {t('common.save')}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
 
             {order.description ? (
               <p className="whitespace-pre-wrap text-sm text-slate-700">{order.description}</p>
@@ -467,6 +527,16 @@ export default function MaintenancePage() {
             onChange={(event) => setClosingNote(event.target.value)}
           />
           <p className="text-xs text-slate-500">{t('maintenance.closing_note_hint')}</p>
+          {canDecide && closeFor?.status === 'completed' ? (
+            <div className="rounded-lg border border-slate-200 px-3 py-3">
+              <MoneyInput
+                label={t('maintenance.closing_cost')}
+                value={closingCost}
+                onChange={setClosingCost}
+              />
+              <p className="mt-1 text-[11px] text-slate-500">{t('maintenance.closing_cost_hint')}</p>
+            </div>
+          ) : null}
           {error ? <Alert tone="danger">{error}</Alert> : null}
         </div>
       </Modal>

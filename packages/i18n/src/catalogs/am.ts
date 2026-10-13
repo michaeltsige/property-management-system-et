@@ -421,6 +421,13 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'maintenance.cancel_request': 'ጥያቄውን ሰርዝ',
   'maintenance.closing_note': 'የመዝጊያ ማስታወሻ',
   'maintenance.closing_note_hint': 'ተከራዩ ይህን ማስታወሻ ያያል — የተሰራውን ይግለጹ።',
+  'maintenance.maintainer': 'ጠባቂ አዋቂ አገልጋይ',
+  'maintenance.assign_maintainer': 'አገልጋይ ይመድቡ',
+  'maintenance.maintainer_hint': 'ስሙን ይጻፉ — ሰው ወይም ኩባንያ ሊሆን ይችላል። የቻለመሳሰል ጠቆር ከአቅራቢዎችዎ ይመጣል።',
+  'maintenance.estimate': 'ግምታዊ ወጪ',
+  'maintenance.estimate_hint': 'አስተዳዳሪ ወጪውን ከመጀመሩ በፊት ሊገመት ይችላል፤ ባለቤቱ ሲያጠናቅቅ የተከናወነውን እውነተኛ ወጪ ይመዘግባል።',
+  'maintenance.closing_cost': 'የመዝጊያ ወጪ',
+  'maintenance.closing_cost_hint': 'የባለቤት ብቻ፡ ስራው የወጣው እውነተኛ ወጪ። ከተቀመጠ በኋላ በጥያቄው ላይ ይታያል።',
   'maintenance.details': 'የጥያቄ ዝርዝር',
 
   'work_order.status.open': 'ክፍት',

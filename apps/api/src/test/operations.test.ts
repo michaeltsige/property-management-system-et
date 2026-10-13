@@ -17,6 +17,7 @@ import { getPrisma } from '../lib/prisma.js';
 import { generateCharges } from '../services/charges.js';
 import { recordPayment } from '../services/payments.js';
 import { authHeader, createOrganizationFixture, createPortfolio } from './helpers.js';
+import { issueTokens } from '../services/auth.service.js';
 
 const app = createApp();
 const etStart = civilToUtcDate({ year: 2015, month: 1, day: 1, calendar: 'ethiopian' });
@@ -130,6 +131,87 @@ describe('maintenance work orders', () => {
       where: { organizationId: fixture.organizationId, entityType: 'WorkOrder' },
     });
     expect(audits.map((entry) => entry.action)).toEqual(['create', 'update', 'update', 'update']);
+  });
+
+  it('keeps people and money owner-only: managers estimate, owners assign and close with cost', async () => {
+    const { headers, prisma, portfolio, property, fixture } = await staffedOrganization('wo-roles');
+
+    // A manager in the same organization, with their own session.
+    const manager = await prisma.user.create({
+      data: {
+        email: `manager-${fixture.organizationId}@test.local`,
+        fullName: 'Manager Role',
+        passwordHash: 'x',
+      },
+    });
+    await prisma.membership.create({
+      data: { organizationId: fixture.organizationId, userId: manager.id, role: 'manager', status: 'active' },
+    });
+    const managerTokens = await issueTokens(manager.id, fixture.organizationId, 'manager', manager.email, false);
+    const managerHeader = { Authorization: `Bearer ${managerTokens.accessToken}` };
+
+    const created = await request(app)
+      .post('/api/v1/work-orders')
+      .set(headers)
+      .send({ propertyId: property.id, title: 'Bedroom window will not lock', priority: 'normal' })
+      .expect(201);
+    const workOrderId = created.body.workOrder.id as string;
+
+    // Manager prices the work: allowed.
+    await request(app)
+      .patch(`/api/v1/work-orders/${workOrderId}`)
+      .set(managerHeader)
+      .send({ estimatedCost: { amountMinor: 300_000, currency: 'ETB' } })
+      .expect(200);
+
+    // Manager cannot assign a maintainer...
+    await request(app)
+      .patch(`/api/v1/work-orders/${workOrderId}`)
+      .set(managerHeader)
+      .send({ maintainerName: 'Abebe the carpenter' })
+      .expect(403);
+    // ...cannot pick a vendor...
+    const vendor = await request(app)
+      .post('/api/v1/vendors')
+      .set(headers)
+      .send({ name: 'Bole Carpentry' })
+      .expect(201);
+    await request(app)
+      .patch(`/api/v1/work-orders/${workOrderId}`)
+      .set(managerHeader)
+      .send({ vendorId: vendor.body.vendor.id })
+      .expect(403);
+    // ...and cannot record closing money.
+    await request(app)
+      .patch(`/api/v1/work-orders/${workOrderId}`)
+      .set(managerHeader)
+      .send({ status: 'completed', resolutionNotes: 'Lock fixed and tested.', actualCost: { amountMinor: 100, currency: 'ETB' } })
+      .expect(403);
+
+    // The owner does all three.
+    await request(app)
+      .patch(`/api/v1/work-orders/${workOrderId}`)
+      .set(headers)
+      .send({ maintainerName: 'Abebe the carpenter' })
+      .expect(200);
+    await request(app)
+      .patch(`/api/v1/work-orders/${workOrderId}`)
+      .set(headers)
+      .send({ status: 'in_progress' })
+      .expect(200);
+    const done = await request(app)
+      .patch(`/api/v1/work-orders/${workOrderId}`)
+      .set(headers)
+      .send({
+        status: 'completed',
+        resolutionNotes: 'Lock replaced with a new cylinder.',
+        actualCost: { amountMinor: 420_000, currency: 'ETB' },
+      })
+      .expect(200);
+    expect(done.body.workOrder.maintainerName).toBe('Abebe the carpenter');
+    expect(done.body.workOrder.actualCostMinor).toBe('420000');
+    expect(done.body.workOrder.estimatedCostMinor).toBe('300000');
+    expect(portfolio.leaseId).toBeDefined(); // portfolio untouched by this flow
   });
 
   it('refuses work orders and vendors from another organization', async () => {

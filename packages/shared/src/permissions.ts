@@ -109,7 +109,8 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'reports.export',
     'maintenance.read',
     'maintenance.write',
-    'maintenance.assign',
+    // `maintenance.assign` (who works on it + the closing cost) is owner-only:
+    // managers estimate and progress the work, but do not decide money or people.
     'vendors.read',
     'vendors.write',
     'documents.read',

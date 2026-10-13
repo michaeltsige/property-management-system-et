@@ -587,6 +587,9 @@ model WorkOrder {
   unitId         String?   @db.Uuid
   tenantId       String?   @db.Uuid
   vendorId       String?   @db.Uuid
+  // Free-text maintainer (plumber, electrician, "Abebe") — vendors remain
+  // an optional directory; the person who actually did the work is free text.
+  maintainerName String?
   ticketNumber   String?
   title          String
   description    String?

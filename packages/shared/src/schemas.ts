@@ -531,6 +531,8 @@ export const createWorkOrderSchema = z.object({
   title: z.string().trim().min(3).max(160),
   description: z.string().trim().max(4000).optional(),
   category: z.string().trim().max(60).optional(),
+  /** Free-text maintainer at creation (owner-only, route-enforced). */
+  maintainerName: z.string().trim().min(1).max(120).optional(),
   priority: z.enum(WORK_ORDER_PRIORITIES).default('normal'),
   scheduledFor: z.string().datetime({ offset: true }).optional(),
   vendorId: uuidSchema.optional(),
@@ -606,8 +608,13 @@ export const updateWorkOrderSchema = z.object({
   priority: z.enum(WORK_ORDER_PRIORITIES).optional(),
   status: z.enum(WORK_ORDER_STATUSES).optional(),
   vendorId: uuidSchema.nullish(),
+  /** Free-text maintainer; the owner decides who works on a request. */
+  maintainerName: z.string().trim().min(1).max(120).nullish(),
+  /** A manager may price the work before it is done (an estimate). */
+  estimatedCost: moneySchema.nullish(),
   scheduledFor: z.string().datetime({ offset: true }).nullish(),
   completedAt: z.string().datetime({ offset: true }).nullish(),
+  /** Owner-only: the money actually spent, set when closing. */
   actualCost: moneySchema.nullish(),
   resolutionNotes: z.string().max(2000).optional(),
 });

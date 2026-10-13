@@ -178,6 +178,8 @@ export interface WorkOrder {
   completedAt: string | null;
   estimatedCostMinor: string | null;
   actualCostMinor: string | null;
+  /** Free text — who actually does/did the work. */
+  maintainerName: string | null;
   currency: string;
   property?: { id: string; name: string };
   unit?: { id: string; label: string } | null;

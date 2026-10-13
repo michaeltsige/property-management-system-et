@@ -15,15 +15,17 @@ import {
   createWorkOrderSchema,
   documentListQuerySchema,
   documentUploadSchema,
+  roleHasPermission,
   sendNotificationSchema,
   updateVendorSchema,
   updateWorkOrderSchema,
   uuidSchema,
   workOrderNoteSchema,
+  type Role,
 } from '@pms/shared';
 
 import { getPrisma } from '../lib/prisma.js';
-import { badRequest, conflict, notFound } from '../lib/errors.js';
+import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
 import { num, pstr, str } from '../lib/query.js';
 import { organizationIdOf } from '../middleware/context.js';
 import { requirePermission } from '../middleware/rbac.js';
@@ -143,6 +145,14 @@ export async function nextTicketNumber(organizationId: string, when: Date): Prom
   throw conflict('Could not allocate a work-order ticket number');
 }
 
+/** Owner-only decisions on a work order: who is assigned and the money spent. */
+function assertCanDecideAssignment(req: { auth?: { role?: string } | null }): void {
+  const role = (req.auth?.role ?? 'tenant') as Role;
+  if (!roleHasPermission(role, 'maintenance.assign')) {
+    throw forbidden('Only the owner can assign a maintainer or set the closing cost');
+  }
+}
+
 operationsRouter.post(
   '/work-orders',
   requirePermission('maintenance.write'),
@@ -174,6 +184,8 @@ operationsRouter.post(
         const vendor = await prisma.vendor.findFirst({ where: { id: vendorId, organizationId } });
         if (!vendor) throw notFound('Vendor not found in this organization');
       }
+      const maintainerName = req.body.maintainerName ?? null;
+      if (maintainerName || vendorId) assertCanDecideAssignment(req);
 
       const ticketNumber = await nextTicketNumber(organizationId, new Date());
 
@@ -185,6 +197,7 @@ operationsRouter.post(
             unitId,
             tenantId,
             vendorId,
+            maintainerName,
             ticketNumber,
             title: req.body.title,
             description: req.body.description ?? null,
@@ -305,6 +318,16 @@ operationsRouter.patch(
         if (!vendor) throw notFound('Vendor not found in this organization');
       }
 
+      // Assigning a person or recording closing money is an owner decision;
+      // managers progress the work and may estimate it, nothing more.
+      if (
+        req.body.vendorId !== undefined ||
+        req.body.maintainerName !== undefined ||
+        req.body.actualCost !== undefined
+      ) {
+        assertCanDecideAssignment(req);
+      }
+
       if (req.body.status && req.body.status !== existing.status) {
         const allowed = WORK_ORDER_TRANSITIONS[existing.status] ?? [];
         if (!allowed.includes(req.body.status)) {
@@ -313,9 +336,11 @@ operationsRouter.patch(
         if (
           (req.body.status === 'assigned' || req.body.status === 'in_progress') &&
           !req.body.vendorId &&
-          !existing.vendorId
+          !req.body.maintainerName &&
+          !existing.vendorId &&
+          !existing.maintainerName
         ) {
-          throw badRequest('Assign a vendor before starting the work');
+          throw badRequest('Assign a maintainer before starting the work');
         }
       }
 
@@ -349,6 +374,12 @@ operationsRouter.patch(
             ...(req.body.priority !== undefined ? { priority: req.body.priority } : {}),
             ...(req.body.status !== undefined ? { status: req.body.status } : {}),
             ...(req.body.vendorId !== undefined ? { vendorId: req.body.vendorId ?? null } : {}),
+            ...(req.body.maintainerName !== undefined
+              ? { maintainerName: req.body.maintainerName ?? null }
+              : {}),
+            ...(req.body.estimatedCost !== undefined
+              ? { estimatedCostMinor: req.body.estimatedCost ? BigInt(req.body.estimatedCost.amountMinor) : null }
+              : {}),
             ...(req.body.scheduledFor !== undefined
               ? { scheduledFor: req.body.scheduledFor ? new Date(req.body.scheduledFor) : null }
               : {}),
@@ -365,8 +396,18 @@ operationsRouter.patch(
           action: 'update',
           entityType: 'WorkOrder',
           entityId: updated.id,
-          before: { status: existing.status, priority: existing.priority, vendorId: existing.vendorId },
-          after: { status: updated.status, priority: updated.priority, vendorId: updated.vendorId },
+          before: {
+            status: existing.status,
+            priority: existing.priority,
+            vendorId: existing.vendorId,
+            maintainerName: existing.maintainerName,
+          },
+          after: {
+            status: updated.status,
+            priority: updated.priority,
+            vendorId: updated.vendorId,
+            maintainerName: updated.maintainerName,
+          },
           requestId: req.requestId,
         });
 

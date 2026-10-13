@@ -432,6 +432,13 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'maintenance.cancel_request': 'Gaaffii haqi',
   'maintenance.closing_note': 'Yaada cufiinsaa',
   'maintenance.closing_note_hint': 'Kiraayaaan yaada kana ni arga — waan hojjetame ibsi.',
+  'maintenance.maintainer': 'Ogeessa bitaa',
+  'maintenance.assign_maintainer': 'Ogeessa ramadi',
+  'maintenance.maintainer_hint': 'Maqaa barreessi — nama yookiin dhaabbilee taʾuu mala. Yaadachiisi balaa keessan irraa dhufa.',
+  'maintenance.estimate': 'Yaadannoo baayii',
+  'maintenance.estimate_hint': 'Bulchaa hojjin dura baayitii tiiʾuu dandaʾa; abbaan yeroo cufame baayii dhugaa galmeessa.',
+  'maintenance.closing_cost': 'Baayii cufiinsaa',
+  'maintenance.closing_cost_hint': 'Abbaa qofaaf: hojjechi dhugumatti baayii isaa. Erga olmaa kaaʾamee booda gaaffii irratti mulʾata.',
   'maintenance.details': "Bal'ina gaaffii",
 
   'work_order.status.open': 'Banaa',

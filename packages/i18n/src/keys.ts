@@ -381,6 +381,13 @@ export const EN_CATALOG = {
   'maintenance.cancel_request': 'Cancel request',
   'maintenance.closing_note': 'Closing note',
   'maintenance.closing_note_hint': 'The tenant will see this note — describe what was done.',
+  'maintenance.maintainer': 'Maintainer',
+  'maintenance.assign_maintainer': 'Assign maintainer',
+  'maintenance.maintainer_hint': 'Write the name — a person or a company. Suggestions come from your vendors.',
+  'maintenance.estimate': 'Estimate',
+  'maintenance.estimate_hint': 'Managers can price the work before it is done; the owner records what was actually spent when closing.',
+  'maintenance.closing_cost': 'Closing cost',
+  'maintenance.closing_cost_hint': 'Owner-only: what the work actually cost. Shows on the request once saved.',
   'maintenance.details': 'Request details',
 
   'work_order.status.open': 'Open',

@@ -419,6 +419,13 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'maintenance.cancel_request': 'ሕቶ ሰርዝ',
   'maintenance.closing_note': 'መዘኻኸሪ ዕጽዋ',
   'maintenance.closing_note_hint': 'ተኻራዪ እዚ መዘኻኸሪ ይርእዮ እዩ — እቲ ዝተሰርሐ ግለጽ።',
+  'maintenance.maintainer': 'ስራሕ ዘካየድ',
+  'maintenance.assign_maintainer': 'ስራሕ ዘካየድ መድልእ',
+  'maintenance.maintainer_hint': 'ስም ጽሓፍ — ሰብ ወይ ትካል ክኸውን ይኽእል። ኣግልባብ ካብ ኣቅራብትኩም ይመጽእ።',
+  'maintenance.estimate': 'ትምኒታዊ ወጻእቲ',
+  'maintenance.estimate_hint': 'ማንሓደጋ ስራሕ ቅድሚ ምጅማሩ ክትመንትኖ ትኽእል፤ ባህጋዉ ምስ ዝዓጸወ እቲ ትክክለኛ ወጻእቲ የመዝግብ።',
+  'maintenance.closing_cost': 'ወጻእቲ ምዕጻፊ',
+  'maintenance.closing_cost_hint': 'ንባህጋዉ ጥራይ፡ እቲ ስራሕ ዝወጸ ትክክለኛ ወጻእቲ። ምስ ተዓጸፈ ኣብ ሕቶኦም ይርኣይ።',
   'maintenance.details': 'ዝርዝር ሕቶ',
 
   'work_order.status.open': 'ክፉት',
