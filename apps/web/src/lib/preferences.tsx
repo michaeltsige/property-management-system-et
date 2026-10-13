@@ -99,7 +99,13 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   const refreshOverrides = useCallback(async () => {
     if (!session) return;
     try {
-      const response = await fetch(`/api/v1/translations?language=${language}`, {
+      // Tenant sessions have no `translations.read` — the staff endpoint 403s
+      // every portal load. The portal-scoped route returns the same rows.
+      const endpoint =
+        session.role === 'tenant'
+          ? `/api/v1/portal/translations?language=${language}`
+          : `/api/v1/translations?language=${language}`;
+      const response = await fetch(endpoint, {
         // The session cookie is HttpOnly; this code has no token to attach.
         credentials: 'same-origin',
         cache: 'no-store',

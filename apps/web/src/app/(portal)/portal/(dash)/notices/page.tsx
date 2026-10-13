@@ -1,0 +1,68 @@
+'use client';
+
+/**
+ * Every in-app notice the organization sent this tenant, newest first. The
+ * dashboard shows the top few; this is the full history.
+ */
+
+import { AlertTriangle, CheckCircle2 } from 'lucide-react';
+
+import { formatDate } from '@/lib/format';
+import { useAsync } from '@/lib/hooks';
+import { usePreferences } from '@/lib/preferences';
+
+import { api } from '@/lib/api';
+import { Card, CardContent, EmptyState, Skeleton } from '@/components/ui';
+
+export default function PortalNoticesPage() {
+  const { session, ready, language, calendar, t } = usePreferences();
+  const isTenant = session?.role === 'tenant';
+
+  const notices = useAsync(
+    () => (isTenant && ready ? api.portalNotices() : Promise.resolve(null)),
+    [isTenant, ready],
+  );
+
+  if (!ready || !isTenant) return null;
+
+  return (
+    <div className="space-y-4">
+      <h1 className="text-xl font-semibold tracking-tight text-slate-900">{t('portal.notices_title')}</h1>
+
+      <Card>
+        <CardContent className="p-0">
+          {notices.loading ? (
+            <div className="space-y-2 p-4">
+              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" />
+            </div>
+          ) : (notices.data?.items.length ?? 0) === 0 ? (
+            <div className="p-4">
+              <EmptyState title={t('portal.notices_empty')} description="" />
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              {(notices.data?.items ?? []).map((notice) => (
+                <li key={notice.id} className="flex items-start gap-3 px-4 py-3">
+                  {notice.templateKey === 'notification.payment_received' ? (
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
+                  ) : (
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm text-slate-800">
+                      {t(notice.templateKey as never, notice.payload as never)}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-slate-400">
+                      {formatDate(notice.createdAt, { language, calendar })}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

@@ -45,7 +45,13 @@ export default function PortalDocumentsPage() {
             </div>
           ) : (
             <ul className="divide-y divide-slate-100">
-              {(documents.data?.items ?? []).map((document) => (
+              {[...(documents.data?.items ?? [])]
+                .sort((a, b) => {
+                  // The lease agreement is the one paper tenants look for.
+                  const rank = (category: string) => (category === 'lease_agreement' ? 0 : 1);
+                  return rank(a.category) - rank(b.category);
+                })
+                .map((document) => (
                 <li key={document.id} className="flex items-center justify-between gap-3 px-4 py-3">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-slate-900">
@@ -66,7 +72,7 @@ export default function PortalDocumentsPage() {
                     {t('portal.download')}
                   </a>
                 </li>
-              ))}
+                ))}
             </ul>
           )}
         </CardContent>

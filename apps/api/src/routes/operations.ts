@@ -734,6 +734,9 @@ operationsRouter.post(
       let phone = req.body.recipientPhone ?? null;
       let email = req.body.recipientEmail ?? null;
       let language = (organization.language ?? 'en') as 'en' | 'am' | 'om' | 'ti';
+      // In-app notices reach the tenant's portal only through this: the portal
+      // lists notifications addressed to their user.
+      let recipientUserId: string | null = null;
 
       if (req.body.tenantId || req.body.leaseId) {
         const tenant = req.body.tenantId
@@ -748,6 +751,7 @@ operationsRouter.post(
         phone = phone ?? tenant.phone ?? null;
         email = email ?? tenant.email ?? null;
         language = (tenant.language ?? language) as typeof language;
+        recipientUserId = tenant.userId ?? null;
       }
 
       const channel = req.body.channel;
@@ -768,6 +772,7 @@ operationsRouter.post(
           channel,
           recipientPhone: phone,
           recipientEmail: email,
+          recipientUserId,
           language,
           payload: { values: req.body.values, renderedStatus: renderStatus },
           status: 'queued',

@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { translationManagerRows } from '@pms/i18n';
+import type { LanguageCode } from '@pms/calendar';
 import {
   portalMaintenanceRequestSchema,
   portalPaymentInitiateSchema,
@@ -13,7 +15,7 @@ import { organizationIdOf, requireAuth } from '../middleware/context.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
 import { getPrisma } from '../lib/prisma.js';
-import { pstr } from '../lib/query.js';
+import { pstr, str } from '../lib/query.js';
 import { badRequest, businessRule, notFound } from '../lib/errors.js';
 import { nextTicketNumber } from './operations.js';
 import { authRateLimiter } from './auth.js';
@@ -246,6 +248,42 @@ portalRouter.patch(
         select: { id: true, language: true },
       });
       res.json({ tenant: updated });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+// --- translations ------------------------------------------------------------
+
+/**
+ * Translation overrides for tenant sessions.
+ *
+ * The staff endpoint (`GET /translations`) requires `translations.read`, which
+ * tenants do not hold — every portal page load answered 403 and the tenant
+ * silently missed organization-tuned wording. This returns the same rows,
+ * scoped behind `portal.use`.
+ */
+portalRouter.get(
+  '/portal/translations',
+  requireAuth,
+  requirePermission('portal.use'),
+  validate({ query: z.object({ language: z.enum(['en', 'am', 'om', 'ti']).default('en') }) }),
+  async (req, res, next) => {
+    try {
+      const organizationId = organizationIdOf(req);
+      const language = (str(req.query.language) ?? 'en') as LanguageCode;
+      const rows = await getPrisma().translationOverride.findMany({
+        where: { OR: [{ organizationId }, { organizationId: null }] },
+      });
+      const overrides = rows.map((row) => ({
+        key: row.key,
+        language: row.language as LanguageCode,
+        text: row.text,
+        organizationId: row.organizationId,
+        status: row.status as 'machine_draft' | 'unreviewed' | 'reviewed',
+      }));
+      res.json({ rows: translationManagerRows(language, { organizationId, overrides }) });
     } catch (error) {
       next(error);
     }

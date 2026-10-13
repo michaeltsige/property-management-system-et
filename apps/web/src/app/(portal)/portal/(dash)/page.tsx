@@ -39,6 +39,13 @@ export default function PortalDashboardPage() {
   }, [ready, session, router]);
 
   const me = useAsync(() => (isTenant ? api.portalMe() : Promise.resolve(null)), [isTenant, ready]);
+  const documents = useAsync(
+    () => (isTenant && ready ? api.portalDocuments() : Promise.resolve(null)),
+    [isTenant, ready],
+  );
+  const leaseAgreement = (documents.data?.items ?? []).find(
+    (document) => document.category === 'lease_agreement',
+  );
   const notices = useAsync(
     () => (isTenant && ready ? api.portalNotices() : Promise.resolve(null)),
     [isTenant, ready],
@@ -163,6 +170,20 @@ export default function PortalDashboardPage() {
               ) : (
                 <EmptyState title={t('portal.no_leases')} description="" />
               )}
+              {activeLease ? (
+                leaseAgreement ? (
+                  <a
+                    href={api.portalDocumentUrl(leaseAgreement.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-4 inline-block text-xs font-medium text-brand-700 hover:underline"
+                  >
+                    {t('portal.lease_download')}
+                  </a>
+                ) : (
+                  <p className="mt-4 text-[11px] text-slate-400">{t('portal.lease_download_none')}</p>
+                )
+              ) : null}
             </CardContent>
           </Card>
 
@@ -171,6 +192,9 @@ export default function PortalDashboardPage() {
             <Card>
               <CardHeader>
                 <CardTitle>{t('portal.notices_title')}</CardTitle>
+                <Link href="/portal/notices" className="text-xs text-brand-700 hover:underline">
+                  {t('portal.notices_view_all')}
+                </Link>
               </CardHeader>
               <CardContent>
                 {notices.loading ? (

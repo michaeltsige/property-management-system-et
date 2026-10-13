@@ -153,6 +153,15 @@ describe('portal self-service', () => {
       .set({ Authorization: `Bearer ${ok.body.tokens.accessToken}` });
     expect(staffList.status).toBe(403);
   });
+  it('serves translation overrides to tenant sessions without a 403', async () => {
+    const f = await setupTenant();
+    const response = await request(app)
+      .get('/api/v1/portal/translations?language=am')
+      .set(f.h)
+      .expect(200);
+    expect(Array.isArray(response.body.rows)).toBe(true);
+  });
+
   it('refuses staff endpoints for tenant sessions and portal endpoints for staff sessions', async () => {
     const f = await setupTenant();
     // Tenant sessions may read their own portal page but not manage tenants.

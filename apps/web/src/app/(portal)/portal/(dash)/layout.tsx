@@ -41,6 +41,7 @@ const NAV_ITEMS = [
   { href: '/portal/statement', labelKey: 'portal.nav.statement', icon: ReceiptItem },
   { href: '/portal/maintenance', labelKey: 'portal.nav.maintenance', icon: Setting3 },
   { href: '/portal/documents', labelKey: 'portal.nav.documents', icon: DocumentText },
+  { href: '/portal/notices', labelKey: 'portal.nav.notices', icon: Element3 },
   { href: '/portal/profile', labelKey: 'portal.nav.profile', icon: Profile2User },
 ];
 
