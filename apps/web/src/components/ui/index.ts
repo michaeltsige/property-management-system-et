@@ -1,4 +1,5 @@
 export { Button, buttonVariants, type ButtonProps } from './button';
+export { Popover } from './popover';
 export {
   Alert,
   Badge,

@@ -4,6 +4,7 @@ import type { CalendarKind, LanguageCode } from '@pms/calendar';
 import { createTranslator } from '@pms/i18n';
 import DashboardPage from '@/app/(app)/dashboard/page';
 import { api } from '@/lib/api';
+import { OrgSettingsProvider } from '@/lib/org-settings';
 
 const prefs = vi.hoisted(() => ({ calendar: 'ethiopian' as CalendarKind, language: 'en' as LanguageCode }));
 vi.mock('@/lib/preferences', () => ({
@@ -57,20 +58,36 @@ it('renders Pagume in Amharic, then switches calendar while old collections are 
         })
       : Promise.resolve(collection('ethiopian')),
   );
-  const view = render(<DashboardPage />);
+  const view = render(
+    <OrgSettingsProvider>
+      <DashboardPage />
+    </OrgSettingsProvider>,
+  );
   expect(await screen.findByTestId('collections')).toHaveTextContent('Pagume 2018');
   prefs.language = 'am';
-  view.rerender(<DashboardPage />);
+  view.rerender(
+    <OrgSettingsProvider>
+      <DashboardPage />
+    </OrgSettingsProvider>,
+  );
   expect(screen.getByTestId('collections')).toHaveTextContent('ጳጉሜን 2018');
   prefs.calendar = 'gregorian';
-  view.rerender(<DashboardPage />);
+  view.rerender(
+    <OrgSettingsProvider>
+      <DashboardPage />
+    </OrgSettingsProvider>,
+  );
   expect(screen.queryByTestId('collections')).toBeNull();
   await waitFor(() => expect(api.collections).toHaveBeenCalledWith('?calendar=gregorian&months=13'));
   await act(async () => resolveGregorian(collection('gregorian')));
   expect(await screen.findByTestId('collections')).toHaveTextContent('ሴፕቴምበር 2026');
   expect(screen.getByTestId('collections')).not.toHaveTextContent('ጳጉሜን');
   prefs.calendar = 'ethiopian';
-  view.rerender(<DashboardPage />);
+  view.rerender(
+    <OrgSettingsProvider>
+      <DashboardPage />
+    </OrgSettingsProvider>,
+  );
   expect(await screen.findByTestId('collections')).toHaveTextContent('ጳጉሜን 2018');
 });
 it('ignores a late previous-calendar response after switching to Gregorian', async () => {
@@ -82,10 +99,18 @@ it('ignores a late previous-calendar response after switching to Gregorian', asy
         })
       : Promise.resolve(collection('gregorian')),
   );
-  const view = render(<DashboardPage />);
+  const view = render(
+    <OrgSettingsProvider>
+      <DashboardPage />
+    </OrgSettingsProvider>,
+  );
   prefs.language = 'am';
   prefs.calendar = 'gregorian';
-  view.rerender(<DashboardPage />);
+  view.rerender(
+    <OrgSettingsProvider>
+      <DashboardPage />
+    </OrgSettingsProvider>,
+  );
   expect(await screen.findByTestId('collections')).toHaveTextContent('ሴፕቴምበር');
   await act(async () => resolveEthiopian(collection('ethiopian')));
   expect(screen.getByTestId('collections')).not.toHaveTextContent('ጳጉሜን');

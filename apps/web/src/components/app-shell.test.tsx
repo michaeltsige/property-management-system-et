@@ -154,11 +154,11 @@ it('ends the rail with an account card whose menu reaches organization settings 
 });
 
 it('renders the served day in the footer with its calendar era', async () => {
-  const { todayIn } = await import('@pms/calendar');
+  const { todayIn, formatCivilDate } = await import('@pms/calendar');
   renderShell();
   await screen.findByText('page content');
   const today = todayIn('ethiopian');
-  const expected = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')} E.C.`;
-  // The header pill was removed (owner request); the footer keeps the date.
+  // The footer formats the day through @pms/calendar and keeps the era suffix.
+  const expected = `${formatCivilDate(today, { language: 'en', showEra: true })} E.C.`;
   expect(screen.getAllByText(expected).length).toBeGreaterThanOrEqual(1);
 });

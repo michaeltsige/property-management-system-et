@@ -10,12 +10,13 @@ import { usePropertyContext } from '@/lib/property-context';
 import { api } from '@/lib/api';
 import { formatAmount, formatDate, statusTone } from '@/lib/format';
 import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
+import { useOrgSettings } from '@/lib/org-settings';
 import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
 import { PageHeader } from '@/components/app-shell';
 import { ExportCsvButton } from '@/components/export-csv-button';
-import { DateField } from '@/components/ethiopian-date-picker';
+import { DateField } from '@/components/date-field';
 import { MoneyInput } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
 import {
@@ -36,7 +37,7 @@ import {
 
 export default function LeasesPage() {
   const { t, language, calendar } = usePreferences();
-  const settings = useAsync(() => api.settings(), []);
+  const { settings: orgSettings, loading: settingsLoading, error: settingsError, billingCalendar } = useOrgSettings();
   const [propertyContext] = usePropertyContext();
   const defaultsApplied = useRef(false);
   const leases = useAsync(() => api.leases(), []);
@@ -74,23 +75,21 @@ export default function LeasesPage() {
   const [deposit, setDeposit] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!settings.data || defaultsApplied.current) return;
+    if (!orgSettings || defaultsApplied.current) return;
     defaultsApplied.current = true;
-    const s = settings.data.settings;
     // Dates are entered in the organization's billing calendar; the lease
     // itself inherits that calendar on the server, so it is not in the form.
-    const billing = s.defaultBillingCalendar === 'gregorian' ? 'gregorian' : 'ethiopian';
     setForm((current) => ({
       ...current,
-      startDate: todayIn(billing),
-      dueDayOfMonth: typeof s.rentDueDay === 'number' ? s.rentDueDay : 5,
+      startDate: todayIn(billingCalendar),
+      dueDayOfMonth: typeof orgSettings.rentDueDay === 'number' ? orgSettings.rentDueDay : 5,
     }));
-  }, [settings.data]);
+  }, [orgSettings, billingCalendar]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     await run(async () => {
-      const currency = (settings.data?.settings.currency as string | undefined) ?? 'ETB';
+      const currency = (orgSettings?.currency as string | undefined) ?? 'ETB';
       await api.createLease({
         unitId: form.unitId,
         tenantId: form.tenantId,
@@ -98,12 +97,10 @@ export default function LeasesPage() {
         status: form.status,
         dueDayOfMonth: form.dueDayOfMonth,
         gracePeriodDays:
-          typeof settings.data?.settings.gracePeriodDays === 'number'
-            ? settings.data.settings.gracePeriodDays
-            : 0,
+          typeof orgSettings?.gracePeriodDays === 'number' ? orgSettings.gracePeriodDays : 0,
         lateFeePercent:
-          settings.data?.settings.lateFeeEnabled && settings.data?.settings.lateFeeType === 'percent'
-            ? settings.data.settings.lateFeePercent
+          orgSettings?.lateFeeEnabled && orgSettings?.lateFeeType === 'percent'
+            ? orgSettings.lateFeePercent
             : undefined,
         startDate: form.startDate,
         endDate: form.endDate,
@@ -136,7 +133,7 @@ export default function LeasesPage() {
 
   return (
     <div>
-      {settings.error && <Alert tone="danger">{settings.error}</Alert>}
+      {settingsError && <Alert tone="danger">{settingsError}</Alert>}
       <PageHeader
         titleKey="nav.leases"
         actions={
@@ -287,9 +284,7 @@ export default function LeasesPage() {
           <div className="space-y-1">
             <Label>{t('lease.billing_calendar')}</Label>
             <p className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
-              {settings.data?.settings.defaultBillingCalendar === 'gregorian'
-                ? t('calendar.gregorian')
-                : t('calendar.ethiopian')}
+              {billingCalendar === 'gregorian' ? t('calendar.gregorian') : t('calendar.ethiopian')}
               <span className="ml-1 text-xs text-slate-400">({t('common.organization_default')})</span>
             </p>
             <p className="text-[11px] text-slate-500">{t('lease.billing_calendar_inherited')}</p>
@@ -350,12 +345,14 @@ export default function LeasesPage() {
             label={t('lease.start_date')}
             value={form.startDate}
             onChange={(value) => setForm((current) => ({ ...current, startDate: value }))}
+            calendar={billingCalendar}
             required
           />
           <DateField
             label={`${t('lease.end_date')} (${t('common.optional')})`}
             value={form.endDate}
             onChange={(value) => setForm((current) => ({ ...current, endDate: value }))}
+            calendar={billingCalendar}
           />
 
           <div className="sm:col-span-2">
@@ -385,7 +382,7 @@ export default function LeasesPage() {
             </Button>
             <Button
               variant="destructive"
-              disabled={pending || settings.loading || !!settings.error}
+              disabled={pending || settingsLoading || !!settingsError}
               onClick={() => void terminate(terminateReason)}
             >
               {pending ? t('app.loading') : t('lease.terminate')}

@@ -262,6 +262,8 @@ export const EN_CATALOG = {
   'calendar.year': 'Year',
   'calendar.month': 'Month',
   'calendar.day': 'Day',
+  'calendar.previous_month': 'Previous month',
+  'calendar.next_month': 'Next month',
 
   // --- organizations and users -------------------------------------------
   'org.name': 'Organization',

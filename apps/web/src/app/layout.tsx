@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 
 import { PreferencesProvider } from '@/lib/preferences';
+import { OrgSettingsProvider } from '@/lib/org-settings';
 import { PwaRegister } from '@/components/pwa-register';
 
 import './globals.css';
@@ -48,7 +49,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body className={jakarta.variable}>
-        <PreferencesProvider>{children}</PreferencesProvider>
+        <PreferencesProvider>
+          <OrgSettingsProvider>{children}</OrgSettingsProvider>
+        </PreferencesProvider>
         <PwaRegister />
       </body>
     </html>

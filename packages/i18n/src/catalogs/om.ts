@@ -258,6 +258,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'calendar.year': 'Waggaa',
   'calendar.month': "Ji'a",
   'calendar.day': 'Guyyaa',
+  "calendar.previous_month": "Ji'a darbe",
+  "calendar.next_month": "Ji'a itti aanu",
 
   'org.name': 'Dhaabbata',
   'org.settings': "Qindaa'ina dhaabbataa",

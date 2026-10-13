@@ -254,6 +254,8 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'calendar.year': 'ዓመት',
   'calendar.month': 'ወር',
   'calendar.day': 'ቀን',
+  'calendar.previous_month': 'ያለፈው ወር',
+  'calendar.next_month': 'ቀጣዩ ወር',
 
   'org.name': 'ድርጅት',
   'org.settings': 'የድርጅት ቅንብሮች',

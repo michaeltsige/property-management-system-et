@@ -38,12 +38,23 @@ export async function runChargeGeneration(
     select: { id: true, calendar: true, name: true },
   });
 
+  // The billing calendar — not the display default — decides which period is
+  // "current" for billing. `Organization.calendar` is only a fallback for
+  // organizations that predate the setting.
+  const billingSettings = await prisma.organizationSetting.findMany({
+    where: { key: 'defaultBillingCalendar' },
+    select: { organizationId: true, value: true },
+  });
+  const billingByOrganization = new Map(billingSettings.map((row) => [row.organizationId, row.value]));
+
   let created = 0;
   let skippedExisting = 0;
   let skippedJobRuns = 0;
 
   for (const organization of organizations) {
-    const calendar = (organization.calendar === 'gregorian' ? 'gregorian' : 'ethiopian') as CalendarKind;
+    const storedBilling = billingByOrganization.get(organization.id);
+    const storedCalendar = typeof storedBilling === 'string' ? storedBilling : undefined;
+    const calendar = ((storedCalendar ?? organization.calendar) === 'gregorian' ? 'gregorian' : 'ethiopian') as CalendarKind;
     const current = periodForDate(todayIn(calendar));
     // Catch up on the previous period too: cron misses happen (deploys, outages).
     const periods: BillingPeriod[] = payload.periodKeys?.length ? [] : [shiftPeriod(current, -1), current];

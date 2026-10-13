@@ -7,6 +7,7 @@ import type { CalendarKind, LanguageCode } from '@pms/calendar';
 
 import { api } from '@/lib/api';
 import { useAction, useAsync } from '@/lib/hooks';
+import { useOrgSettings } from '@/lib/org-settings';
 import { CALENDARS, LANGUAGES, usePreferences } from '@/lib/preferences';
 
 import { PageHeader } from '@/components/app-shell';
@@ -36,11 +37,11 @@ import {
  */
 export default function OrganizationPage() {
   const { t, session, calendar, setCalendar, language, setLanguage } = usePreferences();
-  const settings = useAsync(() => api.settings(), []);
+  const { settings: orgSettings, loading: settingsLoading, reload: reloadSettings } = useOrgSettings();
   const idTypes = useAsync(() => api.idTypes(), []);
   const { pending, error, message, setMessage, run } = useAction();
 
-  const current = (settings.data?.settings ?? {}) as Record<string, unknown>;
+  const current = (orgSettings ?? {}) as Record<string, unknown>;
 
   const [name, setName] = useState('');
   useEffect(() => {
@@ -59,7 +60,7 @@ export default function OrganizationPage() {
     await run(async () => {
       await api.updateSettings({ ...current, ...patch });
       setMessage(t('org.saved'));
-      settings.reload();
+      reloadSettings();
     }).catch(() => undefined);
   }
 
@@ -174,7 +175,7 @@ export default function OrganizationPage() {
               <CardTitle>{t('org.billing_defaults')}</CardTitle>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-2">
-              {settings.loading ? (
+              {settingsLoading ? (
                 <>
                   <Skeleton className="h-9 w-full" />
                   <Skeleton className="h-9 w-full" />

@@ -4,12 +4,14 @@ import { Plus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { MANUAL_PAYMENT_METHODS, PAYMENT_METHODS } from '@pms/shared';
+import { civilToUtcDate, todayIn } from '@pms/calendar';
 
 import { api } from '@/lib/api';
 import { formatAmount, formatDate } from '@/lib/format';
 import { useAction, useAsync, useAutoOpenModal } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { usePropertyContext } from '@/lib/property-context';
+import { DateField } from '@/components/date-field';
 
 import { PageHeader } from '@/components/app-shell';
 import { ExportCsvButton } from '@/components/export-csv-button';
@@ -52,7 +54,8 @@ export default function PaymentsPage() {
     leaseId: '',
     method: 'cash' as (typeof MANUAL_PAYMENT_METHODS)[number],
     reference: '',
-    paidAt: new Date().toISOString().slice(0, 10),
+    // Entered in the viewer's display calendar; stored as an ISO instant.
+    paidOn: todayIn(calendar),
   });
   const [amount, setAmount] = useState<number | null>(null);
   const { pending, error, message, setMessage, run } = useAction();
@@ -68,12 +71,12 @@ export default function PaymentsPage() {
         leaseId: form.leaseId,
         amount: { amountMinor: amount ?? 0, currency },
         method: form.method,
-        paidAt: new Date(`${form.paidAt}T12:00:00.000Z`).toISOString(),
+        paidAt: civilToUtcDate(form.paidOn).toISOString(),
         reference: form.reference || undefined,
       });
       setOpen(false);
       setAmount(null);
-      setForm({ leaseId: '', method: 'cash', reference: '', paidAt: new Date().toISOString().slice(0, 10) });
+      setForm({ leaseId: '', method: 'cash', reference: '', paidOn: todayIn(calendar) });
       setMessage(t('payment.recorded', { receipt: result.receiptNumber }));
       payments.reload();
       leases.reload();
@@ -290,15 +293,12 @@ export default function PaymentsPage() {
             </Select>
           </div>
 
-          <div className="space-y-1">
-            <Label htmlFor="paidAt">{t('payment.paid_on')}</Label>
-            <Input
-              id="paidAt"
-              type="date"
-              value={form.paidAt}
-              onChange={(event) => setForm((current) => ({ ...current, paidAt: event.target.value }))}
-            />
-          </div>
+          <DateField
+            id="paidAt"
+            label={t('payment.paid_on')}
+            value={form.paidOn}
+            onChange={(value) => setForm((current) => ({ ...current, paidOn: value }))}
+          />
 
           <div className="space-y-1 sm:col-span-2">
             <Label htmlFor="reference">{t('payment.reference')}</Label>

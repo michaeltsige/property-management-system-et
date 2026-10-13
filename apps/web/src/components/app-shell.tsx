@@ -55,6 +55,8 @@ import {
 } from './icons';
 
 import { api } from '@/lib/api';
+import { formatCivilDate } from '@pms/calendar';
+
 import { todayFor } from '@/lib/format';
 import { useDocumentTitle } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
@@ -175,7 +177,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { session, t, calendar, signOut, ready } = usePreferences();
+  const { session, t, calendar, language, signOut, ready } = usePreferences();
   const [menuOpen, setMenuOpen] = useState(false);
 
   // A signed-out visitor never sees organization data, and the staff shell is
@@ -397,7 +399,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {t('app.name')} · {session.organization.slug}
           </span>
           <span className="tabular shrink-0">
-            {today.year}-{String(today.month).padStart(2, '0')}-{String(today.day).padStart(2, '0')}
+            {formatCivilDate(today, { language, showEra: true })}
             {calendar === 'ethiopian' ? ' E.C.' : ' G.C.'}
           </span>
         </footer>

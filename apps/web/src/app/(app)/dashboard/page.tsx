@@ -7,6 +7,7 @@ import { Building2, CalendarPlus, TrendingDown, TrendingUp, UserPlus, Wallet } f
 
 import { formatAmount, formatPeriodKey } from '@/lib/format';
 import { useAsync } from '@/lib/hooks';
+import { useOrgSettings } from '@/lib/org-settings';
 import { usePreferences } from '@/lib/preferences';
 import { api } from '@/lib/api';
 
@@ -41,10 +42,7 @@ const QUICK_ACTIONS = [
 
 export default function DashboardPage() {
   const { t, language, calendar, session } = usePreferences();
-  const setup = useAsync(
-    () => (session?.role === 'owner_admin' ? api.settings() : Promise.resolve(null)),
-    [session?.role],
-  );
+  const { settings: orgSettings } = useOrgSettings();
   const [periodKey, setPeriodKey] = useCalendarPeriod(calendar);
 
   const query = `?periodKey=${periodKey}&calendar=${calendar}`;
@@ -103,7 +101,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      {setup.data?.settings.onboardingStatus === 'portfolio_pending' && (
+      {orgSettings?.onboardingStatus === 'portfolio_pending' && (
         <Alert>
           <Link href="/onboarding" className="underline">
             {t('onboarding.resume')}

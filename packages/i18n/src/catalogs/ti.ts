@@ -253,6 +253,8 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'calendar.year': 'ዓመት',
   'calendar.month': 'ወርሒ',
   'calendar.day': 'መዓልቲ',
+  'calendar.previous_month': 'ዝሓለፈ ወርሕታ',
+  'calendar.next_month': 'ዚመጽእ ወርሕታ',
 
   'org.name': 'ትካብ',
   'org.settings': 'ቅጥዒታት ትካብ',
