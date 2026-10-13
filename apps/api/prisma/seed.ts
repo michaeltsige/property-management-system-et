@@ -13,7 +13,7 @@
  * this at a database that holds real data.
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 import { enrollTenantPortal } from '../src/services/portal.js';
 import { postLedgerEntry } from '../src/services/ledger.js';
@@ -99,6 +99,31 @@ function makePdf(title: string, lines: string[]): Buffer {
 
 async function main(): Promise<void> {
   console.warn('Seeding DEMO data only — never run this against a database with real records.');
+
+  // --- schema guard --------------------------------------------------------
+  // Fail fast when migrations were never applied — otherwise the very first
+  // query dies with an opaque P2021 ("the table `public.Region` does not exist")
+  // deep inside the seed, and it is not obvious that `pnpm db:deploy` is missing.
+  const requiredTables = ['Region', 'City', 'TenantIdType', 'Organization', 'Membership'];
+  const found = await prisma.$queryRaw<{ table_name: string }[]>`
+    SELECT table_name
+    FROM information_schema.tables
+    WHERE table_schema = 'public'
+      AND table_name IN (${Prisma.join(requiredTables)})
+  `;
+  const foundTables = new Set(found.map((row) => row.table_name));
+  const missingTables = requiredTables.filter((table) => !foundTables.has(table));
+  if (missingTables.length > 0) {
+    console.error(
+      'The database schema is incomplete — migrations have not been (fully) applied.\n' +
+        `Missing tables: ${missingTables.join(', ')}\n` +
+        'Apply migrations first, then re-run the seed:\n' +
+        '  pnpm db:deploy\n' +
+        '  pnpm db:seed',
+    );
+    await prisma.$disconnect();
+    process.exit(1);
+  }
 
   // --- reference data ------------------------------------------------------
   for (const region of ETHIOPIAN_REGIONS) {
