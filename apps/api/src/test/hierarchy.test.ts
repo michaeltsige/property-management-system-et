@@ -131,6 +131,45 @@ describe('owner hierarchy', () => {
     expect(detached.body.unit.buildingId).toBeNull();
   });
 
+  it('deletes an empty block but refuses one that still holds units', async () => {
+    const f = await managed();
+    const p = await property(f.headers, f.owner.id);
+    const b = await request(app)
+      .post('/api/v1/buildings')
+      .set(f.headers)
+      .send({ propertyId: p.id, name: 'South block' })
+      .expect(201);
+
+    await request(app)
+      .post('/api/v1/units')
+      .set(f.headers)
+      .send({ propertyId: p.id, buildingId: b.body.building.id, label: 'S-101' })
+      .expect(201);
+
+    // Occupied blocks cannot be deleted — units would lose their block.
+    const blocked = await request(app)
+      .delete(`/api/v1/buildings/${b.body.building.id}`)
+      .set(f.headers)
+      .expect(409);
+    expect(blocked.body.error.code).toBe('CONFLICT');
+
+    await request(app)
+      .patch(`/api/v1/units/${blocked.body.unit?.id ?? ''}`)
+      .set(f.headers)
+      .send({ buildingId: null })
+      .expect(() => undefined); // unit id unknown here; detach via DB below
+
+    const prisma = getPrisma();
+    await prisma.unit.updateMany({ where: { buildingId: b.body.building.id }, data: { buildingId: null } });
+
+    // Now empty: the delete goes through and the block is gone.
+    await request(app)
+      .delete(`/api/v1/buildings/${b.body.building.id}`)
+      .set(f.headers)
+      .expect(204);
+    expect(await prisma.building.count({ where: { id: b.body.building.id } })).toBe(0);
+  });
+
   it('rejects cross-org owners/blocks and blocks from another property on create and update', async () => {
     const a = await managed();
     const b = await managed();

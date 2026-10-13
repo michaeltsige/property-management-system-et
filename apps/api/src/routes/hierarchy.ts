@@ -12,7 +12,7 @@ import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
 import { getPrisma } from '../lib/prisma.js';
 import { pstr } from '../lib/query.js';
-import { businessRule, notFound } from '../lib/errors.js';
+import { businessRule, conflict, notFound } from '../lib/errors.js';
 import { recordAudit } from '../services/audit.js';
 
 export const hierarchyRouter = Router();
@@ -177,6 +177,42 @@ hierarchyRouter.patch(
         return updated;
       });
       res.json({ building });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+hierarchyRouter.delete(
+  '/buildings/:buildingId',
+  requirePermission('properties.write'),
+  validate({ params: z.object({ buildingId: uuidSchema }) }),
+  async (req, res, next) => {
+    try {
+      const organizationId = organizationIdOf(req);
+      await getPrisma().$transaction(async (tx) => {
+        const building = await tx.building.findFirst({
+          where: { id: pstr(req, 'buildingId'), organizationId },
+        });
+        if (!building) throw notFound('Building not found in this organization');
+        const unitCount = await tx.unit.count({ where: { buildingId: building.id, deletedAt: null } });
+        if (unitCount > 0) {
+          throw conflict(
+            `This block still has ${unitCount} unit${unitCount === 1 ? '' : 's'} — move or remove them first`,
+          );
+        }
+        await tx.building.delete({ where: { id: building.id } });
+        await recordAudit(tx, {
+          organizationId,
+          actorUserId: req.auth?.userId,
+          action: 'delete',
+          entityType: 'Building',
+          entityId: building.id,
+          before: { name: building.name, propertyId: building.propertyId },
+          requestId: req.requestId,
+        });
+      });
+      res.status(204).end();
     } catch (error) {
       next(error);
     }

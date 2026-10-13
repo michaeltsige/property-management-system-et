@@ -199,6 +199,8 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portfolio.no_blocks': 'ብሎካት ኣማራጺ እዮም። ክፍልታት ብቐጥታ ኣብ ትሕቲ እዚ ንብረት ክኾኑ ይኽእሉ።',
   'portfolio.add_owner': 'ኣካራዪ ወስኹ',
   'portfolio.add_block': 'ብሎክ ወስኹ',
+  'portfolio.block_delete': 'ብሎክ ጥፍእ',
+  'portfolio.block_delete_hint': 'እቲ ብሎክ ክፍሊ የብሉ ምዃኑ ሓላዊ እዩ።',
   'portfolio.choose_owner': 'ኣካራዪ ምረጹ',
 
   'app.name': 'ምሕደራ ንብረት',
@@ -290,6 +292,7 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'unit.status': 'ኩነታት',
   'unit.market_rent': 'ክራይ ዕዳጋ',
   'units.type': 'ዓይነት',
+  'units.total_suffix': 'ክፍሊታት',
   'units.set_rent_by_type': 'ክራይ ብዓይነት ኣቐምጥ',
   'units.rent_by_type_hint': 'ኣብዚ ንብረት ዘሎ ኩሉ ናይዚ ዓይነት ክፍሊ ክራይ ዕዳጋ የሐድስ፤ ክራይ ዘለዎም ውዕላት ኣይትንከፉን።',
   'units.rent_updated': 'ክራይ ዕዳጋ ን{count} ክፍልታት ተሐዲሱ',

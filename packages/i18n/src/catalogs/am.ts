@@ -200,6 +200,8 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portfolio.no_blocks': 'ብሎኮች አማራጭ ናቸው። ክፍሎች በቀጥታ የዚህ ንብረት ሊሆኑ ይችላሉ።',
   'portfolio.add_owner': 'አከራይ ያክሉ',
   'portfolio.add_block': 'ብሎክ ያክሉ',
+  'portfolio.block_delete': 'ብሎክ ይሰርዙ',
+  'portfolio.block_delete_hint': 'ብሎኩ ክፍል ሲኖሩት ብቻ ነው የሚቻለው።',
   'portfolio.choose_owner': 'አከራይ ይምረጡ',
 
   'app.name': 'የንብረት አስተዳደር',
@@ -291,6 +293,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'unit.status': 'ሁኔታ',
   'unit.market_rent': 'የገበያ ኪራይ',
   'units.type': 'ዓይነት',
+  'units.total_suffix': 'ክፍሎች',
   'units.set_rent_by_type': 'ኪራይ በዓይነት ያዘጋጁ',
   'units.rent_by_type_hint': 'በንብረቱ ውስጥ ያሉ የዚህ ዓይነት ክፍሎችን ሁሉ የገበያ ኪራይ ያዘምናል። ያሉ የኪራይ ውሎች አይነኩም።',
   'units.rent_updated': 'የገበያ ኪራይ ለ{count} ክፍሎች ተዘምኗል',

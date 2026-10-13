@@ -288,6 +288,8 @@ export const api = {
   createOwner: (body: unknown) => apiFetch<{ owner: Owner }>('/owners', { method: 'POST', body }),
   updateOwner: (id: string, body: unknown) =>
     apiFetch<{ owner: Owner }>(`/owners/${id}`, { method: 'PATCH', body }),
+  deleteBuilding: (buildingId: string) =>
+    apiFetch<null>(`/buildings/${buildingId}`, { method: 'DELETE' }),
   createBuilding: (body: unknown) => apiFetch<{ building: Building }>('/buildings', { method: 'POST', body }),
   updateBuilding: (id: string, body: unknown) =>
     apiFetch<{ building: Building }>(`/buildings/${id}`, { method: 'PATCH', body }),

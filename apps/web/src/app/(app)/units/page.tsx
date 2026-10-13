@@ -101,6 +101,25 @@ export default function UnitsPage() {
         propertyName(unit.propertyId).toLowerCase().includes(search.toLowerCase())),
   );
 
+  /** One section per property, ordered by name: a flat unit list reads nowhere. */
+  const propertyGroups = useMemo(() => {
+    const map = new Map<string, typeof visible>();
+    for (const unit of visible) {
+      const bucket = map.get(unit.propertyId) ?? [];
+      bucket.push(unit);
+      map.set(unit.propertyId, bucket);
+    }
+    return Array.from(map.entries())
+      .map(([id, items]) => ({
+        id,
+        name: propertyName(id),
+        items: items.sort((a, b) => a.label.localeCompare(b.label)),
+        occupied: items.filter((unit) => unit.status === 'occupied').length,
+        vacant: items.filter((unit) => unit.status === 'vacant').length,
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [visible, propertyName]);
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     await run(async () => {
@@ -190,65 +209,83 @@ export default function UnitsPage() {
           />
         </Modal>
       )}
-      <Card>
-        <CardContent className="p-0">
-          {units.loading ? (
-            <div className="space-y-2 p-4">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-            </div>
-          ) : units.error ? (
-            <div className="p-4">
-              <Alert tone="danger">{units.error}</Alert>
-            </div>
-          ) : visible.length === 0 ? (
+      {units.loading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </div>
+      ) : units.error ? (
+        <Alert tone="danger">{units.error}</Alert>
+      ) : visible.length === 0 ? (
+        <Card>
+          <CardContent>
             <EmptyState title={t('common.no_results')} description={t('unit.label')} />
-          ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>{t('unit.label')}</Th>
-                  <Th>{t('units.type')}</Th>
-                  <Th>{t('nav.properties')}</Th>
-                  <Th>{t('portfolio.block')}</Th>
-                  <Th>{t('unit.bedrooms')}</Th>
-                  <Th>{t('unit.area_sqm')}</Th>
-                  <Th>{t('unit.market_rent')}</Th>
-                  <Th>{t('unit.status')}</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((unit) => (
-                  <tr key={unit.id}>
-                    <Td className="font-medium text-slate-900">
-                      <Link href={`/units/${unit.id}`} className="text-brand-700 hover:underline">
-                        {unit.label}
-                      </Link>
-                    </Td>
-                    <Td>{unit.typeLabel ?? '—'}</Td>
-                    <Td>{unit.property?.name ?? propertyName(unit.propertyId)}</Td>
-                    <Td>{unit.building?.name ?? t('portfolio.no_block')}</Td>
-                    <Td>
-                      {unit.bedrooms ?? '—'} / {unit.bathrooms ?? '—'}
-                    </Td>
-                    <Td>{unit.areaSqm ?? '—'}</Td>
-                    <Td className="tabular">
-                      {unit.marketRentMinor
-                        ? formatAmount(unit.marketRentMinor, unit.currency, language)
-                        : '—'}
-                    </Td>
-                    <Td>
-                      <Badge className={cn(statusTone[unit.status])}>
-                        {t(`unit.status.${unit.status}` as never)}
-                      </Badge>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {propertyGroups.map((group) => (
+            <Card key={group.id}>
+              <CardContent className="p-0">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+                  <p className="text-sm font-medium text-slate-900">{group.name}</p>
+                  <p className="flex items-center gap-2 text-xs text-slate-500">
+                    <span className="tabular">
+                      {group.items.length} {t('units.total_suffix')}
+                    </span>
+                    <Badge tone="brand" className="tabular">
+                      {group.occupied} {t('unit.status.occupied')}
+                    </Badge>
+                    <Badge tone="gold" className="tabular">
+                      {group.vacant} {t('unit.status.vacant')}
+                    </Badge>
+                  </p>
+                </div>
+                <Table>
+                  <thead>
+                    <tr>
+                      <Th>{t('unit.label')}</Th>
+                      <Th>{t('units.type')}</Th>
+                      <Th>{t('portfolio.block')}</Th>
+                      <Th>{t('unit.bedrooms')}</Th>
+                      <Th>{t('unit.area_sqm')}</Th>
+                      <Th>{t('unit.market_rent')}</Th>
+                      <Th>{t('unit.status')}</Th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.items.map((unit) => (
+                      <tr key={unit.id}>
+                        <Td className="font-medium text-slate-900">
+                          <Link href={`/units/${unit.id}`} className="text-brand-700 hover:underline">
+                            {unit.label}
+                          </Link>
+                        </Td>
+                        <Td>{unit.typeLabel ?? '—'}</Td>
+                        <Td>{unit.building?.name ?? t('portfolio.no_block')}</Td>
+                        <Td>
+                          {unit.bedrooms ?? '—'} / {unit.bathrooms ?? '—'}
+                        </Td>
+                        <Td>{unit.areaSqm ?? '—'}</Td>
+                        <Td className="tabular">
+                          {unit.marketRentMinor
+                            ? formatAmount(unit.marketRentMinor, unit.currency, language)
+                            : '—'}
+                        </Td>
+                        <Td>
+                          <Badge className={cn(statusTone[unit.status])}>
+                            {t(`unit.status.${unit.status}` as never)}
+                          </Badge>
+                        </Td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       <Modal
         open={open}

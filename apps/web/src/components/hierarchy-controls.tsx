@@ -125,6 +125,22 @@ export function BlockEditor({
         <Button type="submit" disabled={pending}>
           {block ? t('common.save') : t('portfolio.add_block')}
         </Button>
+        {block ? (
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={pending}
+            title={t('portfolio.block_delete_hint')}
+            onClick={() =>
+              void run(async () => {
+                await api.deleteBuilding(block.id);
+                onSaved();
+              }).catch(() => undefined)
+            }
+          >
+            {t('portfolio.block_delete')}
+          </Button>
+        ) : null}
       </div>
       {error && <Alert tone="danger">{error}</Alert>}
     </form>

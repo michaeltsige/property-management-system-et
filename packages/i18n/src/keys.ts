@@ -127,6 +127,8 @@ export const EN_CATALOG = {
   'portfolio.no_blocks': 'Blocks are optional. Units can belong directly to this property.',
   'portfolio.add_owner': 'Add landlord',
   'portfolio.add_block': 'Add block',
+  'portfolio.block_delete': 'Delete block',
+  'portfolio.block_delete_hint': 'Only possible while the block has no units.',
   'portfolio.choose_owner': 'Choose a landlord',
 
   // --- app shell -----------------------------------------------------------
@@ -303,6 +305,7 @@ export const EN_CATALOG = {
   'unit.status': 'Status',
   'unit.market_rent': 'Market rent',
   'units.type': 'Type',
+  'units.total_suffix': 'units',
   'units.set_rent_by_type': 'Set rent by type',
   'units.rent_by_type_hint':
     'Updates the market rent of every unit of this type in the property. Existing lease rents stay unchanged.',

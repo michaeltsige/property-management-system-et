@@ -203,6 +203,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portfolio.no_blocks': "Blookiin filannoo dha. Kutaaleen kallattiin qabeenya kana jalatti ta'uu danda'u.",
   'portfolio.add_owner': 'Abbaa kiraa dabali',
   'portfolio.add_block': 'Blookii dabali',
+  'portfolio.block_delete': 'Blookii haqi',
+  'portfolio.block_delete_hint': "Kun kan dandaʾamu yeroo blookiin kuufama hin qabne qofa.",
   'portfolio.choose_owner': 'Abbaa kiraa filadhu',
 
   'app.name': 'Bulchiinsa Qabeenyaa',
@@ -298,6 +300,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'unit.status': 'Haala',
   'unit.market_rent': 'Kiree gabaa',
   'units.type': 'Gosa',
+  'units.total_suffix': 'kuufama',
   'units.set_rent_by_type': 'Kira gosaan qindeessi',
   'units.rent_by_type_hint':
     'Kira gabaa kutaa gosa kanaa hunda qabeenyicha keessaa haaromsa; kiraan waliigaltee jiru hin tuqamu.',
