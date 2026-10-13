@@ -408,6 +408,7 @@ moneyRouter.post(
         proofId: pstr(req, 'proofId'),
         actorUserId: req.auth?.userId ?? null,
         notes: req.body.notes ?? null,
+        amount: req.body.amount ?? null,
       });
       res.json({
         proof: result.proof,

@@ -369,6 +369,12 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'payment.proof_approved': 'ሪሲት ተረጋጊጡ · ሪሲት {receipt}',
   'payment.proof_rejected': 'ሪሲት ተሰሪዙ።',
   'payment.proof_download': 'ሪሲት ኣውርድ',
+  'payment.proof_claimed': 'ኣብ ሪሲት ዝተጠዕቀ',
+  'payment.proof_partial_amount': 'ብሕታዊ ዝተረኽበ',
+  'payment.proof_partial_hint': 'ካብ ሪሲት ዝውሓድ መጠን ክትወስን እንተሰሪዕካ ብኽፍሊ ይመዝገብ — ዝተረፈ ክፍሊት ይቕጸር። ሪሲት ኣይስተካክልን እዩ።',
+  'payment.proof_approved_of_claimed': 'ካብ {claimed}',
+  'payment.proof_reviewed_at': 'ኣብ ዝተርኣየሉ',
+  'payment.proof_approval_notes': 'ሓበሬታ (ምርጫ)',
   'payment.receipt_download': 'ሪሲት PDF',
   // Organization payment gateway (per-org provider config); unreviewed machine drafts.
   'org.gateway_title': 'መእተዊ ክፍሊት',

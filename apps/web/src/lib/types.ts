@@ -467,6 +467,8 @@ export interface PaymentProof {
   reference: string | null;
   notes: string | null;
   status: string;
+  /** Amount staff actually received on approval; null until approved. */
+  approvedAmountMinor: string | null;
   reviewedAt: string | null;
   reviewNotes: string | null;
   paymentId: string | null;

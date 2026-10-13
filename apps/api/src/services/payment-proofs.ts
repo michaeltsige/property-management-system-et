@@ -13,7 +13,7 @@ import { Prisma, type PrismaClient } from '@prisma/client';
 
 import { type Money, type PaymentMethod } from '@pms/shared';
 
-import { businessRule, conflict, notFound } from '../lib/errors.js';
+import { badRequest, businessRule, conflict, notFound } from '../lib/errors.js';
 import { getStorageDriver } from '../storage/index.js';
 import { recordAudit } from './audit.js';
 import { recordPaymentInTx } from './payments.js';
@@ -32,6 +32,8 @@ export interface PaymentProofView {
   reference: string | null;
   notes: string | null;
   status: string;
+  /** Amount staff actually received on approval; null until approved. */
+  approvedAmountMinor: string | null;
   reviewedAt: string | null;
   reviewNotes: string | null;
   paymentId: string | null;
@@ -52,6 +54,7 @@ interface ProofRow {
   reference: string | null;
   notes: string | null;
   status: string;
+  approvedAmountMinor: bigint | null;
   reviewedAt: Date | null;
   reviewNotes: string | null;
   paymentId: string | null;
@@ -73,6 +76,7 @@ function serialize(proof: ProofRow): PaymentProofView {
     reference: proof.reference ?? null,
     notes: proof.notes ?? null,
     status: proof.status,
+    approvedAmountMinor: proof.approvedAmountMinor === null ? null : proof.approvedAmountMinor.toString(),
     reviewedAt: proof.reviewedAt ? proof.reviewedAt.toISOString() : null,
     reviewNotes: proof.reviewNotes ?? null,
     paymentId: proof.paymentId ?? null,
@@ -239,6 +243,8 @@ export async function approvePaymentProof(
     proofId: string;
     actorUserId?: string | null;
     notes?: string | null;
+    /** What staff actually received; omit to record the full claimed amount. */
+    amount?: { amountMinor: number; currency: string } | null;
   },
 ) {
   for (let attempt = 0; attempt <= MAX_SERIALIZATION_RETRIES; attempt += 1) {
@@ -254,13 +260,28 @@ export async function approvePaymentProof(
             throw conflict('This proof has already been reviewed');
           }
 
+          // Partial approval: staff record what actually arrived. The claimed
+          // amount stays on the proof for the audit trail; approving more than
+          // the slip claims is a mistake, not a payment.
+          const claimedMinor = Number(proof.amountMinor);
+          const approvedMinor = params.amount?.amountMinor ?? claimedMinor;
+          if (approvedMinor <= 0) {
+            throw badRequest('The approved amount must be greater than zero');
+          }
+          if (approvedMinor > claimedMinor) {
+            throw badRequest('The approved amount cannot exceed the amount on the slip');
+          }
+          if (params.amount && params.amount.currency !== proof.currency) {
+            throw badRequest(`The proof is in ${proof.currency}; the approved amount must use the same currency`);
+          }
+
           // The money enters the books exactly as a staff-recorded payment does.
           const payment = await recordPaymentInTx({
             organizationId: proof.organizationId,
             actorUserId: params.actorUserId ?? null,
             leaseId: proof.leaseId ?? null,
             tenantId: proof.tenantId,
-            amount: { amountMinor: Number(proof.amountMinor), currency: proof.currency },
+            amount: { amountMinor: approvedMinor, currency: proof.currency },
             method: proof.method as PaymentMethod,
             paidAt: new Date(),
             reference: proof.reference ?? undefined,
@@ -271,6 +292,7 @@ export async function approvePaymentProof(
             where: { id: proof.id },
             data: {
               status: 'approved',
+              approvedAmountMinor: BigInt(approvedMinor),
               reviewedById: params.actorUserId ?? null,
               reviewedAt: new Date(),
               reviewNotes: params.notes ?? null,
@@ -285,8 +307,8 @@ export async function approvePaymentProof(
             action: 'update',
             entityType: 'PaymentProof',
             entityId: proof.id,
-            before: { status: 'pending' },
-            after: { status: 'approved', paymentId: payment.paymentId },
+            before: { status: 'pending', claimedAmountMinor: claimedMinor },
+            after: { status: 'approved', approvedAmountMinor: approvedMinor, paymentId: payment.paymentId },
           });
 
           return { proof: serialize(updated), payment };

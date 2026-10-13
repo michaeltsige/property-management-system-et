@@ -371,10 +371,13 @@ export const api = {
     apiFetch<{ paymentId: string; receiptNumber: string }>('/payments', { method: 'POST', body }),
   paymentProofs: (query = '') =>
     apiFetch<{ items: PaymentProof[]; total: number }>(`/payments/proofs${query}`),
-  approvePaymentProof: (proofId: string, notes?: string) =>
+  approvePaymentProof: (
+    proofId: string,
+    options?: { amount?: { amountMinor: number; currency: string } | null; notes?: string },
+  ) =>
     apiFetch<{ proof: PaymentProof; payment: { paymentId: string; receiptNumber: string } }>(
       `/payments/proofs/${proofId}/approve`,
-      { method: 'POST', body: { notes } },
+      { method: 'POST', body: { notes: options?.notes, amount: options?.amount ?? undefined } },
     ),
   rejectPaymentProof: (proofId: string, reason: string) =>
     apiFetch<{ proof: PaymentProof }>(`/payments/proofs/${proofId}/reject`, {

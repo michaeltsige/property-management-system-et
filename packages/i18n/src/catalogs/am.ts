@@ -370,6 +370,12 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'payment.proof_approved': 'ማረጋገጫ ጸድቋል · ደረሰኝ {receipt}',
   'payment.proof_rejected': 'ማረጋገጫ ተቀንጥሷል።',
   'payment.proof_download': 'ማረጋገጫ አውርድ',
+  'payment.proof_claimed': 'በማረጋገጫው ላይ የተጠየቀ',
+  'payment.proof_partial_amount': 'የተቀበለው ትክክለኛ መጠን',
+  'payment.proof_partial_hint': 'ከማረጋገጫው መጠን ያነሰ መጠን ከጻፉ በከፊል እንደተከፈለ ይመዘገባል — ቀሪው ክፍያ ላይ ይቀራል። ማረጋገጫው አይስተካከልም።',
+  'payment.proof_approved_of_claimed': 'ከ{claimed} ውስጥ',
+  'payment.proof_reviewed_at': 'የተገመገመበት',
+  'payment.proof_approval_notes': 'ማስታወሻ (አማራጭ)',
   'payment.receipt_download': 'ደረሰኝ PDF',
   // Organization payment gateway (per-org provider config); unreviewed machine drafts.
   'org.gateway_title': 'የክፍያ ጌትዌይ',

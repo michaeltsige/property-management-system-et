@@ -547,6 +547,12 @@ export const EN_CATALOG = {
   'payment.proof_approved': 'Proof approved · receipt {receipt}',
   'payment.proof_rejected': 'Proof rejected.',
   'payment.proof_download': 'Download slip',
+  'payment.proof_claimed': 'Claimed on the slip',
+  'payment.proof_partial_amount': 'Actually received',
+  'payment.proof_partial_hint': 'An amount smaller than the slip approves it partially — the remainder stays due. The slip itself is never edited.',
+  'payment.proof_approved_of_claimed': 'of {claimed}',
+  'payment.proof_reviewed_at': 'Reviewed',
+  'payment.proof_approval_notes': 'Notes (optional)',
   'payment.receipt_download': 'Receipt PDF',
   // Organization payment gateway (per-org provider config); non-English entries are unreviewed machine drafts.
   'org.gateway_title': 'Payment gateway',

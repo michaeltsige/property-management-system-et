@@ -508,6 +508,12 @@ export const paymentProofListQuerySchema = paginationSchema.partial().extend({
 
 export const paymentProofApprovalSchema = z.object({
   notes: z.string().trim().max(1000).optional(),
+  /**
+   * What the staff member actually received. Omit to approve the full
+   * tenant-claimed amount; a smaller value approves partially (the remainder
+   * stays due). Approving more than claimed is rejected.
+   */
+  amount: moneySchema.optional(),
 });
 
 export const paymentProofRejectionSchema = z.object({

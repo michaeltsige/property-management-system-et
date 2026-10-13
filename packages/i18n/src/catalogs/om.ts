@@ -379,6 +379,12 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'payment.proof_approved': "Rasiifiin mirkanaa'e · rasiifii {receipt}",
   'payment.proof_rejected': 'Rasiifiin dhabame.',
   'payment.proof_download': 'Rasiifii buufi',
+  'payment.proof_claimed': 'Rasiifichi irratti gaafatame',
+  'payment.proof_partial_amount': 'Dhugumatti kan argame',
+  'payment.proof_partial_hint': 'Gatii rasiifichaa gadii taʾeen waliin mirkaneessuu kee baasaa kaffalamaa taʾea — kan hafes kaffalamaatti hafa. Rasiifichi hin jijjiiramu.',
+  'payment.proof_approved_of_claimed': '{claimed} keessaa',
+  'payment.proof_reviewed_at': 'Yeroo ilaalame',
+  'payment.proof_approval_notes': 'Yaadannoo (filannoo)',
   'payment.receipt_download': 'Rasiifii PDF',
   // Organization payment gateway (per-org provider config); unreviewed machine drafts.
   'org.gateway_title': 'Koofii kaffalaa',

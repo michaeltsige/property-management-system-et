@@ -664,6 +664,9 @@ model PaymentProof {
   reference      String?
   notes          String?
   status         String    @default("pending") // PAYMENT_PROOF_STATUSES
+  // What staff actually received when approving — may be less than the
+  // tenant-claimed `amountMinor` (partial payment). Null while pending/rejected.
+  approvedAmountMinor BigInt?
   reviewedById   String?   @db.Uuid
   reviewedAt     DateTime?
   reviewNotes    String?

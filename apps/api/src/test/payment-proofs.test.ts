@@ -195,6 +195,73 @@ describe('reviewing a proof of payment', () => {
     expect(ledger.amountMinor).toBe(-1_500_000n);
   });
 
+  it('approves partially when staff record a smaller amount; the remainder stays due', async () => {
+    const { header, staffHeader, prisma, portfolio } = await setupPortalTenant(
+      'proof-partial',
+      '+251911100208',
+    );
+
+    const proof = await request(app)
+      .post('/api/v1/portal/payment-proofs')
+      .set(header)
+      .send(uploadBody())
+      .expect(201);
+
+    const approved = await request(app)
+      .post(`/api/v1/payments/proofs/${proof.body.proof.id}/approve`)
+      .set(staffHeader)
+      .send({ amount: { amountMinor: 750_000, currency: 'ETB' }, notes: 'Paid half' })
+      .expect(200);
+
+    // The recorded payment is the approved amount, not the claimed one.
+    expect(approved.body.payment.allocatedMinor).toBe('750000');
+    expect(approved.body.proof.amountMinor).toBe('1500000');
+    expect(approved.body.proof.approvedAmountMinor).toBe('750000');
+
+    const proofRow = await prisma.paymentProof.findUniqueOrThrow({
+      where: { id: proof.body.proof.id },
+    });
+    expect(proofRow.approvedAmountMinor).toBe(750_000n);
+    expect(proofRow.claimedAmountMinor).toBeUndefined(); // claimed stays in amountMinor
+
+    // First charge is partial, not paid; the ledger only carries what arrived.
+    const charges = await prisma.charge.findMany({
+      where: { leaseId: portfolio.leaseId },
+      orderBy: { dueDate: 'asc' },
+    });
+    expect(charges[0]!.status).toBe('partial');
+    expect(charges[0]!.paidMinor).toBe(750_000n);
+
+    const ledger = await prisma.ledgerEntry.findFirstOrThrow({
+      where: { paymentId: approved.body.payment.paymentId },
+    });
+    expect(ledger.amountMinor).toBe(-750_000n);
+  });
+
+  it('refuses to approve more than the slip claims', async () => {
+    const { header, staffHeader } = await setupPortalTenant('proof-over', '+251911100209');
+
+    const proof = await request(app)
+      .post('/api/v1/portal/payment-proofs')
+      .set(header)
+      .send(uploadBody())
+      .expect(201);
+
+    const over = await request(app)
+      .post(`/api/v1/payments/proofs/${proof.body.proof.id}/approve`)
+      .set(staffHeader)
+      .send({ amount: { amountMinor: 2_000_000, currency: 'ETB' } })
+      .expect(400);
+    expect(over.body.error.code).toBe('VALIDATION_ERROR');
+
+    // Still reviewable afterwards.
+    await request(app)
+      .post(`/api/v1/payments/proofs/${proof.body.proof.id}/approve`)
+      .set(staffHeader)
+      .send({})
+      .expect(200);
+  });
+
   it('rejects a proof with a reason and never records money', async () => {
     const { header, staffHeader, prisma } = await setupPortalTenant('proof-reject', '+251911100207');
 
