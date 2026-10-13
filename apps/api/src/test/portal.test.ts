@@ -43,7 +43,7 @@ describe('tenant portal enrollment', () => {
     expect(login.status).toBe(401);
     await request(app).delete(`/api/v1/tenants/${f.tenantId}/portal`).set(f.h).expect(200);
     expect((await getPrisma().membership.findFirstOrThrow({ where: { userId: user.id } })).status).toBe(
-      'inactive',
+      'disabled',
     );
   });
   it('requires tenants.write and organization scope', async () => {

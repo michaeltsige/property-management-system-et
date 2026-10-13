@@ -50,6 +50,36 @@ describe('organization members', () => {
     expect(emails).toContain(first.email);
     expect(emails).not.toContain(second.email);
   });
+
+  it('keeps tenants out of the team list even after portal enrollment', async () => {
+    const fixture = await createOrganizationFixture('members-tenant');
+    const prisma = getPrisma();
+    // A portal-enrolled tenant: its own user + a `tenant`-role membership, the
+    // exact row that used to surface in the team table as a fake member.
+    const tenantUser = await prisma.user.create({
+      data: {
+        email: 'tenant-team@example.com',
+        fullName: 'Enrolled Tenant',
+        passwordHash: 'x',
+        language: 'en',
+      },
+    });
+    await prisma.membership.create({
+      data: {
+        organizationId: fixture.organizationId,
+        userId: tenantUser.id,
+        role: 'tenant',
+        status: 'active',
+      },
+    });
+
+    const response = await request(app).get('/api/v1/organizations/members').set(authHeader(fixture));
+
+    expect(response.status).toBe(200);
+    const emails = (response.body.members as { email: string }[]).map((member) => member.email);
+    expect(emails).toContain(fixture.email);
+    expect(emails).not.toContain('tenant-team@example.com');
+  });
 });
 
 describe('organization profile', () => {

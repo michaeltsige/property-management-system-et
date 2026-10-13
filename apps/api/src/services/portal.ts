@@ -211,7 +211,7 @@ export async function enrollTenantPortal(
       // otherwise "enable" silently does nothing.
       await tx.user.updateMany({ where: { id: tenant.userId, isActive: false }, data: { isActive: true } });
       await tx.membership.updateMany({
-        where: { organizationId, userId: tenant.userId, status: 'inactive' },
+        where: { organizationId, userId: tenant.userId, status: { in: ['inactive', 'disabled'] } },
         data: { status: 'active' },
       });
       await tx.tenant.update({ where: { id: tenant.id }, data: { portalEnabledAt: new Date() } });
@@ -259,7 +259,7 @@ export async function disableTenantPortal(
     if (!tenant.userId) return { enrolled: false };
     await tx.membership.updateMany({
       where: { organizationId, userId: tenant.userId },
-      data: { status: 'inactive' },
+      data: { status: 'disabled' },
     });
     await tx.user.update({ where: { id: tenant.userId }, data: { isActive: false } });
     await tx.tenant.update({ where: { id: tenant.id }, data: { portalEnabledAt: null } });

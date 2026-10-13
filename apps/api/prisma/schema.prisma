@@ -123,7 +123,7 @@ model Membership {
   id             String    @id @default(uuid()) @db.Uuid
   organizationId String    @db.Uuid
   userId         String    @db.Uuid
-  role           String    // ROLES: owner_admin | manager | accountant | maintenance | tenant
+  role           String    // ROLES: owner_admin | manager | tenant (tenants join via portal enrollment, not invites)
   status         String    @default("active") // invited | active | disabled
   invitedById    String?   @db.Uuid
   invitedAt      DateTime?

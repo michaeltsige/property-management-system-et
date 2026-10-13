@@ -8,7 +8,7 @@
 
 import type { PrismaClient } from '@prisma/client';
 
-import { DEFAULT_ORG_SETTINGS, PAYMENT_GATEWAY_SETTING_KEY, type Role, type UpdateOrganizationSettings } from '@pms/shared';
+import { DEFAULT_ORG_SETTINGS, PAYMENT_GATEWAY_SETTING_KEY, STAFF_ROLES, type Role, type UpdateOrganizationSettings } from '@pms/shared';
 
 import { conflict, notFound } from '../lib/errors.js';
 import { generateRefreshToken, hashPassword } from '../lib/crypto.js';
@@ -98,9 +98,13 @@ export async function updateSettings(
   });
 }
 
+/**
+ * The team list is staff-only: tenants have their own section (and their own
+ * portal), so portal enrollments must not surface here as fake "members".
+ */
 export async function listMembers(prisma: PrismaClient, organizationId: string) {
   const members = await prisma.membership.findMany({
-    where: { organizationId },
+    where: { organizationId, role: { in: [...STAFF_ROLES] } },
     include: { user: true },
     orderBy: [{ role: 'asc' }, { createdAt: 'asc' }],
   });
