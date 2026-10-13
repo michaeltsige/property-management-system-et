@@ -234,6 +234,22 @@ export const DOCUMENT_CATEGORIES = [
   'other',
 ] as const;
 
+/**
+ * Presentation-only grouping for the documents screen: the ten categories in
+ * one flat list are impossible to scan, so the UI shows six named groups.
+ * Storage and the API keep using the flat `DOCUMENT_CATEGORIES`.
+ */
+export const DOCUMENT_CATEGORY_GROUPS = [
+  { key: 'tenant_data', categories: ['id_document'] },
+  { key: 'lease_agreements', categories: ['lease_agreement'] },
+  { key: 'payments', categories: ['payment_proof', 'payment_receipt', 'invoice'] },
+  { key: 'maintenance', categories: ['inspection_report', 'maintenance_photo'] },
+  { key: 'tax_utilities', categories: ['utility_bill', 'tax_document'] },
+  { key: 'other', categories: ['other'] },
+] as const;
+
+export type DocumentCategoryGroupKey = (typeof DOCUMENT_CATEGORY_GROUPS)[number]['key'];
+
 export const ALLOWED_UPLOAD_MIME_TYPES = [
   'application/pdf',
   'image/jpeg',

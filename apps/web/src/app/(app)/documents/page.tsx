@@ -3,7 +3,13 @@
 import { Download, Plus, Trash2 } from 'lucide-react';
 import { useRef, useState } from 'react';
 
-import { DOCUMENT_CATEGORIES, ALLOWED_UPLOAD_MIME_TYPES, DEFAULT_MAX_UPLOAD_BYTES } from '@pms/shared';
+import {
+  DOCUMENT_CATEGORIES,
+  DOCUMENT_CATEGORY_GROUPS,
+  ALLOWED_UPLOAD_MIME_TYPES,
+  DEFAULT_MAX_UPLOAD_BYTES,
+} from '@pms/shared';
+import type { CalendarKind, LanguageCode } from '@pms/calendar';
 
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
@@ -48,6 +54,7 @@ export default function DocumentsPage() {
   const [leaseId, setLeaseId] = useState('');
   const [tenantId, setTenantId] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [search, setSearch] = useState('');
   const { pending, error, run } = useAction();
 
   const maxMb = Math.round(DEFAULT_MAX_UPLOAD_BYTES / 1024 / 1024);
@@ -100,9 +107,27 @@ export default function DocumentsPage() {
     URL.revokeObjectURL(url);
   }
 
-  const rows = (documents.data?.items ?? []).filter(
-    (document) => propertyContext === null || document.propertyId === null || document.propertyId === propertyContext,
-  );
+  const visible = (documents.data?.items ?? [])
+    .filter(
+      (document) =>
+        propertyContext === null || document.propertyId === null || document.propertyId === propertyContext,
+    )
+    .filter((document) => {
+      if (!search.trim()) return true;
+      const needle = search.trim().toLowerCase();
+      return (
+        (document.title ?? '').toLowerCase().includes(needle) ||
+        document.category.toLowerCase().includes(needle)
+      );
+    });
+  const groups = DOCUMENT_CATEGORY_GROUPS.map((group) => ({
+    ...group,
+    items: visible.filter((document) => (group.categories as readonly string[]).includes(document.category)),
+  }));
+  const groupedCount = groups.reduce((sum, group) => sum + group.items.length, 0);
+  // Rows exist that no group claims (future categories): keep them visible.
+  const known = new Set(DOCUMENT_CATEGORY_GROUPS.flatMap((group) => group.categories as readonly string[]));
+  const ungrouped = visible.filter((document) => !known.has(document.category));
 
   return (
     <div>
@@ -123,65 +148,71 @@ export default function DocumentsPage() {
         </Alert>
       ) : null}
 
-      <Card>
-        <CardContent className="p-0">
-          {documents.loading ? (
-            <div className="space-y-2 p-4">
-              <Skeleton className="h-8 w-full" />
-              <Skeleton className="h-8 w-full" />
-            </div>
-          ) : rows.length === 0 ? (
+      <div className="mb-4 max-w-sm">
+        <Input
+          type="search"
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder={t('documents.search')}
+          aria-label={t('documents.search')}
+        />
+      </div>
+
+      {documents.loading ? (
+        <div className="space-y-2">
+          <Skeleton className="h-16 w-full" />
+          <Skeleton className="h-16 w-full" />
+        </div>
+      ) : visible.length === 0 ? (
+        <Card>
+          <CardContent>
             <EmptyState title={t('common.no_results')} description={t('documents.upload')} />
-          ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>{t('documents.file')}</Th>
-                  <Th>{t('documents.category')}</Th>
-                  <Th>{t('documents.size')}</Th>
-                  <Th>{t('reports.period')}</Th>
-                  <Th />
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((document) => (
-                  <tr key={document.id}>
-                    <Td>
-                      <span className="font-medium text-slate-900">
-                        {document.title ?? document.id.slice(0, 8)}
-                      </span>
-                      <span className="block text-[11px] text-slate-500">{document.mimeType}</span>
-                    </Td>
-                    <Td>
-                      <Badge>{document.category.replace(/_/g, ' ')}</Badge>
-                    </Td>
-                    <Td className="tabular">{(document.sizeBytes / 1024).toFixed(0)} KB</Td>
-                    <Td>{formatDate(document.createdAt, { language, calendar })}</Td>
-                    <Td className="whitespace-nowrap">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title={t('documents.download')}
-                        onClick={() => void download(document.id, document.title ?? 'document')}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        title={t('common.delete')}
-                        onClick={() => void remove(document.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </Td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {groups.map((group) => (
+            <Card key={group.key}>
+              <CardContent className="p-0">
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                  <p className="text-sm font-medium text-slate-900">{t(`documents.group_${group.key}` as never)}</p>
+                  <span className="text-xs text-slate-500 tabular">{group.items.length}</span>
+                </div>
+                {group.items.length === 0 ? (
+                  <p className="px-4 py-3 text-xs text-slate-400">{t('documents.group_empty')}</p>
+                ) : (
+                  <DocumentTable
+                    items={group.items}
+                    language={language}
+                    calendar={calendar}
+                    onDownload={download}
+                    onRemove={remove}
+                  />
+                )}
+              </CardContent>
+            </Card>
+          ))}
+          {ungrouped.length > 0 ? (
+            <Card>
+              <CardContent className="p-0">
+                <div className="border-b border-slate-200 px-4 py-3 text-sm font-medium text-slate-900">
+                  {t('documents.group_other')}
+                </div>
+                <DocumentTable
+                  items={ungrouped}
+                  language={language}
+                  calendar={calendar}
+                  onDownload={download}
+                  onRemove={remove}
+                />
+              </CardContent>
+            </Card>
+          ) : null}
+          {groupedCount === 0 && ungrouped.length === 0 ? (
+            <p className="px-1 text-xs text-slate-400">{t('common.no_results')}</p>
+          ) : null}
+        </div>
+      )}
 
       <Modal
         open={open}
@@ -221,10 +252,14 @@ export default function DocumentsPage() {
               value={category}
               onChange={(event) => setCategory(event.target.value as typeof category)}
             >
-              {DOCUMENT_CATEGORIES.map((option) => (
-                <option key={option} value={option}>
-                  {option.replace(/_/g, ' ')}
-                </option>
+              {DOCUMENT_CATEGORY_GROUPS.map((group) => (
+                <optgroup key={group.key} label={t(`documents.group_${group.key}` as never)}>
+                  {(group.categories as readonly string[]).map((option) => (
+                    <option key={option} value={option}>
+                      {option.replace(/_/g, ' ')}
+                    </option>
+                  ))}
+                </optgroup>
               ))}
             </Select>
           </div>
@@ -258,6 +293,78 @@ export default function DocumentsPage() {
         </form>
       </Modal>
     </div>
+  );
+}
+
+/** One group's table — file, category, size, date, actions. */
+function DocumentTable({
+  items,
+  language,
+  calendar,
+  onDownload,
+  onRemove,
+}: {
+  items: {
+    id: string;
+    title: string | null;
+    category: string;
+    mimeType: string;
+    sizeBytes: number;
+    createdAt: string;
+  }[];
+  language: LanguageCode;
+  calendar: CalendarKind;
+  onDownload: (id: string, filename: string) => Promise<void>;
+  onRemove: (id: string) => Promise<void>;
+}) {
+  const { t } = usePreferences();
+  return (
+    <Table>
+      <thead>
+        <tr>
+          <Th>{t('documents.file')}</Th>
+          <Th>{t('documents.category')}</Th>
+          <Th>{t('documents.size')}</Th>
+          <Th>{t('reports.period')}</Th>
+          <Th />
+        </tr>
+      </thead>
+      <tbody>
+        {items.map((document) => (
+          <tr key={document.id}>
+            <Td>
+              <span className="font-medium text-slate-900">
+                {document.title ?? document.id.slice(0, 8)}
+              </span>
+              <span className="block text-[11px] text-slate-500">{document.mimeType}</span>
+            </Td>
+            <Td>
+              <Badge>{document.category.replace(/_/g, ' ')}</Badge>
+            </Td>
+            <Td className="tabular">{(document.sizeBytes / 1024).toFixed(0)} KB</Td>
+            <Td>{formatDate(document.createdAt, { language, calendar })}</Td>
+            <Td className="whitespace-nowrap">
+              <Button
+                variant="ghost"
+                size="icon"
+                title={t('documents.download')}
+                onClick={() => void onDownload(document.id, document.title ?? 'document')}
+              >
+                <Download className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                title={t('common.delete')}
+                onClick={() => void onRemove(document.id)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </Td>
+          </tr>
+        ))}
+      </tbody>
+    </Table>
   );
 }
 

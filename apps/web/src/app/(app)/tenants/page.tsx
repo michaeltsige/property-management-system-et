@@ -65,6 +65,9 @@ export default function TenantsPage() {
     idType: '',
     idNumber: '',
   });
+  // Optional: the scanned/photographed ID that matches the typed number. Never
+  // required here — a landlord can add it later from Documents.
+  const [idFile, setIdFile] = useState<File | null>(null);
   const { pending, error, run } = useAction();
   const canManagePortal = roleHasPermission(session?.role as Role, 'tenants.write');
   const [portalPendingId, setPortalPendingId] = useState<string | null>(null);
@@ -83,7 +86,7 @@ export default function TenantsPage() {
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     await run(async () => {
-      await api.createTenant({
+      const created = await api.createTenant({
         fullName: form.fullName,
         phone: form.phone || undefined,
         email: form.email || undefined,
@@ -95,6 +98,23 @@ export default function TenantsPage() {
         idDocuments:
           form.idType && form.idNumber ? [{ type: form.idType, number: form.idNumber }] : undefined,
       });
+      if (idFile) {
+        // The profile exists at this point; a failed upload must not make the
+        // landlord re-type everything. Re-throw with a message, tenant stays.
+        try {
+          const dataBase64 = await readAsBase64(idFile);
+          await api.uploadDocument({
+            category: 'id_document',
+            title: `${form.fullName} ID`,
+            filename: idFile.name,
+            mimeType: idFile.type,
+            dataBase64,
+            tenantId: created.tenant.id,
+          });
+        } catch {
+          throw new Error(t('documents.id_upload_failed'));
+        }
+      }
       setForm({
         fullName: '',
         phone: '',
@@ -105,6 +125,7 @@ export default function TenantsPage() {
         idType: '',
         idNumber: '',
       });
+      setIdFile(null);
       setOpen(false);
       tenants.reload();
     }).catch(() => undefined);
@@ -303,6 +324,17 @@ export default function TenantsPage() {
             />
           </div>
 
+          <div className="space-y-1 sm:col-span-2">
+            <Label htmlFor="idFile">{`${t('documents.id_file')} (${t('common.optional')})`}</Label>
+            <Input
+              id="idFile"
+              type="file"
+              accept="application/pdf,image/jpeg,image/png,image/webp"
+              onChange={(event) => setIdFile(event.target.files?.[0] ?? null)}
+            />
+            <p className="text-[11px] text-slate-500">{t('documents.id_file_hint')}</p>
+          </div>
+
           {error ? (
             <div className="sm:col-span-2">
               <Alert tone="danger">{error}</Alert>
@@ -312,4 +344,16 @@ export default function TenantsPage() {
       </Modal>
     </div>
   );
+}
+
+function readAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result ?? '');
+      resolve(result.slice(result.indexOf(',') + 1));
+    };
+    reader.onerror = () => reject(new Error('Could not read the file'));
+    reader.readAsDataURL(file);
+  });
 }
