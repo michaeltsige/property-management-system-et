@@ -315,6 +315,12 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'lease.start_date': 'መዓልቲ ጅማሬ',
   'lease.end_date': 'መዓልቲ መወዳእታ',
   'lease.deposit': 'ትእስራ',
+  'lease.deposit_type.none': 'የለን',
+  'lease.deposit_type.months_of_rent': 'ወርሒ ከረን (ቅድሚ ክፍሊት ይቆጸር)',
+  'lease.deposit_type.fixed': 'ቀዋሚ መጠን (ይዕቆብ፣ ይመለስ)',
+  'lease.deposit_advance_hint': 'ትእስራ ኣይተዓቅብን፡ መጀመርታ ወርሂ ብእኡ ተከፍሉ ይቆጸሩ።',
+  'lease.deposit_months': 'ወርሒ ከረን',
+  'lease.deposit_fixed_amount': 'መጠን ትእስራ (ይዕቆብ)',
   'lease.escalation': 'ዓመታዊ ወርሓ',
   'lease.terminate': 'ውዕል ኣቋርጽ',
 
@@ -327,6 +333,7 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
 
   'money.amount': 'መጠን',
   'money.balance': 'ተረፍ ሕሳብ',
+  'money.balance_credit_hint': 'ናይ መንእታ ቀሪ ሕሳብ፡ ተኻራዪ ቅድሚ ክፍሊቱ ዝኸፍሎ።',
   'money.outstanding': 'ዘይተኸፍለ',
   'money.paid': 'ተኸፊሉ',
   'money.rent_due': 'ክራይ ዝኽፈል',

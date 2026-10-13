@@ -37,7 +37,7 @@ import { money, prorateMoney, type BillingFrequency } from '@pms/shared';
 
 import { businessRule, conflict, notFound } from '../lib/errors.js';
 import { postLedgerEntry } from './ledger.js';
-import { applyLeaseCreditInTx } from './payments.js';
+import { applyLeaseCreditInTx, recordPaymentInTx } from './payments.js';
 import { recordAudit } from './audit.js';
 
 export type PrismaLike = PrismaClient | Prisma.TransactionClient;
@@ -476,6 +476,128 @@ export async function createDepositChargeInTx(tx: PrismaLike, params: DepositCha
 export async function createDepositCharge(prisma: PrismaClient, params: DepositChargeParams) {
   if (params.amountMinor <= 0n) throw businessRule('Deposit amount must be greater than zero');
   return prisma.$transaction((tx) => createDepositChargeInTx(tx, params));
+}
+
+// ---------------------------------------------------------------------------
+// Deposit as advance rent
+// ---------------------------------------------------------------------------
+
+export interface DepositAdvanceParams {
+  organizationId: string;
+  leaseId: string;
+  depositAmountMinor: bigint;
+  depositMonths: number;
+  currency: string;
+  actorUserId?: string | null;
+}
+
+/**
+ * Deposit counts as advance rent: the money a tenant hands over as deposit
+ * (1-2 months of rent, the Ethiopian norm) is exactly the rent for their first
+ * 1-2 months, so those months are charged **and immediately settled** here.
+ *
+ * Mechanics, inside the caller's transaction:
+ * - the first `depositMonths` charging periods generate their rent charges
+ *   (same shape the monthly job produces — proration included),
+ * - one payment referenced `deposit-advance` records the deposit money and is
+ *   allocated oldest-first; any leftover from a prorated start rolls forward
+ *   through the ordinary credit path,
+ * - no `deposit` charge is posted: nothing is held for later in this mode.
+ *
+ * Idempotent on the `deposit-advance` payment, so lease activation can be
+ * retried safely.
+ */
+export async function applyDepositAsAdvanceRentInTx(tx: PrismaLike, params: DepositAdvanceParams) {
+  const existing = await tx.payment.findFirst({
+    where: { leaseId: params.leaseId, reference: 'deposit-advance' },
+    select: { id: true },
+  });
+  if (existing) return null;
+
+  const lease = await tx.lease.findFirst({
+    where: { id: params.leaseId, organizationId: params.organizationId, deletedAt: null },
+  });
+  if (!lease) throw notFound('Lease not found in this organization');
+
+  const calendar: CalendarKind = lease.billingCalendar === 'gregorian' ? 'gregorian' : 'ethiopian';
+  const startPeriod = periodForDate(utcDateToCivil(lease.startDate, calendar));
+  const months =
+    lease.billingFrequency === 'custom'
+      ? 1
+      : (MONTHS_PER_CHARGE[lease.billingFrequency as Exclude<BillingFrequency, 'custom'>] ?? 1);
+
+  let created = 0;
+  for (let step = 0; step < params.depositMonths; step += 1) {
+    const period = shiftPeriod(startPeriod, step * months);
+    if (!isChargingPeriod(lease, period)) continue;
+
+    const amountMinor = amountForPeriod(lease, period);
+    if (amountMinor === 0n) continue;
+
+    const periodFirst = periodStart(period);
+    const periodLast = periodEnd(shiftPeriod(period, months - 1));
+    const dueCivil = clampDayOfMonth(period, lease.dueDayOfMonth);
+
+    try {
+      const charge = await tx.charge.create({
+        data: {
+          organizationId: lease.organizationId,
+          leaseId: lease.id,
+          tenantId: lease.tenantId,
+          unitId: lease.unitId,
+          type: 'rent',
+          description: `Rent for ${periodLabelFor(period)}`,
+          periodKey: period.key,
+          periodCalendar: period.calendar,
+          periodStart: civilToUtcDate(periodFirst),
+          periodEnd: civilToUtcDate(periodLast),
+          dueDate: civilToUtcDate(dueCivil),
+          amountMinor,
+          currency: lease.currency,
+          status: 'open',
+          createdById: params.actorUserId ?? null,
+        },
+      });
+
+      await postLedgerEntry(tx, {
+        organizationId: lease.organizationId,
+        leaseId: lease.id,
+        chargeId: charge.id,
+        kind: 'charge',
+        amountMinor,
+        currency: lease.currency,
+        occurredAt: civilToUtcDate(periodFirst),
+        memo: `Rent ${period.key} (${period.calendar})`,
+        createdById: params.actorUserId ?? null,
+      });
+      created += 1;
+    } catch (error) {
+      // (leaseId, periodKey, type) already billed — the job raced us. Fine.
+      if (error instanceof PrismaNamespace.PrismaClientKnownRequestError && error.code === 'P2002') {
+        continue;
+      }
+      throw error;
+    }
+  }
+
+  if (created === 0) return null;
+
+  // The deposit money itself: one payment, allocated oldest-first. A prorated
+  // first month means the payment runs out mid-way through a later period —
+  // that shows as a partial charge, exactly like a real partial payment.
+  await recordPaymentInTx({
+    organizationId: params.organizationId,
+    actorUserId: params.actorUserId ?? null,
+    leaseId: params.leaseId,
+    tenantId: lease.tenantId,
+    amount: { amountMinor: Number(params.depositAmountMinor), currency: params.currency },
+    method: 'other',
+    paidAt: lease.startDate,
+    reference: 'deposit-advance',
+    notes: 'Deposit received as advance rent',
+  })(tx);
+
+  return { chargesCreated: created };
 }
 
 /**

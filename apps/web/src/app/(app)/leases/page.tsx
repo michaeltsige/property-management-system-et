@@ -3,7 +3,7 @@
 import { Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
-import { BILLING_FREQUENCIES, LEASE_STATUSES, type BillingFrequency, type LeaseStatus } from '@pms/shared';
+import { BILLING_FREQUENCIES, DEPOSIT_TYPES, LEASE_STATUSES, type BillingFrequency, type DepositType, type LeaseStatus } from '@pms/shared';
 import { todayIn, type CivilDate } from '@pms/calendar';
 
 import { usePropertyContext } from '@/lib/property-context';
@@ -72,7 +72,9 @@ export default function LeasesPage() {
     endDate: null,
   });
   const [rent, setRent] = useState<number | null>(null);
-  const [deposit, setDeposit] = useState<number | null>(null);
+  const [depositMode, setDepositMode] = useState<DepositType>('months_of_rent');
+  const [depositMonths, setDepositMonths] = useState(2);
+  const [depositAmount, setDepositAmount] = useState<number | null>(null);
 
   useEffect(() => {
     if (!orgSettings || defaultsApplied.current) return;
@@ -105,12 +107,18 @@ export default function LeasesPage() {
         startDate: form.startDate,
         endDate: form.endDate,
         rentAmount: { amountMinor: rent ?? 0, currency },
-        depositAmount: deposit === null ? undefined : { amountMinor: deposit, currency },
-        depositType: deposit === null ? 'none' : 'fixed_amount',
+        // Months-of-rent deposits count as advance rent server-side: the first
+        // months are charged and settled, so the tenant starts "paid".
+        depositType: depositMode,
+        depositMonths: depositMode === 'months_of_rent' ? depositMonths : undefined,
+        depositAmount:
+          depositMode === 'fixed' && depositAmount !== null
+            ? { amountMinor: depositAmount, currency }
+            : undefined,
       });
       setOpen(false);
       setRent(null);
-      setDeposit(null);
+      setDepositAmount(null);
       leases.reload();
       units.reload();
     }).catch(() => undefined);
@@ -201,7 +209,16 @@ export default function LeasesPage() {
                     </Td>
                     <Td>{formatDate(lease.startDate, { language, calendar: lease.billingCalendar })}</Td>
                     <Td
-                      className={cn('tabular', Number(lease.balanceMinor) > 0 && 'font-medium text-red-600')}
+                      className={cn(
+                        'tabular',
+                        // Owed reads red, credit reads grey: a negative balance is
+                        // money the landlord holds, not a debt of the tenant.
+                        Number(lease.balanceMinor) > 0 && 'font-medium text-red-600',
+                        Number(lease.balanceMinor) < 0 && 'text-slate-400',
+                      )}
+                      title={
+                        Number(lease.balanceMinor) < 0 ? t('money.balance_credit_hint') : undefined
+                      }
                     >
                       {formatAmount(lease.balanceMinor, lease.currency, language)}
                     </Td>
@@ -355,13 +372,43 @@ export default function LeasesPage() {
             calendar={billingCalendar}
           />
 
-          <div className="sm:col-span-2">
-            <MoneyInput
-              label={`${t('lease.deposit')} (${t('common.optional')})`}
-              value={deposit}
-              onChange={setDeposit}
-            />
+          <div className="space-y-1">
+            <Label htmlFor="depositType">{t('lease.deposit')}</Label>
+            <Select
+              id="depositType"
+              value={depositMode}
+              onChange={(event) => setDepositMode(event.target.value as DepositType)}
+            >
+              {DEPOSIT_TYPES.map((mode) => (
+                <option key={mode} value={mode}>
+                  {t(`lease.deposit_type.${mode}` as never)}
+                </option>
+              ))}
+            </Select>
+            {depositMode === 'months_of_rent' ? (
+              <p className="text-[11px] text-slate-500">{t('lease.deposit_advance_hint')}</p>
+            ) : null}
           </div>
+
+          {depositMode === 'months_of_rent' ? (
+            <div className="space-y-1">
+              <Label htmlFor="depositMonths">{t('lease.deposit_months')}</Label>
+              <Input
+                id="depositMonths"
+                type="number"
+                min={1}
+                max={24}
+                value={depositMonths}
+                onChange={(event) => setDepositMonths(Number(event.target.value))}
+              />
+            </div>
+          ) : null}
+
+          {depositMode === 'fixed' ? (
+            <div className="sm:col-span-2">
+              <MoneyInput label={t('lease.deposit_fixed_amount')} value={depositAmount} onChange={setDepositAmount} />
+            </div>
+          ) : null}
 
           {error ? (
             <div className="sm:col-span-2">

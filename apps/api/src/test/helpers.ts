@@ -87,6 +87,8 @@ export async function createPortfolio(
     startDate: Date;
     endDate?: Date | null;
     tenantPhone?: string;
+    /** Lease status at fixture time; 'draft'/'pending' let tests drive activation. */
+    leaseStatus?: string;
   },
 ): Promise<PortfolioFixture> {
   const owner = await prisma.owner.upsert({
@@ -120,7 +122,7 @@ export async function createPortfolio(
       tenantId: tenant.id,
       billingCalendar: params.billingCalendar ?? 'ethiopian',
       billingFrequency: params.billingFrequency ?? 'monthly',
-      status: 'active',
+      status: params.leaseStatus ?? 'active',
       startDate: params.startDate,
       endDate: params.endDate ?? null,
       rentAmountMinor: BigInt(params.rentAmountMinor ?? 1_500_000),

@@ -324,6 +324,12 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'lease.start_date': 'Guyyaa jalqabaa',
   'lease.end_date': 'Guyyaa xumuraa',
   'lease.deposit': "Wabii (deebi'aa)",
+  'lease.deposit_type.none': 'Hin jiru',
+  'lease.deposit_type.months_of_rent': "Ji'a kiree (kaffalamuu duraa ta'a)",
+  'lease.deposit_type.fixed': 'Gatii qabataa (qaban, deebiʾaa)',
+  'lease.deposit_advance_hint': "Wabiin hin qabamu: ji'ootaa duraa isaanitiin kaffalame jedhamu.",
+  'lease.deposit_months': "Ji'a kiree",
+  'lease.deposit_fixed_amount': 'Hangaa wabii (qabamu)',
   'lease.escalation': 'Dabaluu waggaa',
   'lease.terminate': 'Waliigaltee adda kuti',
 
@@ -336,6 +342,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
 
   'money.amount': 'Hamma',
   'money.balance': 'Hafte',
+  'money.balance_credit_hint': 'Baayii absiiraa: kireefii dursee kaffalee qabu.',
   'money.outstanding': 'Kaffalame hin gaafatu',
   'money.paid': 'Kaffalameera',
   'money.rent_due': 'Kiree kaffalamu',

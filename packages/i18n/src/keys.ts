@@ -329,6 +329,12 @@ export const EN_CATALOG = {
   'lease.start_date': 'Start date',
   'lease.end_date': 'End date',
   'lease.deposit': 'Deposit',
+  'lease.deposit_type.none': 'No deposit',
+  'lease.deposit_type.months_of_rent': 'Months of rent (counts as advance rent)',
+  'lease.deposit_type.fixed': 'Fixed amount (held, refundable)',
+  'lease.deposit_advance_hint': 'The deposit is not held: the first months are marked paid with it.',
+  'lease.deposit_months': 'Months of rent',
+  'lease.deposit_fixed_amount': 'Deposit amount (held)',
   'lease.escalation': 'Annual increase',
   'lease.terminate': 'Terminate lease',
 
@@ -342,6 +348,7 @@ export const EN_CATALOG = {
   // --- money --------------------------------------------------------------
   'money.amount': 'Amount',
   'money.balance': 'Balance',
+  'money.balance_credit_hint': 'Negative balance: credit the tenant has paid ahead.',
   'money.outstanding': 'Outstanding',
   'money.paid': 'Paid',
   'money.rent_due': 'Rent due',

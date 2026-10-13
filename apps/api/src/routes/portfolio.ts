@@ -35,7 +35,7 @@ import { decryptField, encryptField, lastFour } from '../lib/crypto.js';
 import { num, pstr, str } from '../lib/query.js';
 import { getPrisma } from '../lib/prisma.js';
 import { balanceMinor, postLedgerEntry } from '../services/ledger.js';
-import { createDepositChargeInTx } from '../services/charges.js';
+import { applyDepositAsAdvanceRentInTx, createDepositChargeInTx } from '../services/charges.js';
 import { getSettings } from '../services/organizations.service.js';
 import { resolveOwner, checkBuilding } from '../services/hierarchy.js';
 import { recordAudit } from '../services/audit.js';
@@ -921,18 +921,30 @@ portfolioRouter.post(
           await tx.unit.update({ where: { id: unit.id }, data: { status: 'occupied' } });
         }
 
-        // Deposit becomes a real charge on the same transaction so it cannot be
-        // forgotten: the UI already collects it, but without a charge it never
-        // appeared in the ledger or arrears.
+        // Deposit handling on the same transaction so it cannot be forgotten.
+        // Months-of-rent deposits count as advance rent: the first months are
+        // charged and settled immediately. Any other deposit stays a held
+        // charge, refundable at the end of the lease.
         if (depositAmountMinor !== null && BigInt(depositAmountMinor) > 0n) {
-          await createDepositChargeInTx(tx, {
-            organizationId,
-            leaseId: created.id,
-            amountMinor: BigInt(depositAmountMinor),
-            currency: req.body.rentAmount.currency,
-            actorUserId: req.auth?.userId ?? null,
-            dueDate: startDate,
-          });
+          if (req.body.depositType === 'months_of_rent' && (req.body.depositMonths ?? 0) > 0) {
+            await applyDepositAsAdvanceRentInTx(tx, {
+              organizationId,
+              leaseId: created.id,
+              depositAmountMinor: BigInt(depositAmountMinor),
+              depositMonths: req.body.depositMonths ?? 0,
+              currency: req.body.rentAmount.currency,
+              actorUserId: req.auth?.userId ?? null,
+            });
+          } else {
+            await createDepositChargeInTx(tx, {
+              organizationId,
+              leaseId: created.id,
+              amountMinor: BigInt(depositAmountMinor),
+              currency: req.body.rentAmount.currency,
+              actorUserId: req.auth?.userId ?? null,
+              dueDate: startDate,
+            });
+          }
         }
 
         await recordAudit(tx, {
@@ -1255,10 +1267,25 @@ portfolioRouter.patch(
             ...(req.body.lateFeePercent !== undefined
               ? { lateFeePercent: req.body.lateFeePercent }
               : {}),
+            ...(req.body.depositType !== undefined ? { depositType: req.body.depositType } : {}),
             ...(req.body.depositMonths !== undefined ? { depositMonths: req.body.depositMonths } : {}),
             ...(req.body.depositAmount
               ? { depositAmountMinor: BigInt(req.body.depositAmount.amountMinor) }
-              : {}),
+              : req.body.depositType === 'months_of_rent' && (req.body.depositMonths ?? 0) > 0
+                ? // Mirror the create path: months-of-rent deposits derive their
+                  // amount from the rent when none was typed.
+                  {
+                    depositAmountMinor: BigInt(
+                      Math.round(
+                        Number(
+                          req.body.rentAmount
+                            ? req.body.rentAmount.amountMinor
+                            : existing.rentAmountMinor,
+                        ) * (req.body.depositMonths ?? 0),
+                      ),
+                    ),
+                  }
+                : {}),
             ...(req.body.escalationPercent !== undefined
               ? { escalationPercent: req.body.escalationPercent }
               : {}),
@@ -1282,25 +1309,37 @@ portfolioRouter.patch(
         const activating = existing.status !== 'active' && lease.status === 'active';
         if (activating) {
           // Activating a pending lease must also materialise its deposit; creating
-          // the lease as pending is the only path that skipped it.
+          // the lease as pending is the only path that skipped it. Months-of-rent
+          // deposits settle the first months as advance rent instead.
           if (lease.depositAmountMinor !== null && lease.depositAmountMinor > 0n) {
-            try {
-              await createDepositChargeInTx(tx, {
+            if (lease.depositType === 'months_of_rent' && (lease.depositMonths ?? 0) > 0) {
+              await applyDepositAsAdvanceRentInTx(tx, {
                 organizationId,
                 leaseId: lease.id,
-                amountMinor: lease.depositAmountMinor,
+                depositAmountMinor: lease.depositAmountMinor,
+                depositMonths: lease.depositMonths ?? 0,
                 currency: lease.currency,
                 actorUserId: req.auth?.userId ?? null,
-                dueDate: lease.startDate,
               });
-            } catch (error) {
-              // Already has a deposit (e.g. retried activation) — not a failure.
-              const isConflict =
-                typeof error === 'object' &&
-                error !== null &&
-                'statusCode' in error &&
-                (error as { statusCode?: number }).statusCode === 409;
-              if (!isConflict) throw error;
+            } else {
+              try {
+                await createDepositChargeInTx(tx, {
+                  organizationId,
+                  leaseId: lease.id,
+                  amountMinor: lease.depositAmountMinor,
+                  currency: lease.currency,
+                  actorUserId: req.auth?.userId ?? null,
+                  dueDate: lease.startDate,
+                });
+              } catch (error) {
+                // Already has a deposit (e.g. retried activation) — not a failure.
+                const isConflict =
+                  typeof error === 'object' &&
+                  error !== null &&
+                  'statusCode' in error &&
+                  (error as { statusCode?: number }).statusCode === 409;
+                if (!isConflict) throw error;
+              }
             }
           }
           await tx.unit.update({ where: { id: lease.unitId }, data: { status: 'occupied' } });

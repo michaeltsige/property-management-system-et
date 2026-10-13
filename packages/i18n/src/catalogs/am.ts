@@ -316,6 +316,12 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'lease.start_date': 'መጀመሪያ ቀን',
   'lease.end_date': 'መጨረሻ ቀን',
   'lease.deposit': 'ተቀማጭ',
+  'lease.deposit_type.none': 'የለም',
+  'lease.deposit_type.months_of_rent': 'የወራት ኪራይ (ከወደፊት ክፍያ ይቆጠራል)',
+  'lease.deposit_type.fixed': 'ቋሚ መጠን (ይዘው ይቀራል፣ ይመለሳል)',
+  'lease.deposit_advance_hint': 'ተቀማጩ አይያዝም፡ የመጀመሪያዎቹ ወራት በእሱ የተከፈሉ ይቆጠራሉ።',
+  'lease.deposit_months': 'የኪራይ ወራት',
+  'lease.deposit_fixed_amount': 'የተቀማጭ መጠን (ይዘው ይቀራል)',
   'lease.escalation': 'ዓመታዊ ጭማሪ',
   'lease.terminate': 'ውሉን አቁም',
 
@@ -328,6 +334,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
 
   'money.amount': 'መጠን',
   'money.balance': 'ቀሪ ሒሳብ',
+  'money.balance_credit_hint': 'አሉታዊ ቀሪ ሒሳብ፡ ተከራዩን የመሰየመው ብድር ነው።',
   'money.outstanding': 'ያልተከፈለ',
   'money.paid': 'የተከፈለ',
   'money.rent_due': 'የሚከፈል ኪራይ',
