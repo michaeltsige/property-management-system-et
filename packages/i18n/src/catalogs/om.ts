@@ -345,6 +345,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'lease.status.active': 'Hojii irra jira',
   'lease.status.expired': 'Yeroon darbeera',
   'lease.status.terminated': 'Addan kutameera',
+  'lease.status.ended': 'Xumureera',
   'lease.status.cancelled': 'Haqameera',
 
   'money.amount': 'Hamma',

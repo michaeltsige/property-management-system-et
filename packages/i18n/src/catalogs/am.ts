@@ -337,6 +337,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'lease.status.active': 'በሥራ ላይ',
   'lease.status.expired': 'ጊዜው አልቋል',
   'lease.status.terminated': 'ተቋርጧል',
+  'lease.status.ended': 'ጨርሷል',
   'lease.status.cancelled': 'ተሰርዟል',
 
   'money.amount': 'መጠን',

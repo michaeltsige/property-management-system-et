@@ -468,9 +468,9 @@ async function main(): Promise<void> {
     dueDay: number;
     /** Negative shift of the period the lease starts in. */
     startShift: number;
-    status: 'active' | 'pending' | 'ended';
+    status: 'active' | 'pending' | 'expired';
     frequency?: 'monthly' | 'quarterly';
-    endShift?: number; // for 'ended': the first NOT-billed period
+    endShift?: number; // for 'expired': the first NOT-billed period
     behavior: 'reliable' | 'late' | 'partial' | 'delinquent' | 'ended' | 'none';
     escalation?: { percent: number; everyMonths: number };
     depositMonths?: number;
@@ -483,7 +483,7 @@ async function main(): Promise<void> {
     { unit: unitOf(bole.id, '202'), tenantIndex: 3, rentMinor: 2_000_000n, dueDay: 1, startShift: -8, status: 'active', behavior: 'reliable', escalation: { percent: 5, everyMonths: 12 }, depositMonths: 2 },
     { unit: unitOf(bole.id, '301'), tenantIndex: 4, rentMinor: 1_550_000n, dueDay: 5, startShift: -13, status: 'active', behavior: 'delinquent', depositMonths: 1 },
     { unit: unitOf(bole.id, '302'), tenantIndex: 5, rentMinor: 1_400_000n, dueDay: 15, startShift: -6, status: 'active', behavior: 'reliable', depositMonths: 2 },
-    { unit: unitOf(bole.id, '103'), tenantIndex: 6, rentMinor: 1_300_000n, dueDay: 5, startShift: -13, status: 'ended', endShift: -2, behavior: 'ended', depositMonths: 1 },
+    { unit: unitOf(bole.id, '103'), tenantIndex: 6, rentMinor: 1_300_000n, dueDay: 5, startShift: -13, status: 'expired', endShift: -2, behavior: 'ended', depositMonths: 1 },
     { unit: unitOf(bole.id, '303'), tenantIndex: 7, rentMinor: 1_600_000n, dueDay: 5, startShift: 1, status: 'pending', behavior: 'none', depositMonths: 2 },
     { unit: unitOf(meg.id, 'G-01'), tenantIndex: 8, rentMinor: 4_500_000n, dueDay: 1, startShift: -13, status: 'active', frequency: 'quarterly', behavior: 'reliable', depositMonths: 3 },
     { unit: unitOf(meg.id, 'G-02'), tenantIndex: 9, rentMinor: 2_800_000n, dueDay: 1, startShift: -5, status: 'active', behavior: 'partial', depositMonths: 2 },
@@ -495,7 +495,7 @@ async function main(): Promise<void> {
 
   const leases: { seed: LeaseSeed; id: string }[] = [];
   for (const [index, seed] of leaseSeeds.entries()) {
-    const endDate = seed.status === 'ended' && seed.endShift !== undefined
+    const endDate = seed.status === 'expired' && seed.endShift !== undefined
       ? addDays(periodStartUtc(seed.endShift), -1)
       : undefined;
     const depositAmount = seed.depositMonths ? seed.rentMinor * BigInt(seed.depositMonths) : undefined;

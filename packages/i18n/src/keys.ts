@@ -350,6 +350,7 @@ export const EN_CATALOG = {
   'lease.status.active': 'Active',
   'lease.status.expired': 'Expired',
   'lease.status.terminated': 'Terminated',
+  'lease.status.ended': 'Ended',
   'lease.status.cancelled': 'Cancelled',
 
   // --- money --------------------------------------------------------------

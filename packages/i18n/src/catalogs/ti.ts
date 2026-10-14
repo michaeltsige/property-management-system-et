@@ -336,6 +336,7 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'lease.status.active': 'ንጡፍ',
   'lease.status.expired': 'ግዜኡ ተወዲኡ',
   'lease.status.terminated': 'ተቋሪጹ',
+  'lease.status.ended': 'ተዛዚሙ',
   'lease.status.cancelled': 'ተሰሪዙ',
 
   'money.amount': 'መጠን',
