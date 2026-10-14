@@ -65,45 +65,62 @@ export function WorkspaceTabs() {
   }
 
   return (
-    <nav aria-label={t('tabs.label')} className="overflow-x-auto border-b border-slate-200 bg-white">
-      <ul className="flex items-center gap-1.5 px-2 py-1.5">
-        {tabs.map((path) => {
-          const active = path === pathname;
-          return (
-            <li key={path} className="flex shrink-0 items-center">
-              <Link
-                href={path}
-                aria-current={active ? 'page' : undefined}
+    /*
+     * The tray-and-folder tab bar (reviewed direction: 3A slot + 3C Chrome tab).
+     *
+     * The white host continues the header surface; the tray inside it is a
+     * shallow slot cut into that surface — a recessed ink-tint with an inner
+     * shadow at its top edge, so it reads as INSET rather than drawn on.
+     * Tabs sit flush with the tray's mouth (no bottom padding): the active
+     * tab takes the canvas color, so it reads as physically connected to the
+     * page content below (the Chrome folder-tab convention) and lifts out of
+     * the slot with a soft ink-tinted shadow; the 1px `after` bridge hides
+     * any subpixel seam between tab and page. Inactive tabs stay flat and
+     * quiet inside the slot until hovered.
+     */
+    <nav aria-label={t('tabs.label')} className="bg-white px-2 pt-1.5">
+      <div className="flex items-end overflow-x-auto rounded-t-lg bg-ink-900/[0.06] px-1.5 pt-1.5 shadow-[inset_0_1px_2px_rgba(13,47,40,0.07)]">
+        <ul className="flex w-max items-end gap-1">
+          {tabs.map((path) => {
+            const active = path === pathname;
+            return (
+              <li
+                key={path}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors',
+                  'relative flex shrink-0 items-center rounded-t-lg pr-1 transition-colors',
                   active
-                    ? // The one filled chip on the strip: solid brand on brand
-                      // border, so the current tab wins at a glance.
-                      'border-brand-700 bg-brand-600 font-semibold text-white shadow-sm'
-                    : // Every other tab gets a visible bordered chip so the
-                      // strip reads as separate, clickable tabs.
-                      'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900',
+                    ? 'bg-canvas shadow-[0_1px_2px_rgba(13,47,40,0.06),0_-2px_6px_-2px_rgba(13,47,40,0.10)] after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-canvas after:content-[""]'
+                    : 'hover:bg-white/60',
                 )}
               >
-                {labelFor(path)}
-              </Link>
-              <button
-                type="button"
-                aria-label={`${t('tabs.close')} ${labelFor(path)}`}
-                onClick={(event) => close(event, path)}
-                className={cn(
-                  '-ml-0.5 rounded p-0.5',
-                  active
-                    ? 'text-white/70 hover:bg-white/20 hover:text-white'
-                    : 'text-slate-400 hover:bg-slate-200 hover:text-slate-700',
-                )}
-              >
-                <X className="h-3.5 w-3.5" aria-hidden="true" />
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+                <Link
+                  href={path}
+                  aria-current={active ? 'page' : undefined}
+                  className={cn(
+                    'flex items-center gap-1.5 py-1.5 pl-2.5 text-xs transition-colors',
+                    active ? 'font-semibold text-ink-900' : 'text-slate-600 hover:text-ink-900',
+                  )}
+                >
+                  {labelFor(path)}
+                </Link>
+                <button
+                  type="button"
+                  aria-label={`${t('tabs.close')} ${labelFor(path)}`}
+                  onClick={(event) => close(event, path)}
+                  className={cn(
+                    'rounded p-0.5 transition-colors',
+                    active
+                      ? 'text-slate-500 hover:bg-white hover:text-ink-900'
+                      : 'text-slate-400 hover:bg-white/70 hover:text-slate-700',
+                  )}
+                >
+                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
     </nav>
   );
 }
