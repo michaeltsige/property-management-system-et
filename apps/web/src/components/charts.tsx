@@ -24,7 +24,11 @@ import { useEffect, useRef } from 'react';
 
 export type EChartsOption = echarts.EChartsOption;
 
-/** The one chart palette. Semantics: brand = ours/primary, slate = comparator. */
+/** The one chart palette. Semantics: brand = ours/primary, slate = comparator.
+ *
+ * Chart internals use the ink-tinted greys of the depth system (edge/
+ * canvas family) rather than neutral slate, so a chart drawn inside a crisp
+ * container belongs to the same world as the border around it. */
 export const CHART_COLORS = {
   brand: '#1d6753',
   brandSoft: 'rgba(29, 103, 83, 0.10)',
@@ -32,11 +36,12 @@ export const CHART_COLORS = {
   gold: '#e8b22b',
   warning: '#f59e0b',
   danger: '#dc2626',
-  grid: '#e2e8f0',
+  // Ink-tinted grid/axis steps (the --color-edge family), not slate.
+  grid: '#dfe9e3',
   // slate-600, not slate-500: axis and legend text must clear WCAG AA (4.5:1)
   // against the white card, and slate-500 sat right on the line.
   axisLabel: '#475569',
-  axisLine: '#cbd5e1',
+  axisLine: '#b7c9c1',
 } as const;
 
 const AXIS_LABEL = { fontSize: 11, color: CHART_COLORS.axisLabel };
@@ -164,7 +169,7 @@ export function ChargesByStatusChart({
   const data =
     total > 0
       ? parts.map((part) => ({ name: part.name, value: part.value, itemStyle: { color: part.color } }))
-      : [{ name: '', value: 1, itemStyle: { color: '#f1f5f9' }, tooltip: { show: false } }];
+      : [{ name: '', value: 1, itemStyle: { color: '#eef4f0' }, tooltip: { show: false } }];
   const share = (value: number) =>
     total > 0 ? `${Math.round((value / total) * 100)}%` : '0%';
 
@@ -337,7 +342,7 @@ export function OccupancyChart({
             stack: 'units',
             barWidth: 14,
             data: rows.map((row) => row.vacant),
-            itemStyle: { color: '#e2e8f0' },
+            itemStyle: { color: CHART_COLORS.grid },
           },
         ],
       }}
@@ -427,7 +432,7 @@ export function ArrearsChart({
           grid: { left: 8, right: 8, top: 28, bottom: 8, containLabel: true },
           tooltip: {
             trigger: 'axis',
-            axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(15, 23, 42, 0.04)' } },
+            axisPointer: { type: 'shadow', shadowStyle: { color: 'rgba(13, 47, 40, 0.04)' } },
             valueFormatter: (value) => `${currencyLabel} ${Number(value).toLocaleString()}`,
           },
           xAxis: {
@@ -457,7 +462,7 @@ export function ArrearsChart({
               // The full-height track makes small buckets readable against the
               // scale of the largest one.
               showBackground: true,
-              backgroundStyle: { color: '#f1f5f9', borderRadius: [8, 8, 3, 3] },
+              backgroundStyle: { color: '#eef4f0', borderRadius: [8, 8, 3, 3] },
               label: {
                 show: true,
                 position: 'top',
