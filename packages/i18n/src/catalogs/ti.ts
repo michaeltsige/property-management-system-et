@@ -539,6 +539,7 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'documents.download': 'ኣውርድ',
   'documents.size': 'መጠን',
   'documents.search': 'ሰነዳት ሪኽብ',
+  'documents.all': 'ኩሉ ሰነዳት',
   'documents.group_empty': 'ድሕሪ ሕጂ ፋይል የለን።',
   'documents.group_tenant_data': 'ሓበሬታ ተኻራዪ',
   'documents.group_lease_agreements': 'ውዕላት ከረን',

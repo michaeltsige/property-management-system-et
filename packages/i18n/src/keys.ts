@@ -505,6 +505,7 @@ export const EN_CATALOG = {
   'documents.download': 'Download',
   'documents.size': 'Size',
   'documents.search': 'Search documents',
+  'documents.all': 'All documents',
   'documents.group_empty': 'No files here yet.',
   'documents.group_tenant_data': 'Tenant data',
   'documents.group_lease_agreements': 'Lease agreements',

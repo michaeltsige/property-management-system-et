@@ -553,6 +553,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'documents.download': 'Buusi',
   'documents.size': 'Hamma',
   'documents.search': 'Barreeffamoota barbaadi',
+  'documents.all': 'Sanadoota hunda',
   'documents.group_empty': "Amma faayilii hin jiru.",
   'documents.group_tenant_data': "Odeeffannoo kireefii",
   'documents.group_lease_agreements': "Waliigaltee kiree",

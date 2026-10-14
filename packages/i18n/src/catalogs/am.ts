@@ -541,6 +541,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'documents.download': 'አውርድ',
   'documents.size': 'መጠን',
   'documents.search': 'ሰነዶችን ይፈልጉ',
+  'documents.all': 'ሁሉም ሰነዶች',
   'documents.group_empty': 'እስካሁን ፋይል የለም።',
   'documents.group_tenant_data': 'የተከራይ መረጃ',
   'documents.group_lease_agreements': 'የውል ስምምነቶች',

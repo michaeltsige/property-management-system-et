@@ -1,7 +1,8 @@
 'use client';
 
 import { Download, Plus, Trash2 } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Suspense, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   DOCUMENT_CATEGORIES,
@@ -16,6 +17,7 @@ import { formatDate } from '@/lib/format';
 import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { usePropertyContext } from '@/lib/property-context';
+import { cn } from '@/lib/utils';
 
 import { PageHeader } from '@/components/app-shell';
 import { Modal } from '@/components/modal';
@@ -25,6 +27,8 @@ import {
   Button,
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
   EmptyState,
   Input,
   Label,
@@ -39,9 +43,26 @@ import {
  * Documents. The API is JSON-only, so a file is read in the browser, base64
  * encoded and validated server-side (type, size, and that the linked record
  * belongs to this organization) before it is written to storage.
+ *
+ * Layout (reviewed 4B direction): a left rail carries "All documents" (the
+ * default view) plus one entry per category group with a live count; the
+ * right column is a single table for the selected view. The selection lives
+ * in the URL (`?group=lease_agreements`) so a view is linkable, survives a
+ * reload, and the back button moves between views. `useSearchParams` needs a
+ * Suspense boundary during prerender, hence the wrapper below.
  */
 export default function DocumentsPage() {
+  return (
+    <Suspense fallback={<div className="space-y-2"><Skeleton className="h-10 w-56" /><Skeleton className="h-64 w-full" /></div>}>
+      <DocumentsView />
+    </Suspense>
+  );
+}
+
+function DocumentsView() {
   const { t, language, calendar } = usePreferences();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const documents = useAsync(() => api.documents('?pageSize=100'), []);
   const leases = useAsync(() => api.leases(), []);
   const tenants = useAsync(() => api.tenants(), []);
@@ -56,6 +77,17 @@ export default function DocumentsPage() {
   const [file, setFile] = useState<File | null>(null);
   const [search, setSearch] = useState('');
   const { pending, error, run } = useAction();
+
+  // `all` (no param) is the default view; an unknown param falls back to it.
+  const activeGroup = searchParams.get('group') ?? 'all';
+
+  function selectGroup(next: string) {
+    const params = new URLSearchParams(searchParams);
+    if (next === 'all') params.delete('group');
+    else params.set('group', next);
+    const query = params.toString();
+    router.push(query ? `/documents?${query}` : '/documents', { scroll: false });
+  }
 
   const maxMb = Math.round(DEFAULT_MAX_UPLOAD_BYTES / 1024 / 1024);
 
@@ -124,10 +156,14 @@ export default function DocumentsPage() {
     ...group,
     items: visible.filter((document) => (group.categories as readonly string[]).includes(document.category)),
   }));
-  const groupedCount = groups.reduce((sum, group) => sum + group.items.length, 0);
-  // Rows exist that no group claims (future categories): keep them visible.
+  // Rows exist that no group claims (future categories): they stay visible in
+  // the All documents view.
   const known = new Set(DOCUMENT_CATEGORY_GROUPS.flatMap((group) => group.categories as readonly string[]));
   const ungrouped = visible.filter((document) => !known.has(document.category));
+
+  const selected = groups.find((group) => group.key === activeGroup);
+  const rows = selected ? selected.items : visible;
+  const viewTitle = selected ? t(`documents.group_${selected.key}` as never) : t('documents.all');
 
   return (
     <div>
@@ -148,41 +184,70 @@ export default function DocumentsPage() {
         </Alert>
       ) : null}
 
-      <div className="mb-4 max-w-sm">
-        <Input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder={t('documents.search')}
-          aria-label={t('documents.search')}
-        />
-      </div>
+      <div className="grid gap-4 lg:grid-cols-[220px_minmax(0,1fr)]">
+        {/*
+         * The rail: navigation, not a container — it sits directly on the
+         * canvas. The selected entry is the one crisp chip (white, edged,
+         * tiny shadow) so the current view reads at a glance; counts are
+         * live (they follow the search and property scope).
+         */}
+        <nav aria-label={t('nav.documents')} className="min-w-0">
+          <ul
+            className={cn(
+              'flex gap-1 overflow-x-auto pb-1',
+              'lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0',
+            )}
+          >
+            <li className="shrink-0 lg:shrink">
+              <RailItem
+                label={t('documents.all')}
+                count={visible.length}
+                active={activeGroup === 'all'}
+                onSelect={() => selectGroup('all')}
+                emphasized
+              />
+            </li>
+            {groups.map((group) => (
+              <li key={group.key} className="shrink-0 lg:shrink">
+                <RailItem
+                  label={t(`documents.group_${group.key}` as never)}
+                  count={group.items.length}
+                  active={activeGroup === group.key}
+                  onSelect={() => selectGroup(group.key)}
+                />
+              </li>
+            ))}
+          </ul>
+        </nav>
 
-      {documents.loading ? (
-        <div className="space-y-2">
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-        </div>
-      ) : visible.length === 0 ? (
-        <Card>
-          <CardContent>
-            <EmptyState title={t('common.no_results')} description={t('documents.upload')} />
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {groups.map((group) => (
-            <Card key={group.key}>
+        <div className="min-w-0">
+          <div className="mb-3 max-w-sm">
+            <Input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder={t('documents.search')}
+              aria-label={t('documents.search')}
+            />
+          </div>
+
+          {documents.loading ? (
+            <Skeleton className="h-64 w-full" />
+          ) : (
+            <Card>
+              <CardHeader>
+                <CardTitle>{viewTitle}</CardTitle>
+                <span className="text-xs text-slate-500 tabular">{rows.length}</span>
+              </CardHeader>
               <CardContent className="p-0">
-                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
-                  <p className="text-sm font-medium text-slate-900">{t(`documents.group_${group.key}` as never)}</p>
-                  <span className="text-xs text-slate-500 tabular">{group.items.length}</span>
-                </div>
-                {group.items.length === 0 ? (
-                  <p className="px-4 py-3 text-xs text-slate-400">{t('documents.group_empty')}</p>
+                {rows.length === 0 ? (
+                  <EmptyState
+                    title={visible.length === 0 ? t('common.no_results') : t('documents.group_empty')}
+                    description={visible.length === 0 ? t('documents.upload') : undefined}
+                  />
                 ) : (
                   <DocumentTable
-                    items={group.items}
+                    items={rows}
                     language={language}
                     calendar={calendar}
                     onDownload={download}
@@ -191,28 +256,9 @@ export default function DocumentsPage() {
                 )}
               </CardContent>
             </Card>
-          ))}
-          {ungrouped.length > 0 ? (
-            <Card>
-              <CardContent className="p-0">
-                <div className="border-b border-slate-200 px-4 py-3 text-sm font-medium text-slate-900">
-                  {t('documents.group_other')}
-                </div>
-                <DocumentTable
-                  items={ungrouped}
-                  language={language}
-                  calendar={calendar}
-                  onDownload={download}
-                  onRemove={remove}
-                />
-              </CardContent>
-            </Card>
-          ) : null}
-          {groupedCount === 0 && ungrouped.length === 0 ? (
-            <p className="px-1 text-xs text-slate-400">{t('common.no_results')}</p>
-          ) : null}
+          )}
         </div>
-      )}
+      </div>
 
       <Modal
         open={open}
@@ -296,7 +342,46 @@ export default function DocumentsPage() {
   );
 }
 
-/** One group's table — file, category, size, date, actions. */
+/**
+ * One rail entry. Geometry is identical for every state (a transparent
+ * border keeps the layout stable) so the active chip never shifts the row.
+ */
+function RailItem({
+  label,
+  count,
+  active,
+  onSelect,
+  emphasized,
+}: {
+  label: string;
+  count: number;
+  active: boolean;
+  onSelect: () => void;
+  emphasized?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-current={active ? 'page' : undefined}
+      className={cn(
+        'flex w-full items-center gap-2 whitespace-nowrap rounded-md border px-3 py-2 text-left text-sm transition-colors',
+        active
+          ? 'border-edge bg-white font-medium text-ink-900 shadow-card'
+          : 'border-transparent text-slate-600 hover:bg-white/60 hover:text-ink-900',
+      )}
+    >
+      <span className={cn('min-w-0 truncate', emphasized && !active && 'font-medium text-slate-700')}>
+        {label}
+      </span>
+      <span className={cn('ml-auto shrink-0 text-xs tabular', active ? 'text-slate-600' : 'text-slate-400')}>
+        {count}
+      </span>
+    </button>
+  );
+}
+
+/** The one document table — file, category, size, date, actions. */
 function DocumentTable({
   items,
   language,
