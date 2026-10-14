@@ -123,7 +123,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   if (!ready || !session) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
         <Skeleton className="h-10 w-64" />
       </div>
     );
@@ -133,7 +133,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   // old single page showed; the shell itself is tenant-only.
   if (!isTenant) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
         <div className="w-full max-w-sm space-y-3 text-center">
           <p className="text-sm text-slate-600">{t('portal.not_tenant')}</p>
           <Link href="/portal/login" className="text-sm font-medium text-brand-700 underline">
@@ -186,7 +186,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           side="top"
           align="start"
           sideOffset={8}
-          className="z-50 w-60 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl"
+          className="z-50 w-60 rounded-xl bg-white p-1.5 shadow-float"
         >
           <DropdownMenu.Label className="px-2.5 py-2">
             <span className="block truncate text-sm font-semibold text-slate-900">
@@ -210,7 +210,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   );
 
   return (
-    <div className="flex h-screen overflow-hidden bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-canvas">
       <a
         href="#portal-main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-brand-800 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -230,7 +230,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-40 bg-ink-950/60 lg:hidden" />
-          <Dialog.Content className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-ink-900 shadow-xl lg:hidden">
+          <Dialog.Content className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-ink-900 shadow-float lg:hidden">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4">
               <Dialog.Title className="min-w-0">{brand}</Dialog.Title>
               <Dialog.Description className="sr-only">{t('nav.menu')}</Dialog.Description>

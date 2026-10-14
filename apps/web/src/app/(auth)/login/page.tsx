@@ -56,7 +56,7 @@ export default function LoginPage() {
           <p className="mt-1 text-xs text-white/70">{t('app.tagline')}</p>
         </div>
 
-        <Card className="shadow-xl">
+        <Card className="shadow-float">
           <CardContent className="py-2">
             <form className="space-y-4" onSubmit={onSubmit}>
               <div className="space-y-1">

@@ -234,6 +234,9 @@ export const DOCUMENT_CATEGORIES = [
   'other',
 ] as const;
 
+/** One document category (the flat storage-level list). */
+export type DocumentCategory = (typeof DOCUMENT_CATEGORIES)[number];
+
 /**
  * Presentation-only grouping for the documents screen: the ten categories in
  * one flat list are impossible to scan, so the UI shows six named groups.

@@ -339,7 +339,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Dialog.Root open={menuOpen} onOpenChange={setMenuOpen}>
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-40 bg-ink-950/60 lg:hidden" />
-          <Dialog.Content className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-ink-900 shadow-xl lg:hidden">
+          <Dialog.Content className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-ink-900 shadow-float lg:hidden">
             <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4">
               <Dialog.Title className="min-w-0">{brand}</Dialog.Title>
               <Dialog.Description className="sr-only">{t('nav.menu')}</Dialog.Description>

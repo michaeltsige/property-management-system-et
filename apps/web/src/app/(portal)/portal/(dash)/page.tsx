@@ -309,14 +309,14 @@ export default function PortalDashboardPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <Link
               href="/portal/documents"
-              className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 transition-colors hover:border-brand-200 hover:bg-brand-50/50"
+              className="flex items-center gap-3 rounded-xl border border-edge bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-card transition-colors hover:border-brand-200 hover:bg-brand-50/50"
             >
               <FileText className="h-5 w-5 text-brand-600" aria-hidden="true" />
               {t('portal.documents')}
             </Link>
             <Link
               href="/portal/profile"
-              className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3.5 text-sm font-medium text-slate-800 transition-colors hover:border-brand-200 hover:bg-brand-50/50"
+              className="flex items-center gap-3 rounded-xl border border-edge bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-card transition-colors hover:border-brand-200 hover:bg-brand-50/50"
             >
               <User className="h-5 w-5 text-brand-600" aria-hidden="true" />
               {t('portal.nav.profile')}

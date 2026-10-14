@@ -187,7 +187,7 @@ export function GlobalSearch() {
           id="global-search-results"
           role="listbox"
           aria-label={t('search.placeholder')}
-          className="absolute z-30 mt-1 w-full rounded-md border border-slate-200 bg-white py-1 shadow-lg"
+          className="absolute z-30 mt-1 w-full rounded-md bg-white py-1 shadow-float"
         >
           {hits.length === 0 ? (
             <li className="px-3 py-2 text-sm text-slate-500">

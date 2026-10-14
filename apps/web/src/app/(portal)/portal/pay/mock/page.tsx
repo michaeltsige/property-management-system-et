@@ -58,7 +58,7 @@ function MockCheckout() {
 
   if (!ready || !session) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+      <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
         <Skeleton className="h-10 w-64" />
       </div>
     );
@@ -67,7 +67,7 @@ function MockCheckout() {
   const alreadySucceeded = intent.data?.status === 'succeeded';
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-canvas">
       <header className="border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3">
           <Logo size={34} onDark={false} />
@@ -154,7 +154,7 @@ export default function MockCheckoutPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
+        <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
           <Skeleton className="h-10 w-64" />
         </div>
       }

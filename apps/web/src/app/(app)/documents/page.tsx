@@ -5,10 +5,10 @@ import { Suspense, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
-  DOCUMENT_CATEGORIES,
   DOCUMENT_CATEGORY_GROUPS,
   ALLOWED_UPLOAD_MIME_TYPES,
   DEFAULT_MAX_UPLOAD_BYTES,
+  type DocumentCategory,
 } from '@pms/shared';
 import type { CalendarKind, LanguageCode } from '@pms/calendar';
 
@@ -71,7 +71,7 @@ function DocumentsView() {
   const [propertyContext] = usePropertyContext();
   const fileInput = useRef<HTMLInputElement | null>(null);
   const [open, setOpen] = useState(false);
-  const [category, setCategory] = useState<(typeof DOCUMENT_CATEGORIES)[number]>('lease_agreement');
+  const [category, setCategory] = useState<DocumentCategory>('lease_agreement');
   const [leaseId, setLeaseId] = useState('');
   const [tenantId, setTenantId] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -156,10 +156,6 @@ function DocumentsView() {
     ...group,
     items: visible.filter((document) => (group.categories as readonly string[]).includes(document.category)),
   }));
-  // Rows exist that no group claims (future categories): they stay visible in
-  // the All documents view.
-  const known = new Set(DOCUMENT_CATEGORY_GROUPS.flatMap((group) => group.categories as readonly string[]));
-  const ungrouped = visible.filter((document) => !known.has(document.category));
 
   const selected = groups.find((group) => group.key === activeGroup);
   const rows = selected ? selected.items : visible;

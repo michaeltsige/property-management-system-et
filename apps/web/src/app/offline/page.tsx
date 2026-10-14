@@ -17,7 +17,7 @@ export default function OfflinePage() {
   const { t } = usePreferences();
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-slate-50 px-6 text-center">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-canvas px-6 text-center">
       <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-brand-600 text-lg font-bold text-white">
         ቤ
       </div>

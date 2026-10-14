@@ -95,7 +95,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4 py-8">
+    <div className="flex min-h-screen items-center justify-center bg-canvas px-4 py-8">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
           <h1 className="text-xl font-semibold tracking-tight text-slate-900">{t('auth.register_organization')}</h1>

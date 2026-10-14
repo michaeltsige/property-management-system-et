@@ -73,7 +73,7 @@ export default function PortalLoginPage() {
           <p className="mt-1 text-xs text-white/70">{t('portal.login_hint')}</p>
         </div>
 
-        <Card className="shadow-xl">
+        <Card className="shadow-float">
           <CardContent className="py-2">
             {step === 'phone' ? (
               <form className="space-y-4" onSubmit={requestCode}>
