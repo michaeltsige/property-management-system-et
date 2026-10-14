@@ -33,7 +33,7 @@ export function Modal({
         <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-900/40" />
         <Dialog.Content
           className={cn(
-            'fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[95vw] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-lg bg-white p-0 shadow-xl',
+            'fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[95vw] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-0 shadow-float',
             width,
           )}
         >

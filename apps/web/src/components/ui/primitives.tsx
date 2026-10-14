@@ -185,7 +185,7 @@ export function Select({
         <SelectPrimitive.Content
           position="popper"
           sideOffset={4}
-          className="relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md border border-slate-200 bg-white text-slate-900 shadow-md"
+          className="relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md bg-white text-slate-900 shadow-float"
         >
           <SelectPrimitive.ScrollUpButton className="flex h-6 items-center justify-center">
             <ChevronUp className="h-4 w-4" aria-hidden="true" />
@@ -234,15 +234,25 @@ export function Select({
   );
 }
 
+/**
+ * Cards are containers, and per the depth decision containers carry a crisp,
+ * ink-tinted edge plus a tiny ink-tinted shadow — visible separation against
+ * the green-mist canvas, nothing like the old 1.2:1 hairline. The tonal half
+ * of the system lives in the canvas contrast, the brand-tinted header row
+ * (CardHeader) and the borderless floating overlays.
+ */
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('rounded-lg border border-slate-200 bg-white', className)} {...props} />;
+  return <div className={cn('rounded-lg border border-edge bg-white shadow-card', className)} {...props} />;
 }
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3',
+        // The tonal header: the shallowest step of brand green, rounded to
+        // stay inside the card's corners. The hairline under it is a step of
+        // edge, so the tint ends with the same ink voice as the card border.
+        'flex flex-wrap items-center justify-between gap-2 rounded-t-[7px] border-b border-edge/50 bg-brand-50/80 px-4 py-3',
         className,
       )}
       {...props}
@@ -345,7 +355,7 @@ export function Th({ className, scope = 'col', ...props }: ThHTMLAttributes<HTML
       className={cn(
         // Normal-case column headers (the operations-console convention):
         // shouting uppercase on every screen was one of the "vibecoded" tells.
-        'border-b border-slate-200 bg-slate-50/60 px-3 py-2 text-left text-xs font-semibold text-slate-600',
+        'border-b border-edge/50 bg-brand-50/60 px-3 py-2 text-left text-xs font-semibold text-slate-600',
         className,
       )}
       {...props}

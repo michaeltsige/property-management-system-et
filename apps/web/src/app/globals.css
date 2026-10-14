@@ -49,6 +49,35 @@
   --color-ink-800: #1a2d25;
   --color-ink-700: #243a30;
 
+  /*
+   * Depth system (user decision: tonal 1B with crisp 1C containers).
+   *
+   * - `canvas` is the page background: a quiet green mist so white surfaces
+   *   read as objects ON a surface instead of floating in white. One token,
+   *   one line to change if the tone is tuned later.
+   * - `edge` is the crisp container border: a visible, ink-tinted line
+   *   (≈1.6:1 against white — nothing like the old near-invisible slate-200)
+   *   used by cards/containers and chart boxes only.
+   * - `shadow-card` / `shadow-float` are the two elevation levels. Both are
+   *   tinted toward the ink (Vercel guideline: shadows take the surface's
+   *   hue, not neutral black). Float = layered ambient+direct for popovers,
+   *   selects, menus and the date picker: the layer that must read as
+   *   hovering ABOVE the page.
+   *
+   * All four tokens are plain color/step values, so a dark theme later only
+   * re-points them (dark mode deliberately deferred — see worklog).
+   */
+  --color-canvas: #e9f1ec;
+  --color-edge: #b7c9c1;
+
+  --shadow-card:
+    0 1px 2px 0 rgb(13 47 40 / 0.06),
+    0 1px 1px 0 rgb(13 47 40 / 0.04);
+  --shadow-float:
+    0 2px 4px -1px rgb(13 47 40 / 0.07),
+    0 10px 24px -4px rgb(13 47 40 / 0.14),
+    0 24px 48px -12px rgb(13 47 40 / 0.10);
+
   /* Plus Jakarta Sans first (loaded by next/font as --font-jakarta) — the
      owner's pick from the typeface trial, now the one UI face. It has no Ge'ez
      glyphs, so Ethiopic text falls through to Noto Sans Ethiopic. */
@@ -64,7 +93,7 @@ body {
 }
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply bg-canvas text-slate-900 antialiased;
 }
 
 /*
