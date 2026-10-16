@@ -17,10 +17,13 @@ import { useMemo, useState } from 'react';
 import {
   civilToUtcDate,
   compareCivil,
+  convertCivil,
   formatCivilDate,
+  formatMonthYear,
   isInPeriod,
   monthGrid,
   nextPeriod,
+  periodEnd,
   periodForDate,
   periodLabel,
   periodStart,
@@ -54,6 +57,26 @@ function suffixOf(calendar: CalendarKind): string {
 function dual(civil: CivilDate, language: LanguageCode): string {
   const converted = utcDateToCivil(civilToUtcDate(civil), otherCalendar(civil.calendar));
   return `${formatCivilDate(converted, { language })} ${suffixOf(converted.calendar)}`;
+}
+
+/**
+ * The viewed month in the OTHER calendar — as a range, not a single day.
+ *
+ * The calendars are offset (the Ethiopian year starts around September 11), so
+ * the first day of a Gregorian month lands mid-Ethiopian-month and vice versa:
+ * a one-day label read like a random unrelated date while paging through
+ * months. A month is only ever ONE other-calendar month wide + a day or two,
+ * so the range is short and it makes the offset visible instead of confusing.
+ */
+function dualRange(period: BillingPeriod, language: LanguageCode): string {
+  const other = otherCalendar(period.calendar);
+  const start = convertCivil(periodStart(period), other);
+  const end = convertCivil(periodEnd(period), other);
+  const suffix = suffixOf(other);
+  if (start.month === end.month && start.year === end.year) {
+    return `${formatMonthYear(start, language)} ${suffix}`;
+  }
+  return `${formatCivilDate(start, { language })} – ${formatCivilDate(end, { language })} ${suffix}`;
 }
 
 export interface DateFieldProps {
@@ -133,7 +156,7 @@ export function DateField({ value, onChange, label, required, id, calendar, disa
                   <span className="text-slate-800">
                     {formatCivilDate(selected, { language, showEra: true })} {suffixOf(selected.calendar)}
                   </span>
-                  <span className="ml-2 text-xs text-slate-400">{dual(selected, language)}</span>
+                  <span className="ml-2 text-xs text-slate-500">{dual(selected, language)}</span>
                 </>
               ) : (
                 <span className="text-slate-400">{t('calendar.select_date')}</span>
@@ -160,8 +183,8 @@ export function DateField({ value, onChange, label, required, id, calendar, disa
                 {' '}
                 {suffixOf(viewPeriod.calendar)}
               </p>
-              <p className="truncate text-[11px] text-slate-500">
-                {dual(periodStart(viewPeriod), language)}
+              <p className="truncate text-[11px] text-slate-600">
+                {dualRange(viewPeriod, language)}
               </p>
             </div>
             <Button
@@ -177,7 +200,7 @@ export function DateField({ value, onChange, label, required, id, calendar, disa
 
           <div className="mb-1 grid grid-cols-7 gap-1">
             {headers.map((header) => (
-              <div key={header} className="py-1 text-center text-[10px] font-medium uppercase tracking-wide text-slate-400">
+              <div key={header} className="py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                 {header}
               </div>
             ))}
@@ -199,7 +222,7 @@ export function DateField({ value, onChange, label, required, id, calendar, disa
                       onClick={() => (inMonth ? pick(civil) : setViewPeriod(periodForDate(civil)))}
                       className={cn(
                         'tabular rounded-md py-1.5 text-xs transition-colors',
-                        inMonth ? 'text-slate-700' : 'text-slate-300',
+                        inMonth ? 'text-slate-700' : 'text-slate-400',
                         inMonth && 'hover:bg-brand-50',
                         isSelectedDay
                           ? 'bg-brand-600 font-semibold text-white hover:bg-brand-600'
