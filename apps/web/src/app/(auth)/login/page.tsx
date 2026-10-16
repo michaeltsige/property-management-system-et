@@ -8,6 +8,7 @@ import { api } from '@/lib/api';
 import { usePreferences } from '@/lib/preferences';
 
 import { Logo } from '@/components/logo';
+import { DoorLanguagePicker } from '@/components/door-language';
 import { Alert, Button, Card, CardContent, Input, Label } from '@/components/ui';
 
 export default function LoginPage() {
@@ -49,6 +50,8 @@ export default function LoginPage() {
         style={{ backgroundImage: "url('/images/login-hero.jpg')" }}
       />
       <div aria-hidden="true" className="absolute inset-0 bg-ink-950/60" />
+      {/* Door language is a device choice, always one tap away (see door-language.tsx). */}
+      <DoorLanguagePicker />
       <div className="relative w-full max-w-sm">
         <div className="mb-6 text-center">
           <Logo size={88} className="mx-auto mb-3" />

@@ -253,7 +253,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
       <div className="flex h-full min-w-0 flex-1 flex-col">
         {/* Phone-only top bar; on desktop the rail carries the identity. */}
-        <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-2.5 lg:hidden">
+        <header className="flex items-center gap-3 border-b border-edge bg-white px-4 py-2.5 lg:hidden">
           <Button
             variant="ghost"
             size="icon"

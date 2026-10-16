@@ -50,6 +50,18 @@ interface PreferenceState {
 
 const PreferenceContext = createContext<PreferenceState | null>(null);
 
+/**
+ * Language remembered for the SIGNED-OUT doors (login, register, portal login).
+ * It belongs to the device, not to any account: while a session is stored the
+ * account's own preference rules, and the door value only takes over after
+ * sign-out — so the door never overwrites what an account chose.
+ */
+const DOOR_LANGUAGE_KEY = 'pms.door-language';
+
+function isLanguageCode(value: string): value is LanguageCode {
+  return LANGUAGES.some((option) => option.code === value);
+}
+
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<StoredSession | null>(null);
   const [ready, setReady] = useState(false);
@@ -66,6 +78,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     if (stored) {
       setLanguageState(stored.user.language);
       setCalendarState(stored.user.calendar);
+    } else {
+      // No session: the door speaks the device's remembered language (or English).
+      const door = window.localStorage.getItem(DOOR_LANGUAGE_KEY);
+      if (door && isLanguageCode(door)) setLanguageState(door);
     }
     setReady(true);
 
@@ -155,6 +171,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       user: { ...(loadSession()?.user as StoredSession['user']), language: next },
     });
     if (updated) setSession(updated);
+    else window.localStorage.setItem(DOOR_LANGUAGE_KEY, next);
   }, []);
 
   const setCalendar = useCallback((next: CalendarKind) => {
@@ -177,7 +194,11 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     saveSession(null);
     setSession(null);
     setOverrides([]);
-  }, []);
+    // The door keeps speaking the language the visitor just used (their choice,
+    // now that every door shows a picker) — but as a device value, detached
+    // from the account that is gone.
+    window.localStorage.setItem(DOOR_LANGUAGE_KEY, language);
+  }, [language]);
 
   useEffect(() => {
     if (typeof document !== 'undefined') document.documentElement.lang = language;

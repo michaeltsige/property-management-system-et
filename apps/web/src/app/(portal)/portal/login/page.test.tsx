@@ -13,9 +13,18 @@ const context = vi.hoisted(() => ({
 
 vi.mock('next/navigation', () => ({ useRouter: () => ({ replace: context.replace }) }));
 vi.mock('@/lib/preferences', () => ({
+  // The door language picker needs the real catalog labels and the setter.
+  LANGUAGES: [
+    { code: 'en', label: 'English', english: 'English' },
+    { code: 'am', label: 'አማርኛ', english: 'Amharic' },
+    { code: 'om', label: 'Afaan Oromoo', english: 'Afaan Oromo' },
+    { code: 'ti', label: 'ትግርኛ', english: 'Tigrinya' },
+  ],
   usePreferences: () => ({
     t: (key: keyof typeof EN_CATALOG) => EN_CATALOG[key] ?? key,
     signIn: context.signIn,
+    language: 'en',
+    setLanguage: () => undefined,
   }),
 }));
 vi.mock('@/lib/api', async (importOriginal) => {
