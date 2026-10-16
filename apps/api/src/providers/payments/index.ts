@@ -28,7 +28,7 @@ import {
 
 import { getConfig } from '../../config.js';
 import { decryptField } from '../../lib/crypto.js';
-import { ChapaPaymentProvider } from './chapa.js';
+import { ChapaPaymentProvider, type ChapaMode } from './chapa.js';
 import { MockPaymentProvider, mockPaymentProvider } from './mock.js';
 import { TelebirrPaymentProvider } from './telebirr.js';
 import { ProviderNotConfiguredError, type PaymentProviderAdapter, type ProviderName } from './types.js';
@@ -48,6 +48,7 @@ function envCredentials(name: ProviderName): Record<string, string> {
       return {
         ...(config.CHAPA_SECRET_KEY ? { secretKey: config.CHAPA_SECRET_KEY } : {}),
         ...(config.CHAPA_WEBHOOK_SECRET ? { webhookSecret: config.CHAPA_WEBHOOK_SECRET } : {}),
+        ...(config.CHAPA_BASE_URL ? { baseUrl: config.CHAPA_BASE_URL } : {}),
       };
     case 'telebirr':
       return {
@@ -62,21 +63,35 @@ function envCredentials(name: ProviderName): Record<string, string> {
   }
 }
 
-/** Build an adapter instance for a provider from an explicit credential map. */
+/**
+ * Build an adapter instance for a provider from an explicit credential map.
+ *
+ * `mode` is meaningful for Chapa: `test` always runs the built-in sandbox
+ * simulation (no network, no account needed — what an organization uses before
+ * its credentials exist), `live` makes real api.chapa.co calls with the saved
+ * secret key. Without an explicit mode the presence of a secret key decides.
+ */
 export function buildPaymentProvider(
   name: ProviderName,
   credentials: Record<string, string> = {},
+  mode?: PaymentGatewayMode,
 ): PaymentProviderAdapter {
   switch (name) {
     // The mock keeps a single in-process transaction ledger, so the demo checkout
     // (initiate in one request, confirm+complete in later ones) shares state.
     case 'mock':
       return mockPaymentProvider;
-    case 'chapa':
-      return new ChapaPaymentProvider({
-        secretKey: credentials.secretKey,
-        webhookSecret: credentials.webhookSecret,
-      });
+    case 'chapa': {
+      const chapaMode: ChapaMode = mode ?? (credentials.secretKey ? 'live' : 'test');
+      return new ChapaPaymentProvider(
+        {
+          secretKey: credentials.secretKey,
+          webhookSecret: credentials.webhookSecret,
+          baseUrl: credentials.baseUrl,
+        },
+        chapaMode,
+      );
+    }
     case 'telebirr':
       return new TelebirrPaymentProvider({
         appId: credentials.appId,
@@ -105,11 +120,23 @@ export function listPaymentProviders(): { name: ProviderName; configured: boolea
   }));
 }
 
-/** Required credential fields an adapter of `name` still lacks. */
+/**
+ * Required credential fields an adapter of `name` still lacks.
+ *
+ * Mode-aware for Chapa: test mode (the built-in sandbox simulation) needs
+ * nothing, live mode needs the secret key; the webhook secret is optional
+ * because payments still verify on return without it (webhook events are
+ * simply rejected as unsigned).
+ */
 export function missingGatewayCredentials(
   name: ProviderName,
   credentials: Record<string, string>,
+  mode?: PaymentGatewayMode,
 ): string[] {
+  if (name === 'chapa') {
+    const chapaMode: ChapaMode = mode ?? (credentials.secretKey ? 'live' : 'test');
+    return chapaMode === 'live' && !credentials.secretKey ? ['secretKey'] : [];
+  }
   return PAYMENT_GATEWAY_CREDENTIAL_FIELDS[name]
     .filter((field) => field.required && !credentials[field.key])
     .map((field) => field.key);
@@ -187,11 +214,16 @@ export async function resolveOrgPaymentProvider(
   const target: ProviderName = preferred ?? stored?.provider ?? envDefault;
 
   if (stored && stored.provider === target) {
-    const missing = missingGatewayCredentials(target, stored.credentials);
+    const missing = missingGatewayCredentials(target, stored.credentials, stored.mode);
     if (missing.length > 0) {
       throw new ProviderNotConfiguredError(target, missing.join(', '));
     }
-    return { adapter: buildPaymentProvider(target, stored.credentials), provider: target, source: 'organization', mode: stored.mode };
+    return {
+      adapter: buildPaymentProvider(target, stored.credentials, stored.mode),
+      provider: target,
+      source: 'organization',
+      mode: stored.mode,
+    };
   }
 
   const adapter = getPaymentProvider(target);

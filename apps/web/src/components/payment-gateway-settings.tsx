@@ -146,6 +146,9 @@ export function PaymentGatewaySettings() {
           </Alert>
         ) : null}
         {active === 'mock' ? <Alert tone="info">{t('org.gateway_demo_note')}</Alert> : null}
+        {active !== 'mock' && mode === 'test' ? (
+          <Alert tone="info">{t('org.gateway_test_note')}</Alert>
+        ) : null}
         {active !== 'mock' && mode === 'live' ? (
           <Alert tone="warning">{t('org.gateway_live_note')}</Alert>
         ) : null}

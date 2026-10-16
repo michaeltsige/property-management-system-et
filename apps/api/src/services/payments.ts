@@ -819,6 +819,19 @@ export async function completePortalPayment(
     throw businessRule('The verified amount does not match the payment attempt');
   }
 
+  return settleWithRetry(prisma, params, verification);
+}
+
+/**
+ * The completion transaction, retried on serialization failure: two completions
+ * racing (a tenant's return page and the provider's webhook) allocate the same
+ * money exactly once.
+ */
+async function settleWithRetry(
+  prisma: PrismaClient,
+  params: { organizationId: string; tenantId: string; providerRef: string; actorUserId?: string | null },
+  verification: { paidAt?: Date; raw?: unknown },
+): Promise<RecordedPayment & { status: string }> {
   for (let attempt = 0; attempt <= MAX_SERIALIZATION_RETRIES; attempt += 1) {
     try {
       return await prisma.$transaction(runCompletion(params, verification), {
@@ -832,6 +845,46 @@ export async function completePortalPayment(
     }
   }
   throw conflict('Could not complete the payment after several attempts; please retry');
+}
+
+/**
+ * Settle a provider-confirmed payment from outside the portal session — the
+ * webhook path. The payment row supplies the tenant scope, so a spoofed or
+ * stray notification can only ever complete a payment that actually exists and
+ * was already verified against the provider.
+ */
+export async function settleProviderPayment(
+  prisma: PrismaClient,
+  payment: { organizationId: string; tenantId: string; providerRef: string },
+  verification: { paidAt?: Date; raw?: unknown },
+  actorUserId?: string | null,
+): Promise<RecordedPayment & { status: string }> {
+  return settleWithRetry(
+    prisma,
+    { organizationId: payment.organizationId, tenantId: payment.tenantId, providerRef: payment.providerRef, actorUserId: actorUserId ?? null },
+    verification,
+  );
+}
+
+/**
+ * Mark a pending provider payment as failed (webhook-reported failure). Only a
+ * still-pending attempt is touched: a payment that already completed keeps its
+ * receipt and allocations.
+ */
+export async function failPendingProviderPayment(
+  prisma: PrismaClient,
+  params: { organizationId: string; providerRef: string; provider: string; reason: string },
+): Promise<boolean> {
+  const result = await prisma.payment.updateMany({
+    where: {
+      organizationId: params.organizationId,
+      providerRef: params.providerRef,
+      provider: params.provider,
+      status: 'pending',
+    },
+    data: { status: 'failed', notes: params.reason },
+  });
+  return result.count > 0;
 }
 
 function runCompletion(

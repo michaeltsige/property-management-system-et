@@ -140,8 +140,11 @@ export type PaymentGatewayMode = (typeof PAYMENT_GATEWAY_MODES)[number];
  * Credential fields per provider. Shared so the API validates exactly what the
  * web form renders. `secret` fields are masked in every API response (only a
  * `••••last4` hint comes back); `i18nKey` is the catalog key for the label.
- * Real adapters stay unimplemented until the official integration is confirmed —
- * storing credentials is safe, calling the provider is refused until then.
+ *
+ * Chapa: test mode (the built-in sandbox simulation) needs no credentials at
+ * all; live mode needs the secret key. The webhook secret is optional —
+ * payments verify on return without it, and unsigned webhook events are
+ * rejected by the ingest route instead of trusted.
  */
 export interface GatewayCredentialField {
   key: string;
@@ -164,7 +167,7 @@ export const PAYMENT_GATEWAY_CREDENTIAL_FIELDS: Record<
   ],
   chapa: [
     { key: 'secretKey', i18nKey: 'org.gateway_field_secret_key', secret: true, required: true },
-    { key: 'webhookSecret', i18nKey: 'org.gateway_field_webhook_secret', secret: true, required: true },
+    { key: 'webhookSecret', i18nKey: 'org.gateway_field_webhook_secret', secret: true, required: false },
   ],
 };
 

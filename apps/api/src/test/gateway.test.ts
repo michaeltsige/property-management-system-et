@@ -123,18 +123,20 @@ describe('saving organization gateway credentials', () => {
       .set(header)
       .send({
         provider: 'chapa',
-        mode: 'test',
+        mode: 'live',
         credentials: { secretKey: CHAPA_SECRET },
       })
       .expect(200);
 
-    // Incomplete on purpose: the response names the missing field instead.
+    // Live mode with the required secret key is configured; the webhook secret
+    // is optional (webhook events without it are rejected, payments still
+    // verify on return).
     expect(saved.body.gateway).toMatchObject({
       provider: 'chapa',
       source: 'organization',
-      mode: 'test',
-      configured: false,
-      missing: ['webhookSecret'],
+      mode: 'live',
+      configured: true,
+      missing: [],
     });
     expect(saved.body.gateway.credentials.secretKey).toEqual({
       configured: true,
@@ -158,6 +160,37 @@ describe('saving organization gateway credentials', () => {
     expect(JSON.stringify(settings.body)).not.toContain(CHAPA_SECRET);
   });
 
+  it('reports the missing secret key when live mode has no credentials', async () => {
+    const fixture = await createOrganizationFixture('gateway-live-missing');
+    const saved = await request(app)
+      .put('/api/v1/organizations/payment-gateway')
+      .set(authHeader(fixture))
+      .send({ provider: 'chapa', mode: 'live', credentials: {} })
+      .expect(200);
+    expect(saved.body.gateway).toMatchObject({
+      provider: 'chapa',
+      mode: 'live',
+      configured: false,
+      missing: ['secretKey'],
+    });
+  });
+
+  it('runs test mode as the built-in sandbox with no credentials at all', async () => {
+    const fixture = await createOrganizationFixture('gateway-test-sandbox');
+    const saved = await request(app)
+      .put('/api/v1/organizations/payment-gateway')
+      .set(authHeader(fixture))
+      .send({ provider: 'chapa', mode: 'test', credentials: {} })
+      .expect(200);
+    expect(saved.body.gateway).toMatchObject({
+      provider: 'chapa',
+      mode: 'test',
+      source: 'organization',
+      configured: true,
+      missing: [],
+    });
+  });
+
   it('keeps saved values when a field is omitted and completes later', async () => {
     const fixture = await createOrganizationFixture('gateway-merge');
     const header = authHeader(fixture);
@@ -165,13 +198,13 @@ describe('saving organization gateway credentials', () => {
     await request(app)
       .put('/api/v1/organizations/payment-gateway')
       .set(header)
-      .send({ provider: 'chapa', mode: 'test', credentials: { secretKey: CHAPA_SECRET } })
+      .send({ provider: 'chapa', mode: 'live', credentials: { secretKey: CHAPA_SECRET } })
       .expect(200);
 
     const completed = await request(app)
       .put('/api/v1/organizations/payment-gateway')
       .set(header)
-      .send({ provider: 'chapa', mode: 'test', credentials: { webhookSecret: CHAPA_WEBHOOK } })
+      .send({ provider: 'chapa', mode: 'live', credentials: { webhookSecret: CHAPA_WEBHOOK } })
       .expect(200);
 
     expect(completed.body.gateway).toMatchObject({ configured: true, missing: [] });
@@ -200,7 +233,7 @@ describe('saving organization gateway credentials', () => {
       .set(authHeader(fixture))
       .send({
         provider: 'chapa',
-        mode: 'test',
+        mode: 'live',
         credentials: { secretKey: CHAPA_SECRET, webhookSecret: CHAPA_WEBHOOK },
       })
       .expect(200);
@@ -219,21 +252,44 @@ describe('saving organization gateway credentials', () => {
 });
 
 describe('org-aware provider resolution', () => {
-  it('routes the portal payment through the configured real provider and refuses live calls until verified', async () => {
-    const { fixture, session } = await setupPortalTenant('gateway-route', '+251911000121');
+  it('runs the chapa sandbox end to end from an explicit org configuration', async () => {
+    const { fixture, session } = await setupPortalTenant('gateway-chapa-sandbox', '+251911000121');
 
     await request(app)
       .put('/api/v1/organizations/payment-gateway')
       .set(authHeader(fixture))
-      .send({
-        provider: 'chapa',
-        mode: 'test',
-        credentials: { secretKey: CHAPA_SECRET, webhookSecret: CHAPA_WEBHOOK },
-      })
+      .send({ provider: 'chapa', mode: 'test', credentials: {} })
       .expect(200);
 
-    // The structure is live: the org adapter is resolved from org credentials.
-    // Chapa's adapter itself refuses until the official contract is confirmed.
+    const intent = await request(app)
+      .post('/api/v1/portal/payments/initiate')
+      .set(session.header)
+      .send({})
+      .expect(201);
+    expect(intent.body.provider).toBe('chapa');
+    expect(intent.body.redirectUrl).toContain('/portal/pay/chapa?tx_ref=PMS-');
+
+    const completed = await request(app)
+      .post(`/api/v1/portal/payments/${intent.body.providerRef}/complete`)
+      .set(session.header)
+      .send({})
+      .expect(200);
+    expect(completed.body.status).toBe('succeeded');
+
+    const payment = await getPrisma().payment.findUniqueOrThrow({ where: { id: intent.body.paymentId } });
+    expect(payment.method).toBe('chapa');
+    expect(payment.provider).toBe('chapa');
+  });
+
+  it('refuses live payments while the secret key is missing', async () => {
+    const { fixture, session } = await setupPortalTenant('gateway-chapa-live', '+251911000124');
+
+    await request(app)
+      .put('/api/v1/organizations/payment-gateway')
+      .set(authHeader(fixture))
+      .send({ provider: 'chapa', mode: 'live', credentials: {} })
+      .expect(200);
+
     const intent = await request(app)
       .post('/api/v1/portal/payments/initiate')
       .set(session.header)
@@ -241,7 +297,7 @@ describe('org-aware provider resolution', () => {
       .expect(502);
     expect(intent.body.error.code).toBe('PROVIDER_ERROR');
     expect(intent.body.error.message).toContain('chapa');
-    expect(intent.body.error.message).toContain('official documentation');
+    expect(intent.body.error.message).toContain('secretKey');
   });
 
   it('runs the mock demo end to end from an explicit org configuration', async () => {
@@ -284,7 +340,7 @@ describe('resetting the organization gateway', () => {
       .set(header)
       .send({
         provider: 'chapa',
-        mode: 'test',
+        mode: 'live',
         credentials: { secretKey: CHAPA_SECRET, webhookSecret: CHAPA_WEBHOOK },
       })
       .expect(200);

@@ -44,6 +44,10 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.mock_hint': "Kun fuula kaffaltii agarsiisaa qopheessuudhaaf. Maallaqa dhugaan hin socho'u.",
   'portal.mock_confirm': 'Kaffaltii mirkaneessi',
   'portal.mock_cancel': "Haqi fi deebi'i",
+  'portal.chapa_title': 'Chapa — sandbox checkout',
+  'portal.chapa_hint':
+    "Kun dhoksaan kaffaltii Chapa abbaa manaan kee qopheesse fakkeessa. Gateway gara live tti jijjiiramee yeroo gara Chapa mataasaatti ergama. Maallaqa dhugaan as hin socho'u.",
+  'portal.chapa_confirm': 'Kaffaltii saandibakkaa xumuri',
   'portal.payment_success': 'Kaffaltii nu fudhacherra',
   'portal.payment_receipt': 'Rasiifii {receipt}',
   'portal.payment_success_hint': 'Kaffaltiin kee abbaa qabeenya kee biratti jijjiirama male galmeffameera.',
@@ -415,8 +419,10 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'org.gateway_demo_badge': 'Agarsiisuu',
   'org.gateway_demo_note':
     'Haala agarsiisuu: waadaa kireeffataa jalqaba hangaa xumuraa fakkeessa, qarshii dhugaan hin darbu.',
+  'org.gateway_test_note':
+    "Qormaata / saandibakkaa: chekki'aawutiin Chapa appii kana keessatti fakkeeffama — hanga ammaa herrega Chapaan barbaachisa miti. Iccittaa sirreeffii kee ol kaa'i gara live tti jijjiiri.",
   'org.gateway_live_note':
-    "Haalli sirreeffamaa kooodii haaraa dhiyeessaa saandibakkaa ofiisaadhaan mirkaneffamu barbaada; hanga mirkanaa'etti waamamni sirreeffamaa dhorkama.",
+    "Haalli sirreeffamaa kaffaltii dhugaa dhiyeessaa qua. Odeeffannoo seerludaa fi baasii galmeessa mirkaneffadhu, jijjiirraa dura.",
   'org.gateway_platform_source': "Koofiin dhaabbataa hin qindaa'ine — dhiyeessaan durtii maqarsaa hojjeta.",
   'org.gateway_credentials_hint':
     "Gatiin olkaa'aman mijeessamanii turu, irra deebi'anee hin mul'atu. Bakka buufuuf gatii haaraa barressi; olkaa'uuf duwwaa dhiisi.",

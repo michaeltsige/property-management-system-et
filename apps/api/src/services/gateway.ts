@@ -22,6 +22,7 @@ import {
   PAYMENT_GATEWAY_CREDENTIAL_FIELDS,
   PAYMENT_GATEWAY_SETTING_KEY,
   type PaymentGatewayConfigInput,
+  type PaymentGatewayMode,
   type PaymentGatewayProvider,
   type PaymentGatewayStatus,
 } from '@pms/shared';
@@ -64,7 +65,14 @@ async function readStored(prisma: PrismaClient, organizationId: string): Promise
   };
 }
 
-/** The status payload for the Organization screen — no credential values, ever. */
+/**
+ * The status payload for the Organization screen — no credential values, ever.
+ *
+ * `mode` is always concrete for Chapa: an organization without a stored config
+ * inherits the platform's effective Chapa mode (live when the environment
+ * carries a secret key, otherwise the built-in sandbox simulation), so the UI
+ * can say honestly what a tenant checkout will do right now.
+ */
 export async function getGatewayStatus(
   prisma: PrismaClient,
   organizationId: string,
@@ -91,12 +99,16 @@ export async function getGatewayStatus(
     }
   }
 
-  const missing = missingGatewayCredentials(provider, plaintext);
+  const platformChapaMode: PaymentGatewayMode | null =
+    provider === 'chapa' ? (getConfig().CHAPA_SECRET_KEY ? 'live' : 'test') : null;
+  const mode: PaymentGatewayMode | null = stored?.mode ?? platformChapaMode;
+
+  const missing = missingGatewayCredentials(provider, plaintext, mode ?? undefined);
 
   return {
     provider,
     source: stored ? 'organization' : 'platform',
-    mode: stored?.mode ?? null,
+    mode,
     configured: missing.length === 0,
     missing,
     credentials,

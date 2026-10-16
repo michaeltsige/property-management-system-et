@@ -22,11 +22,13 @@ import { portalRouter } from './portal.js';
 import { portfolioRouter } from './portfolio.js';
 import { reportsRouter } from './reports.js';
 import { translationsRouter } from './translations.js';
+import { webhooksRouter } from './webhooks.js';
 
 export const apiRouter = Router();
 
 apiRouter.use('/health', healthRouter);
 apiRouter.use('/auth', authRouter);
+apiRouter.use('/', webhooksRouter);
 apiRouter.use('/', onboardingRouter);
 apiRouter.use('/', portalRouter);
 apiRouter.use('/organizations', organizationsRouter);

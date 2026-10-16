@@ -42,6 +42,10 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.mock_hint': 'ይህ ለልማት የተሰራ በቂ የክፍያ ገጽ ነው። ትክክለኛ ገንዘብ አይንቀሳቀስም።',
   'portal.mock_confirm': 'ክፍያውን አረጋግጥ',
   'portal.mock_cancel': 'ሰርዝ ተመለስ',
+  'portal.chapa_title': 'ቻፓ — ሳንድባክስ ቼክአውት',
+  'portal.chapa_hint':
+    'ይህ የቤት ባለቤትዎ ካዋጀው የቻፓ ቼክአውት ሳንድባክስ ማስመሳያ ነው። ጌትዌይ ወደ live ሁኔታ ሲቀየር ወደ ቻፓ ራሱ ይላካሉ። እዚህ ትክክለኛ ገንዘብ አይንቀሳቀስም።',
+  'portal.chapa_confirm': 'ሳንድባክስ ክፍያውን አጠናቅቅ',
   'portal.payment_success': 'ክፍያው ተቀብለናል',
   'portal.payment_receipt': 'ደረሰኝ {receipt}',
   'portal.payment_success_hint': 'ክፍያዎ ከባለቤትዎ ዘንድ ወዲያውኑ ተመዝግቧል።',
@@ -405,8 +409,10 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'org.gateway_mode_live': 'በቀጥታ',
   'org.gateway_demo_badge': 'ማሳያ',
   'org.gateway_demo_note': 'የማሳያ ሁነታ፡ የኪራይ ቼካውት ከመጀመሪያ እስከ መጨረሻ ይለወሳል፣ ትክክለኛ ገንዘብ አይተላለፍም።',
+  'org.gateway_test_note':
+    'ሙከራ / ሳንድባክስ፦ የቻፓ ቼክአውት በዚህ መተግበሪያ ውስጥ ይለማመዳል — እስካሁን የቻፓ መለያ አያስፈልግም። የሚስጥር ቁልፍዎን ያስቀምጡ እና ወደ Live ይቀይሩ።',
   'org.gateway_live_note':
-    'የበቀጥታ ሁነታ የአቅራቢውን አዳዲስ ኮድ ከኦፊሴላዊ ሳንድባክስ ጋር መረጋገጥ ይጠይቃል፤ እስካልተረጋገጠ ድረስ የበቀጥታ ጥሪዎች ይከለከላሉ።',
+    'የበቀጥታ ሁነታ በእውነተኛ ገንዘብ ክፍያ ያስቀምጣል። ከመቀየርዎ በፊት የመግቢያ ቁልፎቹንና የክፍያ ሂደቱን በጥንቃቄ ያረጋግጡ።',
   'org.gateway_platform_source': 'የድርጅት ጌትዌይ አልተዋቀረም — የመድረኩ ነባሪ አቅራቢ ተግብሯል።',
   'org.gateway_credentials_hint': 'የተቀመጡ እሴቶች ተመስጥረው ይቀመጣሉ፣ እንደገና አይታዩም። ለመተካት አዲስ እሴት ይጻፉ፤ ለማቆየት ባዶ ይተዉ።',
   'org.gateway_missing': 'የጎደሉ ማእዘኖች፡ {fields}',

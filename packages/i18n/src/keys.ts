@@ -208,6 +208,10 @@ export const EN_CATALOG = {
   'portal.mock_hint': 'This is a simulated payment provider page for development. No real money moves.',
   'portal.mock_confirm': 'Confirm payment',
   'portal.mock_cancel': 'Cancel and go back',
+  'portal.chapa_title': 'Chapa — sandbox checkout',
+  'portal.chapa_hint':
+    'A sandbox simulation of the Chapa checkout your landlord configured. When they switch the gateway to live mode you will be sent to Chapa itself. No real money moves here.',
+  'portal.chapa_confirm': 'Complete sandbox payment',
   'portal.payment_success': 'Payment received',
   'portal.payment_receipt': 'Receipt {receipt}',
   'portal.payment_success_hint': 'Your payment is recorded with your landlord immediately.',
@@ -601,8 +605,10 @@ export const EN_CATALOG = {
   'org.gateway_mode_live': 'Live',
   'org.gateway_demo_badge': 'Demo',
   'org.gateway_demo_note': 'Demo mode: the tenant checkout is simulated end to end and no real money moves.',
+  'org.gateway_test_note':
+    'Test / sandbox: the Chapa checkout is simulated inside this app — no Chapa account is needed yet. Save your secret key and switch to Live to use the real Chapa.',
   'org.gateway_live_note':
-    'Live mode requires the provider adapter to be verified against the official sandbox; until then live calls are refused.',
+    'Live mode takes real payments through the provider. Double-check the credentials and the settlement account before switching.',
   'org.gateway_platform_source':
     'No organization gateway configured — the platform default provider is in effect.',
   'org.gateway_credentials_hint':

@@ -42,6 +42,10 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.mock_hint': 'እዚ ንምምዕባል ተዳሎት ዝተደለ ገጽ ክፍሊት እዩ። ሓቀኛ ገንዘብ ኣይተንቀሳቐስን።',
   'portal.mock_confirm': 'ክፍሊት ኣረጋግጽ',
   'portal.mock_cancel': 'ሰርዝ ተመለስ',
+  'portal.chapa_title': 'ቻፓ — ሳንድባክስ ቼክኣውት',
+  'portal.chapa_hint':
+    'እዚ ሳንድባክስ መሰላ ቼክኣውት ቻፓ ብባለቤት ገይስኩም ዝተዳለወ እዩ። gateway ናብ live ክቕየር ምስ ተቐይር ናብ ቻፓ ባዕሉ ክሕዙ እዩ። ሓቀኛ ገንዘብ ኣይተንቀሳቐስን።',
+  'portal.chapa_confirm': 'ሳንድባክስ ክፍሊት ውዕሉ',
   'portal.payment_success': 'ክፍሊት ተቐቢልናዮ',
   'portal.payment_receipt': 'ሪሲት {receipt}',
   'portal.payment_success_hint': 'ክፍሊትኩም ብወናኒኩም ኣብ ውሽጢ ሕጂ ተመዝጊቡ ኣሎ።',
@@ -404,7 +408,10 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'org.gateway_mode_live': 'ቀጥታዊ',
   'org.gateway_demo_badge': 'ኣብርሥታ',
   'org.gateway_demo_note': 'ውንባር ኣብርሥታ፡ ችውካውት ኬረንታ ካብ መጀመርታ ክሳብ መወዳእታ ይተሓለው፣ ሓቀኛ ቅርጺ ኣይሕለፍን።',
-  'org.gateway_live_note': 'ቀጥታዊ ውንባር እቲ መሃቢ ስራሕ ምስ ኦፊሴላዊ ሳንድባክስ ክትረጋገጽ ይጠልብ፤ ክሳብ ዝተረጋገጸ ቀጥታዊ ውዒልቲ ኣይፍቀድን።',
+  'org.gateway_test_note':
+    'ፈተነ / ሳንድባክስ፦ ቼክኣውት ቻፓ ኣብ ውሽጢ ነዚ ኣፕሊኬሽን ይምልከት — ድሕሪ ሕጂ ሕሳብ ቻፓ ኣይሓትኩን። ቅልፅቲ ቃል መእተዊ ኣቐምጵ ናብ Live ቐይርዎ።',
+  'org.gateway_live_note':
+    'ቀጥታዊ ውንባር ሓቀኛ ክፍሊት ይቅበል። ቅድሚ ምቕያርኩም ነቲ መእተዊ ሓበሬታን ተቐባቢል ሕሳብን ብጥንቁቕ ኣረጋግጹ።',
   'org.gateway_platform_source': 'መእተዊ ክፍሊት ውድብ ኣይተዳለወን — ናይ መደበር ቀዳማይ ምርጫ ይሰርሕ ኣሎ።',
   'org.gateway_credentials_hint': 'ዝተዐቀባ ዋጋታት ተመስጢሮም ይቕመጡ፣ ደጊሞም ኣይረኣዩን። ንምትኻኽል ሓድሽ ዋጋ ጽሓፉ፤ ንምሕዝኦት ባዶ ኣቱዎ።',
   'org.gateway_missing': 'ዘሎዉሑ መሣርያታት፡ {fields}',

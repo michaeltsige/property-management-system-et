@@ -192,3 +192,46 @@ Concepts only: the leasing funnel, per-property income statement as the owner's
 primary screen, and application → screening → approval → e-signature as one flow.
 No code, text, screenshot, icon or brand asset was taken. Nothing from it may be
 copied; these are generic industry workflows.
+
+## 6. Chapa payment gateway — documented API contract
+
+The Chapa adapter (`apps/api/src/providers/payments/chapa.ts`) implements exactly
+this contract, confirmed from the official documentation on 2026-10-16:
+
+- Source: `developer.chapa.co` → Integrations Guides → "Accept Payment" and
+  "Webhooks" (the "last updated" dates on those pages were July–September 2026).
+- **Initialize** — `POST https://api.chapa.co/v1/transaction/initialize`,
+  `Authorization: Bearer <secretKey>`. Required: `amount` (major units, decimal
+  string), `currency` (`ETB`/`USD`), `email`, `first_name`, `last_name`; plus
+  `tx_ref` (our unique reference), `return_url`, `callback_url`,
+  `customization[title|description]`, and optionally `phone_number` — which must
+  be 10 digits in `09xxxxxxxx`/`07xxxxxxxx` form, so `+251…` numbers are
+  rewritten locally and anything else is omitted. Response:
+  `{ status: "success", data: { checkout_url } }` — the payer is redirected to
+  `data.checkout_url`.
+- **Return flow** — after payment Chapa redirects to `return_url` appending
+  `trx_ref`, `ref_id`, `status` params (hence the sandbox page accepting
+  `tx_ref|trx_ref|ref`). The redirect is never trusted: the transaction is
+  verified server-side.
+- **Verify** — `GET https://api.chapa.co/v1/transaction/verify/{tx_ref}` →
+  `{ status: "success", data: { status: "success" | "failed" | "pending",
+  amount: "400.00", currency, tx_ref, created_at, updated_at } }`. Amounts are
+  major-unit decimal strings and are converted to minor units without floats.
+- **Webhooks** — POST with a JSON body
+  `{ event: "charge.success" | "charge.failed/cancelled" | "charge.refunded" |
+  "charge.reversed", tx_ref, reference, amount, currency, status, ... }`. The
+  signature is HMAC-SHA256 (hex) of the raw body with the webhook secret,
+  delivered in `x-chapa-signature` (standard) or `chapa-signature` (custom
+  webhooks); the docs accept either header being valid. Invalid or missing
+  signature → the event is discarded with 400. Valid events are only a trigger:
+  the transaction is re-verified through the API before any money is recorded.
+  Handlers must answer 200; Chapa retries every ~10 minutes up to 10 times over
+  72 hours otherwise.
+- **Not implemented on purpose** (live mode): `refund` and `reconcile` — the
+  exact endpoints were not confirmed from the docs at the time of writing, so
+  the adapter refuses with a clear message instead of guessing URLs. Refunds
+  run from the Chapa dashboard until then.
+- **Test mode** — the adapter's built-in sandbox simulation emulates this same
+  contract in-process (same tx_ref shape, checkout redirect, verify semantics,
+  signed webhooks). No network, no Chapa account.
+

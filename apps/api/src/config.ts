@@ -81,6 +81,8 @@ const envSchema = z.object({
   SMS_PROVIDER: z.enum(['mock', 'ethio-telecom-sms']).default('mock'),
   CHAPA_SECRET_KEY: z.string().optional(),
   CHAPA_WEBHOOK_SECRET: z.string().optional(),
+  // Live API base URL override; the official value is https://api.chapa.co/v1.
+  CHAPA_BASE_URL: z.string().url().optional(),
   TELEBIRR_APP_ID: z.string().optional(),
   TELEBIRR_APP_KEY: z.string().optional(),
   TELEBIRR_PUBLIC_KEY: z.string().optional(),
@@ -156,6 +158,10 @@ export function configWarnings(config: AppConfig = getConfig()): string[] {
   if (config.isProduction) {
     if (config.PAYMENT_PROVIDER === 'mock')
       warnings.push('PAYMENT_PROVIDER=mock in production: no real payments can be taken.');
+    if (config.PAYMENT_PROVIDER === 'chapa' && !config.CHAPA_SECRET_KEY)
+      warnings.push(
+        'PAYMENT_PROVIDER=chapa without CHAPA_SECRET_KEY in production: online payments run through the built-in sandbox simulation.',
+      );
     if (config.SMS_PROVIDER === 'mock')
       warnings.push('SMS_PROVIDER=mock in production: no SMS will actually be sent.');
     if (config.STORAGE_DRIVER === 'local')

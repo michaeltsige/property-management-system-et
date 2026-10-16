@@ -9,6 +9,19 @@ import cors from 'cors';
 import express, { type Express } from 'express';
 import helmet from 'helmet';
 
+declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace
+  namespace Express {
+    export interface Request {
+      /**
+       * Raw body bytes, captured for every JSON request so signature-verified
+       * webhooks (Chapa HMAC over the exact bytes) can re-hash what was signed.
+       */
+      rawBody?: Buffer;
+    }
+  }
+}
+
 import { getConfig } from './config.js';
 import { logger } from './lib/logger.js';
 import { attachPrincipal } from './middleware/auth.js';
@@ -47,8 +60,19 @@ export function createApp(): Express {
     }),
   );
 
-  // JSON only: uploads use the storage layer, not multipart bodies.
-  app.use(express.json({ limit: '1mb' }));
+  // JSON only: uploads use the storage layer, not multipart bodies. The verify
+  // hook keeps the raw bytes alongside the parsed body — webhook routes need
+  // the exact bytes that were signed, not a re-serialization.
+  app.use(
+    express.json({
+      limit: '1mb',
+      verify(request, _response, buffer) {
+        // express types the hook's request as IncomingMessage; the augmented
+        // `rawBody` field lives on the Express request.
+        (request as express.Request).rawBody = Buffer.from(buffer);
+      },
+    }),
+  );
 
   // Money columns are BigInt (integer minor units) because ETB amounts in santim
   // can exceed quietly-lossy float ranges, and JSON.stringify cannot represent
