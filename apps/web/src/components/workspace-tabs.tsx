@@ -87,9 +87,19 @@ export function WorkspaceTabs() {
               <li
                 key={path}
                 className={cn(
-                  'relative flex shrink-0 items-center rounded-t-lg pr-1 transition-colors',
+                  /*
+                   * Every tab carries the same 1px border box (transparent when
+                   * inactive) so switching never shifts geometry by a pixel.
+                   * The ACTIVE tab gets the crisp container edge on its top and
+                   * sides — the Chrome folder-tab outline — while its bottom
+                   * border stays transparent and the canvas `after` bridge
+                   * melts it into the page below. Against the recessed slot
+                   * and the canvas fill, that ink-tinted outline is what makes
+                   * the active tab read as the one pulled forward.
+                   */
+                  'relative flex shrink-0 items-center rounded-t-lg border border-transparent pr-1 transition-colors',
                   active
-                    ? 'bg-canvas shadow-[0_1px_2px_rgba(13,47,40,0.06),0_-2px_6px_-2px_rgba(13,47,40,0.10)] after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-canvas after:content-[""]'
+                    ? 'border-x-edge border-t-edge border-b-transparent bg-canvas shadow-[0_1px_2px_rgba(13,47,40,0.08),0_-2px_8px_-2px_rgba(13,47,40,0.16)] after:absolute after:inset-x-px after:bottom-0 after:h-px after:bg-canvas after:content-[""]'
                     : 'hover:bg-white/60',
                 )}
               >
