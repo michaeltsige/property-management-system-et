@@ -327,7 +327,10 @@ export const api = {
   updateTenantLanguage: (language: string) =>
     apiFetch<{ tenant: { id: string; language: string } }>('/portal/me/language', {
       method: 'PATCH',
-      body: JSON.stringify({ language }),
+      // The client stringifies every body — pass the object, never pre-encoded
+      // JSON (a pre-stringified body became `"{\"language\":\"am\"}"` on the
+      // wire and the API rightly rejected it as malformed).
+      body: { language },
     }),
   /** Lease papers, receipts and anything else filed for this tenant. */
   portalDocuments: () => apiFetch<{ items: PortalDocument[] }>('/portal/documents'),
