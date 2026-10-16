@@ -228,14 +228,20 @@ function DocumentsView() {
           </div>
 
           {documents.loading ? (
-            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-[512px] w-full" />
           ) : (
             <Card>
               <CardHeader>
                 <CardTitle>{viewTitle}</CardTitle>
                 <span className="text-xs text-slate-500 tabular">{rows.length}</span>
               </CardHeader>
-              <CardContent className="p-0">
+              {/*
+                A stable frame: the table area never collapses below 24rem nor
+                grows past 30rem, so paging between groups (248 lease papers vs
+                a handful of inspections) keeps the same page length and the
+                header actions never jump. Tall groups scroll inside the frame.
+              */}
+              <CardContent className="min-h-[384px] max-h-[480px] overflow-y-auto p-0">
                 {rows.length === 0 ? (
                   <EmptyState
                     title={visible.length === 0 ? t('common.no_results') : t('documents.group_empty')}
