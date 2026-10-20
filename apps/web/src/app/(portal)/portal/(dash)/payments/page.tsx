@@ -12,6 +12,8 @@ import { usePreferences } from '@/lib/preferences';
 import { api } from '@/lib/api';
 import { PortalPaymentProofs } from '@/components/portal-proofs';
 import {
+  Alert,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -51,7 +53,14 @@ export default function PortalPaymentsPage() {
               <Skeleton className="h-10 w-full" />
             </div>
           ) : payments.error ? (
-            <div className="p-4 text-sm text-red-700">{payments.error}</div>
+            <div className="space-y-3 p-4">
+              <Alert tone="danger">
+                {t('portal.load_failed')} {payments.error}
+              </Alert>
+              <Button variant="secondary" onClick={() => payments.reload()}>
+                {t('common.retry')}
+              </Button>
+            </div>
           ) : (payments.data?.items.length ?? 0) === 0 ? (
             <div className="p-4">
               <EmptyState title={t('portal.payments_empty')} description="" />

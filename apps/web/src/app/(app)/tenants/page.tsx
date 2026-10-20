@@ -68,6 +68,9 @@ export default function TenantsPage() {
   // Optional: the scanned/photographed ID that matches the typed number. Never
   // required here — a landlord can add it later from Documents.
   const [idFile, setIdFile] = useState<File | null>(null);
+  // Portal enrollment in the same flow: the tenant signs in with this phone
+  // number and an SMS code, so it only makes sense when a phone was entered.
+  const [portalNow, setPortalNow] = useState(true);
   const { pending, error, run } = useAction();
   const canManagePortal = roleHasPermission(session?.role as Role, 'tenants.write');
   const [portalPendingId, setPortalPendingId] = useState<string | null>(null);
@@ -115,6 +118,16 @@ export default function TenantsPage() {
           throw new Error(t('documents.id_upload_failed'));
         }
       }
+      if (portalNow && (form.phone || form.email)) {
+        // Same one-flow promise: the account exists when the landlord is done.
+        // Enrollment itself is idempotent; a failure keeps the tenant and is
+        // recoverable from the Tenants list.
+        try {
+          await api.enableTenantPortal(created.tenant.id);
+        } catch {
+          throw new Error(t('tenant.portal_enable_failed'));
+        }
+      }
       setForm({
         fullName: '',
         phone: '',
@@ -126,6 +139,7 @@ export default function TenantsPage() {
         idNumber: '',
       });
       setIdFile(null);
+      setPortalNow(true);
       setOpen(false);
       tenants.reload();
     }).catch(() => undefined);
@@ -333,6 +347,23 @@ export default function TenantsPage() {
               onChange={(event) => setIdFile(event.target.files?.[0] ?? null)}
             />
             <p className="text-[11px] text-slate-500">{t('documents.id_file_hint')}</p>
+          </div>
+
+          <div className="sm:col-span-2">
+            <label className="flex cursor-pointer items-start gap-2 text-xs text-slate-600">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                checked={portalNow}
+                onChange={(event) => setPortalNow(event.target.checked)}
+              />
+              <span>
+                <span className="font-medium text-slate-800">{t('tenant.portal_now')}</span>
+                <span className="mt-0.5 block text-[11px] text-slate-500">
+                  {t('tenant.portal_now_hint')}
+                </span>
+              </span>
+            </label>
           </div>
 
           {error ? (

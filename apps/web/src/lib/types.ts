@@ -403,7 +403,8 @@ export interface PortalPayment {
 export interface PortalNotice {
   id: string;
   templateKey: string;
-  payload: Record<string, string>;
+  /** Free-form ICU values; staff-sent rows nest them under `values`. */
+  payload: Record<string, unknown>;
   createdAt: string;
   status: string;
 }

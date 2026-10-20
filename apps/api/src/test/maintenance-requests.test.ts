@@ -194,4 +194,116 @@ describe('work order notes', () => {
       2,
     );
   });
+
+  it('closing a request notifies the tenant in their portal notices', async () => {
+    const { fixture, staffHeaders, tenantHeaders, portfolio } = await setup();
+    const created = await fileRequest(tenantHeaders);
+    const workOrderId = created.body.workOrder.id as string;
+    const vendor = await request(app)
+      .post('/api/v1/vendors')
+      .set(staffHeaders)
+      .send({ name: 'KazanaFIX Services', category: 'plumbing' })
+      .expect(201);
+    await request(app)
+      .patch(`/api/v1/work-orders/${workOrderId}`)
+      .set(staffHeaders)
+      .send({ status: 'assigned', vendorId: vendor.body.vendor.id })
+      .expect(200);
+    await request(app)
+      .patch(`/api/v1/work-orders/${workOrderId}`)
+      .set(staffHeaders)
+      .send({ status: 'in_progress' })
+      .expect(200);
+
+    await request(app)
+      .patch(`/api/v1/work-orders/${workOrderId}`)
+      .set(staffHeaders)
+      .send({ status: 'completed', resolutionNotes: 'Replaced the washer; tested for leaks.' })
+      .expect(200);
+
+    const tenant = await getPrisma().tenant.findUniqueOrThrow({ where: { id: portfolio.tenantId } });
+    const notices = await getPrisma().notification.findMany({
+      where: { organizationId: fixture.organizationId, recipientUserId: tenant.userId ?? '' },
+      orderBy: { createdAt: 'asc' },
+    });
+    // One OTP notice from login, one close-out notice.
+    expect(notices).toHaveLength(2);
+    const closeNotice = notices.at(-1)!;
+    expect(closeNotice.channel).toBe('in_app');
+    expect(closeNotice.templateKey).toBe('notification.work_order_completed');
+    expect(closeNotice.status).toBe('sent');
+    expect(closeNotice.sentAt).not.toBeNull();
+    // Payload values are flat so the portal client re-translates the template.
+    expect(closeNotice.payload).toEqual({
+      title: 'Water is leaking under the kitchen sink',
+      ticketNumber: created.body.workOrder.ticketNumber,
+    });
+
+    // Cancellation uses the cancelled template.
+    const second = await fileRequest(tenantHeaders, 'The bedroom light switch sparks');
+    await request(app)
+      .patch(`/api/v1/work-orders/${second.body.workOrder.id}`)
+      .set(staffHeaders)
+      .send({ status: 'cancelled', resolutionNotes: 'Duplicate of the water leak request.' })
+      .expect(200);
+    const cancelledNotice = await getPrisma().notification.findFirstOrThrow({
+      where: { recipientUserId: tenant.userId ?? '', templateKey: 'notification.work_order_cancelled' },
+    });
+    expect(cancelledNotice.payload).toMatchObject({ ticketNumber: second.body.workOrder.ticketNumber });
+
+    // The portal notices endpoint serves the new rows to the tenant session.
+    const portal = await request(app).get('/api/v1/portal/notices').set(tenantHeaders).expect(200);
+    const keys = (portal.body.items as { templateKey: string }[]).map((item) => item.templateKey);
+    expect(keys).toContain('notification.work_order_completed');
+    expect(keys).toContain('notification.work_order_cancelled');
+  });
+
+  it('closing a staff-filed request for an unenrolled tenant records no notice', async () => {
+    const { fixture, staffHeaders } = await setup();
+
+    // A second portfolio whose tenant has no portal account (no User row).
+    const other = await createPortfolio(getPrisma(), {
+      organizationId: fixture.organizationId,
+      startDate: utcDate(2026, 1, 1),
+    });
+    const created = await request(app)
+      .post('/api/v1/work-orders')
+      .set(staffHeaders)
+      .send({
+        propertyId: other.propertyId,
+        unitId: other.unitId,
+        tenantId: other.tenantId,
+        title: 'Gate lock replacement',
+      })
+      .expect(201);
+    const vendor = await request(app)
+      .post('/api/v1/vendors')
+      .set(staffHeaders)
+      .send({ name: 'Gate Guards PLC', category: 'other' })
+      .expect(201);
+    await request(app)
+      .patch(`/api/v1/work-orders/${created.body.workOrder.id}`)
+      .set(staffHeaders)
+      .send({ status: 'assigned', vendorId: vendor.body.vendor.id })
+      .expect(200);
+    await request(app)
+      .patch(`/api/v1/work-orders/${created.body.workOrder.id}`)
+      .set(staffHeaders)
+      .send({ status: 'in_progress' })
+      .expect(200);
+
+    await request(app)
+      .patch(`/api/v1/work-orders/${created.body.workOrder.id}`)
+      .set(staffHeaders)
+      .send({ status: 'completed', resolutionNotes: 'New lock installed and keys handed over.' })
+      .expect(200);
+
+    const otherTenant = await getPrisma().tenant.findUniqueOrThrow({ where: { id: other.tenantId } });
+    expect(otherTenant.userId).toBeNull();
+    expect(
+      await getPrisma().notification.count({
+        where: { organizationId: fixture.organizationId, templateKey: 'notification.work_order_completed' },
+      }),
+    ).toBe(0);
+  });
 });

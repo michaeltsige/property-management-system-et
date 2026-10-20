@@ -216,6 +216,9 @@ export const EN_CATALOG = {
   'portal.payment_receipt': 'Receipt {receipt}',
   'portal.payment_success_hint': 'Your payment is recorded with your landlord immediately.',
   'portal.back_to_portal': 'Back to portal',
+  'portal.pay_no_redirect': 'The payment provider did not return a checkout page. Try again in a moment.',
+  'portal.payment_not_found': 'That payment reference was not found. Start the payment again from the portal.',
+  'portal.load_failed': 'This page could not load.',
   // Tenant portal shell, statement and history; non-English entries are unreviewed machine drafts.
   'portal.nav.dashboard': 'Overview',
   'portal.nav.payments': 'Payments',
@@ -260,6 +263,9 @@ export const EN_CATALOG = {
   'reports.total_outstanding': 'Total outstanding',
   'tenant.portal': 'Portal',
   'tenant.portal_enable': 'Enable portal',
+  'tenant.portal_now': 'Create their portal account now',
+  'tenant.portal_now_hint': 'They sign in at /portal/login with this phone number and a code sent by SMS. You can enable it later from the Tenants list.',
+  'tenant.portal_enable_failed': 'The tenant was created, but enabling the portal failed — enable it later from the Tenants list.',
   'tenant.portal_disable': 'Disable portal',
 
   // --- calendar & dates ---------------------------------------------------
@@ -427,6 +433,8 @@ export const EN_CATALOG = {
   'notification.payment_received': 'We received your payment of {amount}. Thank you.',
   'notification.lease_expiring': 'Your lease ends on {endDate}',
   'notification.work_order_created': 'Maintenance request received: {title}',
+  'notification.work_order_completed': 'Maintenance request {ticketNumber} is completed: {title}',
+  'notification.work_order_cancelled': 'Maintenance request {ticketNumber} was cancelled: {title}',
 
   // --- errors and validation ---------------------------------------------
   'error.generic': 'Something went wrong. Please try again.',
@@ -521,6 +529,9 @@ export const EN_CATALOG = {
   'documents.id_file': 'ID document scan',
   'documents.id_file_hint': 'A photo or scan of the ID above. You can add or replace it later from Documents.',
   'documents.id_upload_failed': 'The tenant was created, but the ID file could not be uploaded — try again from Documents.',
+  'documents.lease_file': 'Signed lease agreement',
+  'documents.lease_file_hint': 'The signed PDF or scan, filed against this lease. The tenant sees it under Documents in their portal.',
+  'documents.lease_upload_failed': 'The lease was created, but the agreement file could not be uploaded — try again from Documents.',
   'tenant.employer': 'Employer',
   'tenant.emergency_contact': 'Emergency contact',
   'unit.bedrooms': 'Bedrooms',

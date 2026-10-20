@@ -14,7 +14,17 @@ import { usePreferences } from '@/lib/preferences';
 
 import { api } from '@/lib/api';
 import { LANGUAGES } from '@/lib/preferences';
-import { Alert, Card, CardContent, CardHeader, CardTitle, Label, Select, Skeleton } from '@/components/ui';
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  Label,
+  Select,
+  Skeleton,
+} from '@/components/ui';
 
 export default function PortalProfilePage() {
   const { session, ready, t, language, setLanguage } = usePreferences();
@@ -54,7 +64,14 @@ export default function PortalProfilePage() {
           {me.loading ? (
             <Skeleton className="h-24 w-full" />
           ) : me.error ? (
-            <p className="text-sm text-red-700">{me.error}</p>
+            <div className="space-y-3">
+              <Alert tone="danger">
+                {t('portal.load_failed')} {me.error}
+              </Alert>
+              <Button variant="secondary" onClick={() => me.reload()}>
+                {t('common.retry')}
+              </Button>
+            </div>
           ) : me.data ? (
             <dl className="grid gap-4 text-sm sm:grid-cols-2">
               <div>

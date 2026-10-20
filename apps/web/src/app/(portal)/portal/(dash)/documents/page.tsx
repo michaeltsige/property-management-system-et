@@ -10,7 +10,16 @@ import { useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 
 import { api } from '@/lib/api';
-import { Card, CardContent, CardHeader, CardTitle, EmptyState, Skeleton } from '@/components/ui';
+import {
+  Alert,
+  Button,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+  Skeleton,
+} from '@/components/ui';
 
 export default function PortalDocumentsPage() {
   const { session, ready, language, calendar, t } = usePreferences();
@@ -38,7 +47,14 @@ export default function PortalDocumentsPage() {
               <Skeleton className="h-10 w-full" />
             </div>
           ) : documents.error ? (
-            <div className="p-4 text-sm text-red-700">{documents.error}</div>
+            <div className="space-y-3 p-4">
+              <Alert tone="danger">
+                {t('portal.load_failed')} {documents.error}
+              </Alert>
+              <Button variant="secondary" onClick={() => documents.reload()}>
+                {t('common.retry')}
+              </Button>
+            </div>
           ) : (documents.data?.items.length ?? 0) === 0 ? (
             <div className="p-4">
               <EmptyState title={t('portal.documents_empty')} description="" />

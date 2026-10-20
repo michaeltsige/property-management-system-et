@@ -425,6 +425,41 @@ operationsRouter.patch(
               internal: false,
             },
           });
+
+          // Close-out sync to the tenant portal: an in-app notice is the row the
+          // portal Notices page renders. Payload values are stored flat so the
+          // client can re-translate the template in the tenant's language.
+          if (updated.tenantId) {
+            const tenant = await tx.tenant.findUnique({
+              where: { id: updated.tenantId },
+              select: { userId: true, language: true },
+            });
+            if (tenant?.userId) {
+              const organization = await tx.organization.findUniqueOrThrow({
+                where: { id: organizationId },
+                select: { language: true },
+              });
+              await tx.notification.create({
+                data: {
+                  organizationId,
+                  templateKey:
+                    updated.status === 'completed'
+                      ? 'notification.work_order_completed'
+                      : 'notification.work_order_cancelled',
+                  channel: 'in_app',
+                  recipientUserId: tenant.userId,
+                  language: (tenant.language ?? organization.language ?? 'en') as
+                    | 'en'
+                    | 'am'
+                    | 'om'
+                    | 'ti',
+                  status: 'sent',
+                  sentAt: new Date(),
+                  payload: { title: updated.title, ticketNumber: updated.ticketNumber },
+                },
+              });
+            }
+          }
         }
 
         return updated;

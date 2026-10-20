@@ -61,3 +61,9 @@ export const Menu = wrap('Menu');
 export const SearchNormal1 = wrap('SearchNormal1');
 export const Notification = wrap('Notification');
 export const Global = wrap('Global');
+// Portal status and document icons
+export const TickCircle = wrap('TickCircle');
+export const Warning2 = wrap('Warning2');
+export const Document = wrap('Document');
+export const PathTool = wrap('PathTool');
+export const CloseSquare = wrap('CloseSquare');

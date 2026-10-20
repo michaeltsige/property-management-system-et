@@ -284,6 +284,7 @@ export const NOTIFICATION_TEMPLATE_KEYS = [
   'notification.lease_renewed',
   'notification.work_order_created',
   'notification.work_order_completed',
+  'notification.work_order_cancelled',
   'notification.invite_user',
   'notification.password_reset',
 ] as const;

@@ -75,6 +75,9 @@ export default function LeasesPage() {
   const [depositMode, setDepositMode] = useState<DepositType>('months_of_rent');
   const [depositMonths, setDepositMonths] = useState(2);
   const [depositAmount, setDepositAmount] = useState<number | null>(null);
+  // Optional: the signed lease captured in the same flow, filed against the new
+  // lease so the tenant sees it in their portal Documents from day one.
+  const [leaseFile, setLeaseFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (!orgSettings || defaultsApplied.current) return;
@@ -92,7 +95,7 @@ export default function LeasesPage() {
     event.preventDefault();
     await run(async () => {
       const currency = (orgSettings?.currency as string | undefined) ?? 'ETB';
-      await api.createLease({
+      const created = await api.createLease({
         unitId: form.unitId,
         tenantId: form.tenantId,
         billingFrequency: form.billingFrequency,
@@ -116,9 +119,29 @@ export default function LeasesPage() {
             ? { amountMinor: depositAmount, currency }
             : undefined,
       });
+      if (leaseFile) {
+        // The lease exists at this point; a failed upload must not make the
+        // landlord re-enter the whole lease. Re-throw with a message, lease stays.
+        try {
+          const unit = units.data?.units.find((candidate) => candidate.id === form.unitId);
+          const dataBase64 = await readAsBase64(leaseFile);
+          await api.uploadDocument({
+            category: 'lease_agreement',
+            title: `${t('documents.lease_file')} — ${unit?.label ?? created.lease.id}`,
+            filename: leaseFile.name,
+            mimeType: leaseFile.type,
+            dataBase64,
+            leaseId: created.lease.id,
+            tenantId: form.tenantId,
+          });
+        } catch {
+          throw new Error(t('documents.lease_upload_failed'));
+        }
+      }
       setOpen(false);
       setRent(null);
       setDepositAmount(null);
+      setLeaseFile(null);
       leases.reload();
       units.reload();
     }).catch(() => undefined);
@@ -410,6 +433,17 @@ export default function LeasesPage() {
             </div>
           ) : null}
 
+          <div className="space-y-1 sm:col-span-2">
+            <Label htmlFor="leaseFile">{`${t('documents.lease_file')} (${t('common.optional')})`}</Label>
+            <Input
+              id="leaseFile"
+              type="file"
+              accept="application/pdf,image/jpeg,image/png,image/webp"
+              onChange={(event) => setLeaseFile(event.target.files?.[0] ?? null)}
+            />
+            <p className="text-[11px] text-slate-500">{t('documents.lease_file_hint')}</p>
+          </div>
+
           {error ? (
             <div className="sm:col-span-2">
               <Alert tone="danger">{error}</Alert>
@@ -454,4 +488,16 @@ export default function LeasesPage() {
       </Modal>
     </div>
   );
+}
+
+function readAsBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = String(reader.result ?? '');
+      resolve(result.slice(result.indexOf(',') + 1));
+    };
+    reader.onerror = () => reject(new Error('Could not read the file'));
+    reader.readAsDataURL(file);
+  });
 }
