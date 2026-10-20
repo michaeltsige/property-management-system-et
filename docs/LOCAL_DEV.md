@@ -64,6 +64,106 @@ Prefer separate terminals? `pnpm db:deploy && pnpm db:seed`, then `pnpm dev`
 
 ---
 
+## Windows 10/11 via WSL2
+
+`pnpm dev:all` is a Linux workflow (Docker Compose, shell scripts, signal
+handling), so on Windows run the stack inside WSL2 — a real Ubuntu environment
+on the Windows kernel, not a VM you manage by hand. Everything lives inside
+WSL (git, pnpm, Docker, the dev servers); the Windows browser just opens
+`http://localhost:3000`. Ubuntu is the right default here: the Alpine server
+runs production, but the dev experience — Node, Docker, hot reload — is
+smoothest on Ubuntu, and the app itself only sees Node + Postgres either way.
+
+### 1. Install WSL (Windows side, one-time)
+
+PowerShell **as Administrator**:
+
+```powershell
+wsl --install
+```
+
+That installs WSL2 plus Ubuntu and asks for a reboot. On first launch Ubuntu
+asks for a Linux username and password (the password is for `sudo` inside
+Ubuntu). Requires Windows 10 2004+ (build 19041) or Windows 11, and
+virtualization enabled in the BIOS/UEFI (on by default on most machines).
+`wsl --update` in PowerShell fixes most install errors; if it still complains
+about virtualization, enable VT-x (Intel) / SVM (AMD) in the firmware setup.
+
+### 2. Toolchain inside Ubuntu
+
+```bash
+# Node 20 — the tested baseline in .nvmrc
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+exec $SHELL && nvm install 20
+
+# pnpm is pinned in package.json; corepack ships with Node
+corepack enable && corepack prepare pnpm@10.34.6 --activate
+
+sudo apt update && sudo apt install -y build-essential git
+```
+
+### 3. Docker for the Postgres container
+
+Pick one:
+
+- **Docker Desktop (least friction):** install it on Windows, keep *Use WSL 2
+  based engine* on, and under Settings → Resources → WSL Integration enable it
+  for the Ubuntu distro. `docker compose` then works inside Ubuntu and the
+  daemon is always running before `pnpm dev:all` needs it.
+- **Native engine inside WSL (no Docker Desktop):** install Docker Engine per
+  Docker's Ubuntu instructions (`apt install docker-ce docker-compose-plugin`),
+  then `sudo systemctl enable --now docker` — systemd is on by default in
+  current WSL Ubuntu images. Add yourself to the `docker` group:
+  `sudo usermod -aG docker $USER`, then close and reopen the terminal.
+
+### 4. Clone into the WSL filesystem — never /mnt/c
+
+This one rule decides whether the stack is fast or unusable. Clone into the
+Linux home:
+
+```bash
+git config --global core.autocrlf input
+git clone https://github.com/michaeltsige/property-management-system-et.git ~/property-management-system-et
+cd ~/property-management-system-et
+nvm use    # .nvmrc pins Node 20
+```
+
+The repo is private: HTTPS asks for your GitHub username and a token as the
+password — never paste a token into the URL itself. `node_modules` on
+`/mnt/c/...` (the Windows drive) makes `pnpm install` and hot reload several
+times slower; if you want a Windows editor, use VS Code's Remote-WSL mode
+(`code .` from inside the repo) — it edits the Linux files in place without
+the penalty.
+
+### 5. Env, install, run
+
+```bash
+cp .env.example .env
+pnpm install
+pnpm dev:all
+```
+
+The first run pulls `postgres:17-alpine`, migrates and seeds the demo data.
+Then open **http://localhost:3000 in the Windows browser** — WSL2 forwards
+localhost automatically — and sign in with `owner@demo.test` / `DemoPass123`.
+
+### 6. WSL-specific troubleshooting
+
+| Symptom                                          | Cause and fix                                                                                                                                              |
+| ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Browser cannot reach `localhost:3000`            | `wsl --shutdown` in PowerShell, reopen Ubuntu, re-run `pnpm dev:all`. Restarting WSL fixes most networking oddities.                                       |
+| Installs and builds are painfully slow           | The repo lives on `/mnt/c` — move it into `~/` (section 4).                                                                                                 |
+| Hot reload does not trigger                      | Same cause: file watching only works inside the WSL filesystem.                                                                                             |
+| `docker: permission denied`                      | Docker Desktop: enable WSL integration for this distro. Native: `sudo usermod -aG docker $USER`, reopen the terminal.                                       |
+| The wrong Node runs (`/mnt/c/...` in the path)    | Work inside the Ubuntu terminal: `which node` must print an nvm or `/usr/bin` path, never `/mnt/c/...`.                                                     |
+
+Memory needs are the same as documented below (~1.5 GB total with all four
+processes); default WSL2 memory — half of the PC's RAM — is fine from 8 GB up.
+Stop the stack with `Ctrl-C` in the Ubuntu terminal; `wsl --shutdown` gives the
+machine back.
+
+---
+
 ## Google Cloud Shell
 
 Cloud Shell gives you a Debian VM with Node, Docker and `git` preinstalled, a 5 GB
