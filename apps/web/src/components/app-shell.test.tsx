@@ -158,7 +158,8 @@ it('renders the served day in the footer with its calendar era', async () => {
   renderShell();
   await screen.findByText('page content');
   const today = todayIn('ethiopian');
-  // The footer formats the day through @pms/calendar and keeps the era suffix.
-  const expected = `${formatCivilDate(today, { language: 'en', showEra: true })} E.C.`;
+  // The footer formats the day through @pms/calendar with exactly one era
+  // suffix — showEra adds E.C./G.C. itself, so nothing is appended by hand.
+  const expected = formatCivilDate(today, { language: 'en', showEra: true });
   expect(screen.getAllByText(expected).length).toBeGreaterThanOrEqual(1);
 });

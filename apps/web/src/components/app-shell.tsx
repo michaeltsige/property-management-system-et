@@ -385,7 +385,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <GlobalSearch />
           </div>
         </header>
-        <div aria-hidden="true" className="h-px bg-gradient-to-r from-brand-600 via-brand-300/60 to-transparent" />
+        <div
+          aria-hidden="true"
+          className="h-px bg-gradient-to-r from-brand-600 via-brand-300/60 to-transparent"
+        />
 
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <WorkspaceTabs />
@@ -399,8 +402,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {t('app.name')} · {session.organization.slug}
           </span>
           <span className="tabular shrink-0">
+            {/* showEra already appends the right suffix for the calendar in
+                use (E.C. / G.C.) — a hand-appended one doubled it. */}
             {formatCivilDate(today, { language, showEra: true })}
-            {calendar === 'ethiopian' ? ' E.C.' : ' G.C.'}
           </span>
         </footer>
       </div>
