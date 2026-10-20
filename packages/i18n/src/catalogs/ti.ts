@@ -84,6 +84,7 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.due_date': 'ዕለት ክፍሊት',
   'portal.amount': 'መጠን',
   'portal.paid': 'ዝተኸፍለ',
+  'portal.billed': 'ዝተመዝገበ',
   'portal.status': 'ኩነታት',
   'portal.receipt': 'ሪሲት',
   'portal.reference': 'መዋዕል',
@@ -98,7 +99,8 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'tenant.portal': 'ፖርታል',
   'tenant.portal_enable': 'ፖርታል ክፈት',
   'tenant.portal_now': 'ናይ ፖርታል ሕሳብ ሕጂ ፍጠርዎ',
-  'tenant.portal_now_hint': 'ብ/portal/login ብኣዚሂ ቁጽሪ ስልኪን ብኮድ ብSMS እተላእከን ይኣቱ። ድሕሪ እዋን ካብ ዝርዝር ተኻራዪታት ክክፈት ይኽእል።',
+  'tenant.portal_now_hint':
+    'ብ/portal/login ብኣዚሂ ቁጽሪ ስልኪን ብኮድ ብSMS እተላእከን ይኣቱ። ድሕሪ እዋን ካብ ዝርዝር ተኻራዪታት ክክፈት ይኽእል።',
   'tenant.portal_enable_failed': 'ተኻራዪ ተፈጢሩ፣ ግን ምኽፋት ፖርታል ኣይተኻእለን — ድሕሪ እዋን ካብ ዝርዝር ተኻራዪታት ፈትኖ።',
   'tenant.portal_disable': 'ፖርታል ዕጾ',
 
@@ -416,8 +418,7 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'org.gateway_demo_note': 'ውንባር ኣብርሥታ፡ ችውካውት ኬረንታ ካብ መጀመርታ ክሳብ መወዳእታ ይተሓለው፣ ሓቀኛ ቅርጺ ኣይሕለፍን።',
   'org.gateway_test_note':
     'ፈተነ / ሳንድባክስ፦ ቼክኣውት ቻፓ ኣብ ውሽጢ ነዚ ኣፕሊኬሽን ይምልከት — ድሕሪ ሕጂ ሕሳብ ቻፓ ኣይሓትኩን። ቅልፅቲ ቃል መእተዊ ኣቐምጵ ናብ Live ቐይርዎ።',
-  'org.gateway_live_note':
-    'ቀጥታዊ ውንባር ሓቀኛ ክፍሊት ይቅበል። ቅድሚ ምቕያርኩም ነቲ መእተዊ ሓበሬታን ተቐባቢል ሕሳብን ብጥንቁቕ ኣረጋግጹ።',
+  'org.gateway_live_note': 'ቀጥታዊ ውንባር ሓቀኛ ክፍሊት ይቅበል። ቅድሚ ምቕያርኩም ነቲ መእተዊ ሓበሬታን ተቐባቢል ሕሳብን ብጥንቁቕ ኣረጋግጹ።',
   'org.gateway_platform_source': 'መእተዊ ክፍሊት ውድብ ኣይተዳለወን — ናይ መደበር ቀዳማይ ምርጫ ይሰርሕ ኣሎ።',
   'org.gateway_credentials_hint': 'ዝተዐቀባ ዋጋታት ተመስጢሮም ይቕመጡ፣ ደጊሞም ኣይረኣዩን። ንምትኻኽል ሓድሽ ዋጋ ጽሓፉ፤ ንምሕዝኦት ባዶ ኣቱዎ።',
   'org.gateway_missing': 'ዘሎዉሑ መሣርያታት፡ {fields}',

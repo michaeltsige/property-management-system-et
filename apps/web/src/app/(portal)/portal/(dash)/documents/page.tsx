@@ -40,14 +40,18 @@ export default function PortalDocumentsPage() {
         <CardHeader>
           <CardTitle>{t('portal.documents')}</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-4">
+          {/* The lease agreement is the one paper tenants look for, so it
+              leads. On wider screens the papers sit in two columns of crisp
+              containers (the depth system's 1C language) so the page does
+              not read as a lonely single list on a big monitor. */}
           {documents.loading ? (
-            <div className="space-y-2 p-4">
+            <div className="space-y-2">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
           ) : documents.error ? (
-            <div className="space-y-3 p-4">
+            <div className="space-y-3">
               <Alert tone="danger">
                 {t('portal.load_failed')} {documents.error}
               </Alert>
@@ -56,11 +60,9 @@ export default function PortalDocumentsPage() {
               </Button>
             </div>
           ) : (documents.data?.items.length ?? 0) === 0 ? (
-            <div className="p-4">
-              <EmptyState title={t('portal.documents_empty')} description="" />
-            </div>
+            <EmptyState title={t('portal.documents_empty')} description="" />
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="grid gap-3 sm:grid-cols-2">
               {[...(documents.data?.items ?? [])]
                 .sort((a, b) => {
                   // The lease agreement is the one paper tenants look for.
@@ -68,26 +70,29 @@ export default function PortalDocumentsPage() {
                   return rank(a.category) - rank(b.category);
                 })
                 .map((document) => (
-                <li key={document.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-slate-900">
-                      {document.title ?? document.category}
-                    </p>
-                    <p className="mt-0.5 truncate text-[11px] text-slate-500">
-                      {[document.property, document.unit].filter(Boolean).join(' · ')}
-                      {document.property || document.unit ? ' · ' : ''}
-                      {formatDate(document.createdAt, { language, calendar })}
-                    </p>
-                  </div>
-                  <a
-                    href={api.portalDocumentUrl(document.id)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="shrink-0 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                  <li
+                    key={document.id}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-edge bg-white px-3 py-2.5"
                   >
-                    {t('portal.download')}
-                  </a>
-                </li>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-slate-900">
+                        {document.title ?? document.category}
+                      </p>
+                      <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                        {[document.property, document.unit].filter(Boolean).join(' · ')}
+                        {document.property || document.unit ? ' · ' : ''}
+                        {formatDate(document.createdAt, { language, calendar })}
+                      </p>
+                    </div>
+                    <a
+                      href={api.portalDocumentUrl(document.id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="shrink-0 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                    >
+                      {t('portal.download')}
+                    </a>
+                  </li>
                 ))}
             </ul>
           )}

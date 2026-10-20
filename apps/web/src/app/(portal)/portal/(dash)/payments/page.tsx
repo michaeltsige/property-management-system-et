@@ -41,75 +41,82 @@ export default function PortalPaymentsPage() {
     <div className="space-y-4">
       <h1 className="text-xl font-semibold tracking-tight text-slate-900">{t('portal.nav.payments')}</h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t('portal.payments_title')}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          {payments.loading ? (
-            <div className="space-y-2 p-4">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : payments.error ? (
-            <div className="space-y-3 p-4">
-              <Alert tone="danger">
-                {t('portal.load_failed')} {payments.error}
-              </Alert>
-              <Button variant="secondary" onClick={() => payments.reload()}>
-                {t('common.retry')}
-              </Button>
-            </div>
-          ) : (payments.data?.items.length ?? 0) === 0 ? (
-            <div className="p-4">
-              <EmptyState title={t('portal.payments_empty')} description="" />
-            </div>
-          ) : (
-            <Table>
-              <thead>
-                <tr>
-                  <Th>{t('portal.paid_on')}</Th>
-                  <Th>{t('payment.method_label')}</Th>
-                  <Th>{t('portal.reference')}</Th>
-                  <Th>{t('portal.amount')}</Th>
-                  <Th>{t('portal.receipt')}</Th>
-                </tr>
-              </thead>
-              <tbody>
-                {(payments.data?.items ?? []).map((payment) => (
-                  <tr key={payment.id}>
-                    <Td>{formatDate(payment.paidAt, { language, calendar })}</Td>
-                    <Td>{t(`payment.method.${payment.method}` as never)}</Td>
-                    <Td className="max-w-40 truncate text-slate-600">
-                      {payment.reference ?? payment.receiptNumber ?? '—'}
-                    </Td>
-                    <Td className="tabular font-medium text-slate-900">
-                      {formatAmount(payment.amountMinor, payment.currency ?? currency, language)}
-                    </Td>
-                    <Td>
-                      {payment.receiptNumber ? (
-                        <a
-                          href={api.portalReceiptUrl(payment.id)}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-xs font-medium text-brand-700 hover:underline"
-                        >
-                          {t('portal.download')}
-                        </a>
-                      ) : (
-                        <span className="text-xs text-slate-400">—</span>
-                      )}
-                    </Td>
+      {/* Desktop: history on the left, the transfer-proof upload on the right —
+          the two things a tenant comes to this page for, without a second trip.
+          Phones stack them in the same order as before. */}
+      <div className="grid gap-4 lg:grid-cols-5 lg:items-start">
+        <Card className="lg:col-span-3">
+          <CardHeader>
+            <CardTitle>{t('portal.payments_title')}</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            {payments.loading ? (
+              <div className="space-y-2 p-4">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : payments.error ? (
+              <div className="space-y-3 p-4">
+                <Alert tone="danger">
+                  {t('portal.load_failed')} {payments.error}
+                </Alert>
+                <Button variant="secondary" onClick={() => payments.reload()}>
+                  {t('common.retry')}
+                </Button>
+              </div>
+            ) : (payments.data?.items.length ?? 0) === 0 ? (
+              <div className="p-4">
+                <EmptyState title={t('portal.payments_empty')} description="" />
+              </div>
+            ) : (
+              <Table>
+                <thead>
+                  <tr>
+                    <Th>{t('portal.paid_on')}</Th>
+                    <Th>{t('payment.method_label')}</Th>
+                    <Th>{t('portal.reference')}</Th>
+                    <Th>{t('portal.amount')}</Th>
+                    <Th>{t('portal.receipt')}</Th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                </thead>
+                <tbody>
+                  {(payments.data?.items ?? []).map((payment) => (
+                    <tr key={payment.id}>
+                      <Td>{formatDate(payment.paidAt, { language, calendar })}</Td>
+                      <Td>{t(`payment.method.${payment.method}` as never)}</Td>
+                      <Td className="max-w-40 truncate text-slate-600">
+                        {payment.reference ?? payment.receiptNumber ?? '—'}
+                      </Td>
+                      <Td className="tabular font-medium text-slate-900">
+                        {formatAmount(payment.amountMinor, payment.currency ?? currency, language)}
+                      </Td>
+                      <Td>
+                        {payment.receiptNumber ? (
+                          <a
+                            href={api.portalReceiptUrl(payment.id)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-medium text-brand-700 hover:underline"
+                          >
+                            {t('portal.download')}
+                          </a>
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
 
-      <PortalPaymentProofs currency={currency} />
+        <div className="lg:col-span-2">
+          <PortalPaymentProofs currency={currency} />
+        </div>
+      </div>
     </div>
   );
 }

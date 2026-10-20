@@ -217,7 +217,8 @@ export const EN_CATALOG = {
   'portal.payment_success_hint': 'Your payment is recorded with your landlord immediately.',
   'portal.back_to_portal': 'Back to portal',
   'portal.pay_no_redirect': 'The payment provider did not return a checkout page. Try again in a moment.',
-  'portal.payment_not_found': 'That payment reference was not found. Start the payment again from the portal.',
+  'portal.payment_not_found':
+    'That payment reference was not found. Start the payment again from the portal.',
   'portal.load_failed': 'This page could not load.',
   // Tenant portal shell, statement and history; non-English entries are unreviewed machine drafts.
   'portal.nav.dashboard': 'Overview',
@@ -250,6 +251,7 @@ export const EN_CATALOG = {
   'portal.due_date': 'Due date',
   'portal.amount': 'Amount',
   'portal.paid': 'Paid',
+  'portal.billed': 'Billed',
   'portal.status': 'Status',
   'portal.receipt': 'Receipt',
   'portal.reference': 'Reference',
@@ -264,8 +266,10 @@ export const EN_CATALOG = {
   'tenant.portal': 'Portal',
   'tenant.portal_enable': 'Enable portal',
   'tenant.portal_now': 'Create their portal account now',
-  'tenant.portal_now_hint': 'They sign in at /portal/login with this phone number and a code sent by SMS. You can enable it later from the Tenants list.',
-  'tenant.portal_enable_failed': 'The tenant was created, but enabling the portal failed — enable it later from the Tenants list.',
+  'tenant.portal_now_hint':
+    'They sign in at /portal/login with this phone number and a code sent by SMS. You can enable it later from the Tenants list.',
+  'tenant.portal_enable_failed':
+    'The tenant was created, but enabling the portal failed — enable it later from the Tenants list.',
   'tenant.portal_disable': 'Disable portal',
 
   // --- calendar & dates ---------------------------------------------------
@@ -408,11 +412,14 @@ export const EN_CATALOG = {
   'maintenance.closing_note_hint': 'The tenant will see this note — describe what was done.',
   'maintenance.maintainer': 'Maintainer',
   'maintenance.assign_maintainer': 'Assign maintainer',
-  'maintenance.maintainer_hint': 'Write the name — a person or a company. Suggestions come from your vendors.',
+  'maintenance.maintainer_hint':
+    'Write the name — a person or a company. Suggestions come from your vendors.',
   'maintenance.estimate': 'Estimate',
-  'maintenance.estimate_hint': 'Managers can price the work before it is done; the owner records what was actually spent when closing.',
+  'maintenance.estimate_hint':
+    'Managers can price the work before it is done; the owner records what was actually spent when closing.',
   'maintenance.closing_cost': 'Closing cost',
-  'maintenance.closing_cost_hint': 'Owner-only: what the work actually cost. Shows on the request once saved.',
+  'maintenance.closing_cost_hint':
+    'Owner-only: what the work actually cost. Shows on the request once saved.',
   'maintenance.details': 'Request details',
 
   'work_order.status.open': 'Open',
@@ -527,11 +534,15 @@ export const EN_CATALOG = {
   'documents.group_tax_utilities': 'Tax & utilities',
   'documents.group_other': 'Other',
   'documents.id_file': 'ID document scan',
-  'documents.id_file_hint': 'A photo or scan of the ID above. You can add or replace it later from Documents.',
-  'documents.id_upload_failed': 'The tenant was created, but the ID file could not be uploaded — try again from Documents.',
+  'documents.id_file_hint':
+    'A photo or scan of the ID above. You can add or replace it later from Documents.',
+  'documents.id_upload_failed':
+    'The tenant was created, but the ID file could not be uploaded — try again from Documents.',
   'documents.lease_file': 'Signed lease agreement',
-  'documents.lease_file_hint': 'The signed PDF or scan, filed against this lease. The tenant sees it under Documents in their portal.',
-  'documents.lease_upload_failed': 'The lease was created, but the agreement file could not be uploaded — try again from Documents.',
+  'documents.lease_file_hint':
+    'The signed PDF or scan, filed against this lease. The tenant sees it under Documents in their portal.',
+  'documents.lease_upload_failed':
+    'The lease was created, but the agreement file could not be uploaded — try again from Documents.',
   'tenant.employer': 'Employer',
   'tenant.emergency_contact': 'Emergency contact',
   'unit.bedrooms': 'Bedrooms',
@@ -598,7 +609,8 @@ export const EN_CATALOG = {
   'payment.proof_download': 'Download slip',
   'payment.proof_claimed': 'Claimed on the slip',
   'payment.proof_partial_amount': 'Actually received',
-  'payment.proof_partial_hint': 'An amount smaller than the slip approves it partially — the remainder stays due. The slip itself is never edited.',
+  'payment.proof_partial_hint':
+    'An amount smaller than the slip approves it partially — the remainder stays due. The slip itself is never edited.',
   'payment.proof_approved_of_claimed': 'of {claimed}',
   'payment.proof_reviewed_at': 'Reviewed',
   'payment.proof_approval_notes': 'Notes (optional)',

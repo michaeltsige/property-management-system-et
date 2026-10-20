@@ -31,6 +31,9 @@ import {
 } from '@/components/icons';
 
 import { api } from '@/lib/api';
+import { formatCivilDate } from '@pms/calendar';
+
+import { todayFor } from '@/lib/format';
 import { useDocumentTitle } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
@@ -49,9 +52,7 @@ const NAV_ITEMS = [
 ];
 
 function activeHrefFor(pathname: string): string {
-  const matches = NAV_ITEMS.filter(
-    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
-  );
+  const matches = NAV_ITEMS.filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
   // `/portal` must not swallow `/portal/payments` — the longest match wins.
   return matches.sort((a, b) => b.href.length - a.href.length)[0]?.href ?? '/portal';
 }
@@ -102,14 +103,16 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
 export default function PortalLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { session, ready, t, signOut } = usePreferences();
+  const { session, ready, t, signOut, calendar, language } = usePreferences();
   const [menuOpen, setMenuOpen] = useState(false);
   const isTenant = session?.role === 'tenant';
 
   // The document title is what a screen reader announces on navigation and what
   // the tab/history show (ADR-0024) — the staff shell does the same per page.
   const activeItem = NAV_ITEMS.find((item) => item.href === activeHrefFor(pathname));
-  useDocumentTitle(`${activeItem ? t(activeItem.labelKey as never) : t('portal.title')} · ${t('portal.title')}`);
+  useDocumentTitle(
+    `${activeItem ? t(activeItem.labelKey as never) : t('portal.title')} · ${t('portal.title')}`,
+  );
 
   useEffect(() => {
     if (ready && !session) router.replace('/portal/login');
@@ -178,9 +181,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-semibold text-white">
-              {session.user.fullName}
-            </span>
+            <span className="block truncate text-sm font-semibold text-white">{session.user.fullName}</span>
             <span className="block truncate text-xs text-slate-400">{t('role.tenant')}</span>
           </span>
           <ArrowRight2
@@ -227,8 +228,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       </a>
 
       {/* Permanent rail on lg and up — the same operations-console convention
-          as the staff side. */}
-      <aside className="hidden h-full w-64 shrink-0 flex-col bg-ink-900 lg:flex">
+          and the same width as the staff side. */}
+      <aside className="hidden h-full w-72 shrink-0 flex-col bg-ink-900 lg:flex">
         <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-3.5">{brand}</div>
         <NavLinks pathname={pathname} />
         <div className="border-t border-white/10 p-3">{accountCard()}</div>
@@ -278,13 +279,21 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </div>
         </header>
 
-        <main
-          id="portal-main"
-          tabIndex={-1}
-          className="flex-1 overflow-y-auto p-4 focus:outline-none lg:p-8"
-        >
-          <div className="mx-auto max-w-4xl">{children}</div>
+        <main id="portal-main" tabIndex={-1} className="flex-1 overflow-y-auto p-4 focus:outline-none lg:p-6">
+          <div className="mx-auto max-w-5xl">{children}</div>
         </main>
+
+        {/* The staff shell's footer strip, in the tenant's register: who this
+            portal belongs to on the left, today in their calendar on the
+            right. showEra appends the E.C./G.C. suffix itself. */}
+        <footer className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-2 text-[11px] text-slate-500">
+          <span className="truncate">
+            {t('portal.title')} · {session.organization.name}
+          </span>
+          <span className="tabular shrink-0">
+            {formatCivilDate(todayFor(calendar), { language, showEra: true })}
+          </span>
+        </footer>
       </div>
     </div>
   );

@@ -52,7 +52,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.payment_receipt': 'Rasiifii {receipt}',
   'portal.payment_success_hint': 'Kaffaltiin kee abbaa qabeenya kee biratti jijjiirama male galmeffameera.',
   'portal.back_to_portal': "Gara portal deebi'i",
-  'portal.pay_no_redirect': 'Dhaadannoo kaffalaa fuula kaffalaa hin deebisne. Zallaqeensaa irra deebi’ii yaali.',
+  'portal.pay_no_redirect':
+    'Dhaadannoo kaffalaa fuula kaffalaa hin deebisne. Zallaqeensaa irra deebi’ii yaali.',
   'portal.payment_not_found': 'Wabii kaffalaa kaa argamuu hin dandeene. Kaffalaa portal irraa jalqabi.',
   'portal.load_failed': 'Fuulli kun fe’uu hin dandeenye.',
   // Tenant portal shell, statement and history; unreviewed machine drafts.
@@ -67,14 +68,15 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.tenant_since': 'Kirayyaa eegalame',
   'portal.rent_per_period': 'Kiree',
   'portal.credit_on_account': 'Kaffaltii dabalataa herrega kee irratti',
-  'portal.credit_hint': 'Kaffaltii dabalataan akka baasii kuufameera; ji’aawwaan itti aananiin ofumaan gargaara.',
+  'portal.credit_hint':
+    'Kaffaltii dabalataan akka baasii kuufameera; ji’aawwaan itti aananiin ofumaan gargaara.',
   'portal.recent_payments': 'Kaffaltiilee dhuma',
   'portal.view_all': 'Hunda ilaali',
   'portal.open_requests': 'Gaaffiiwwan banaman',
   'portal.notices_title': 'Beekssisaa',
-  'portal.lease_download': "Waliigaltee kiree buufi",
+  'portal.lease_download': 'Waliigaltee kiree buufi',
   'portal.lease_download_none': "Abbaan kiree yeroo galmeessu asitti mul'ata.",
-  'portal.notices_view_all': "Beekamtota hunda ilaali",
+  'portal.notices_view_all': 'Beekamtota hunda ilaali',
   'portal.notices_empty': 'Amma beekssisaa hin jiru.',
   'portal.payments_title': 'Seenaa kaffaltii',
   'portal.payments_empty': 'Amma kaffaltiin galmeefame hin jiru.',
@@ -86,6 +88,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.due_date': 'Guyyaa kaffaltii',
   'portal.amount': 'Hamma',
   'portal.paid': 'Kaffeefame',
+  'portal.billed': 'Galmeessame',
   'portal.status': 'Haala',
   'portal.receipt': 'Risitii',
   'portal.reference': 'Ilallachaa',
@@ -100,8 +103,10 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'tenant.portal': 'Portaala',
   'tenant.portal_enable': 'Portaala bani',
   'tenant.portal_now': 'Herrega portaalaa amma uumi',
-  'tenant.portal_now_hint': '/portal/login irratti lakkoobsa bilbilaa kanaan fi koodii SMS tiin seena. Booda Tenants list irraa banuu dandeessu.',
-  'tenant.portal_enable_failed': 'Kireefni uumameera, garuu portaala banaachuun hin dandeenye — booda Tenants list irraa yaali.',
+  'tenant.portal_now_hint':
+    '/portal/login irratti lakkoobsa bilbilaa kanaan fi koodii SMS tiin seena. Booda Tenants list irraa banuu dandeessu.',
+  'tenant.portal_enable_failed':
+    'Kireefni uumameera, garuu portaala banaachuun hin dandeenye — booda Tenants list irraa yaali.',
   'tenant.portal_disable': 'Portaala cufi',
 
   // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
@@ -218,7 +223,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portfolio.add_owner': 'Abbaa kiraa dabali',
   'portfolio.add_block': 'Blookii dabali',
   'portfolio.block_delete': 'Blookii haqi',
-  'portfolio.block_delete_hint': "Kun kan dandaʾamu yeroo blookiin kuufama hin qabne qofa.",
+  'portfolio.block_delete_hint': 'Kun kan dandaʾamu yeroo blookiin kuufama hin qabne qofa.',
   'portfolio.choose_owner': 'Abbaa kiraa filadhu',
 
   'app.name': 'Bulchiinsa Qabeenyaa',
@@ -274,8 +279,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'calendar.year': 'Waggaa',
   'calendar.month': "Ji'a",
   'calendar.day': 'Guyyaa',
-  "calendar.previous_month": "Ji'a darbe",
-  "calendar.next_month": "Ji'a itti aanu",
+  'calendar.previous_month': "Ji'a darbe",
+  'calendar.next_month': "Ji'a itti aanu",
 
   'org.name': 'Dhaabbata',
   'org.settings': "Qindaa'ina dhaabbataa",
@@ -299,7 +304,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'user.role': 'Gahee',
   'user.invite': 'Fayyadamaa affeeri',
   'user.invited': 'Affeerraan gara {email} ergameera',
-  'user.invite_hint': 'Waamatoonni haaraa akka bulchaa qabeenyaatti seenu — gahee yeroo tokkotti murtaa2019a.',
+  'user.invite_hint':
+    'Waamatoonni haaraa akka bulchaa qabeenyaatti seenu — gahee yeroo tokkotti murtaa2019a.',
 
   'role.owner_admin': 'Abbaa qabeenyaa / Bulchaa',
   'role.manager': 'Bulchaa qabeenyaa',
@@ -406,7 +412,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'payment.proof_download': 'Rasiifii buufi',
   'payment.proof_claimed': 'Rasiifichi irratti gaafatame',
   'payment.proof_partial_amount': 'Dhugumatti kan argame',
-  'payment.proof_partial_hint': 'Gatii rasiifichaa gadii taʾeen waliin mirkaneessuu kee baasaa kaffalamaa taʾea — kan hafes kaffalamaatti hafa. Rasiifichi hin jijjiiramu.',
+  'payment.proof_partial_hint':
+    'Gatii rasiifichaa gadii taʾeen waliin mirkaneessuu kee baasaa kaffalamaa taʾea — kan hafes kaffalamaatti hafa. Rasiifichi hin jijjiiramu.',
   'payment.proof_approved_of_claimed': '{claimed} keessaa',
   'payment.proof_reviewed_at': 'Yeroo ilaalame',
   'payment.proof_approval_notes': 'Yaadannoo (filannoo)',
@@ -428,7 +435,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'org.gateway_test_note':
     "Qormaata / saandibakkaa: chekki'aawutiin Chapa appii kana keessatti fakkeeffama — hanga ammaa herrega Chapaan barbaachisa miti. Iccittaa sirreeffii kee ol kaa'i gara live tti jijjiiri.",
   'org.gateway_live_note':
-    "Haalli sirreeffamaa kaffaltii dhugaa dhiyeessaa qua. Odeeffannoo seerludaa fi baasii galmeessa mirkaneffadhu, jijjiirraa dura.",
+    'Haalli sirreeffamaa kaffaltii dhugaa dhiyeessaa qua. Odeeffannoo seerludaa fi baasii galmeessa mirkaneffadhu, jijjiirraa dura.',
   'org.gateway_platform_source': "Koofiin dhaabbataa hin qindaa'ine — dhiyeessaan durtii maqarsaa hojjeta.",
   'org.gateway_credentials_hint':
     "Gatiin olkaa'aman mijeessamanii turu, irra deebi'anee hin mul'atu. Bakka buufuuf gatii haaraa barressi; olkaa'uuf duwwaa dhiisi.",
@@ -461,11 +468,14 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'maintenance.closing_note_hint': 'Kiraayaaan yaada kana ni arga — waan hojjetame ibsi.',
   'maintenance.maintainer': 'Ogeessa bitaa',
   'maintenance.assign_maintainer': 'Ogeessa ramadi',
-  'maintenance.maintainer_hint': 'Maqaa barreessi — nama yookiin dhaabbilee taʾuu mala. Yaadachiisi balaa keessan irraa dhufa.',
+  'maintenance.maintainer_hint':
+    'Maqaa barreessi — nama yookiin dhaabbilee taʾuu mala. Yaadachiisi balaa keessan irraa dhufa.',
   'maintenance.estimate': 'Yaadannoo baayii',
-  'maintenance.estimate_hint': 'Bulchaa hojjin dura baayitii tiiʾuu dandaʾa; abbaan yeroo cufame baayii dhugaa galmeessa.',
+  'maintenance.estimate_hint':
+    'Bulchaa hojjin dura baayitii tiiʾuu dandaʾa; abbaan yeroo cufame baayii dhugaa galmeessa.',
   'maintenance.closing_cost': 'Baayii cufiinsaa',
-  'maintenance.closing_cost_hint': 'Abbaa qofaaf: hojjechi dhugumatti baayii isaa. Erga olmaa kaaʾamee booda gaaffii irratti mulʾata.',
+  'maintenance.closing_cost_hint':
+    'Abbaa qofaaf: hojjechi dhugumatti baayii isaa. Erga olmaa kaaʾamee booda gaaffii irratti mulʾata.',
   'maintenance.details': "Bal'ina gaaffii",
 
   'work_order.status.open': 'Banaa',
@@ -569,19 +579,23 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'documents.size': 'Hamma',
   'documents.search': 'Barreeffamoota barbaadi',
   'documents.all': 'Sanadoota hunda',
-  'documents.group_empty': "Amma faayilii hin jiru.",
-  'documents.group_tenant_data': "Odeeffannoo kireefii",
-  'documents.group_lease_agreements': "Waliigaltee kiree",
+  'documents.group_empty': 'Amma faayilii hin jiru.',
+  'documents.group_tenant_data': 'Odeeffannoo kireefii',
+  'documents.group_lease_agreements': 'Waliigaltee kiree',
   'documents.group_payments': 'Kaffaltii',
   'documents.group_maintenance': 'Dimuunsaa',
   'documents.group_tax_utilities': 'Gibiraafi taajajila',
   'documents.group_other': 'Kan biraa',
   'documents.id_file': 'Cuunfaa meeʾadota addaa',
-  'documents.id_file_hint': "Fuula yookiin cuunfaa meeʾadichaa olitti. Boodaan Documents irraa dabaluu yookiin jijjiiruu dandeessa.",
-  'documents.id_upload_failed': "Kireefiin uumameera, garuu faayiliin meeʾadaa ol hin kaaʾinne — Documents irraa yaali.",
+  'documents.id_file_hint':
+    'Fuula yookiin cuunfaa meeʾadichaa olitti. Boodaan Documents irraa dabaluu yookiin jijjiiruu dandeessa.',
+  'documents.id_upload_failed':
+    'Kireefiin uumameera, garuu faayiliin meeʾadaa ol hin kaaʾinne — Documents irraa yaali.',
   'documents.lease_file': "Waa'eelee kiree mallattoole",
-  'documents.lease_file_hint': "PDF ykn skaanaan mallattoole, waliin kiree kanaa hidhamee. Kireefni portaala isaa Documents jalatti arga.",
-  'documents.lease_upload_failed': "Kireen uumameera, garuu faayiliin waa'eelee ol hin kaaʾinne — Documents irraa yaali.",
+  'documents.lease_file_hint':
+    'PDF ykn skaanaan mallattoole, waliin kiree kanaa hidhamee. Kireefni portaala isaa Documents jalatti arga.',
+  'documents.lease_upload_failed':
+    "Kireen uumameera, garuu faayiliin waa'eelee ol hin kaaʾinne — Documents irraa yaali.",
   'tenant.employer': 'Hojjechiisaa',
   'tenant.emergency_contact': 'Qunnamtii ariifachiisaa',
   'unit.bedrooms': 'Kutaa rafaa',

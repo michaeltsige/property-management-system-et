@@ -97,95 +97,99 @@ export default function PortalDashboardPage() {
       ) : me.data ? (
         <>
           {/* The one number a tenant cares about, with the one primary action
-              on this screen underneath it. */}
-          <Card>
-            <CardContent className="space-y-3 py-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-medium text-slate-500">{t('portal.due_balance')}</p>
-                  <p
-                    className={cn(
-                      'tabular mt-1 text-3xl font-semibold tracking-tight',
-                      due > 0 ? 'text-slate-900' : 'text-brand-700',
-                    )}
-                  >
-                    {formatAmount(me.data.dueMinor, currency, language)}
-                  </p>
-                  {credit > 0 ? (
-                    <p className="mt-1 text-xs font-medium text-brand-700">
-                      {t('portal.credit_on_account')}:{' '}
-                      <span className="tabular">{formatAmount(String(credit), currency, language)}</span>
+              on this screen underneath it. On desktop it shares the row with
+              "My home" — the two facts a tenant reads together — and the grid
+              collapses to one column on phones. */}
+          <div className="grid gap-4 lg:grid-cols-2 lg:items-start">
+            <Card>
+              <CardContent className="space-y-3 py-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-slate-500">{t('portal.due_balance')}</p>
+                    <p
+                      className={cn(
+                        'tabular mt-1 text-3xl font-semibold tracking-tight',
+                        due > 0 ? 'text-slate-900' : 'text-brand-700',
+                      )}
+                    >
+                      {formatAmount(me.data.dueMinor, currency, language)}
                     </p>
+                    {credit > 0 ? (
+                      <p className="mt-1 text-xs font-medium text-brand-700">
+                        {t('portal.credit_on_account')}:{' '}
+                        <span className="tabular">{formatAmount(String(credit), currency, language)}</span>
+                      </p>
+                    ) : null}
+                  </div>
+                  {due === 0 ? (
+                    <Badge tone="brand" className="gap-1.5">
+                      <TickCircle className="h-3.5 w-3.5" aria-hidden="true" />
+                      {t('portal.up_to_date')}
+                    </Badge>
                   ) : null}
                 </div>
-                {due === 0 ? (
-                  <Badge tone="brand" className="gap-1.5">
-                    <TickCircle className="h-3.5 w-3.5" aria-hidden="true" />
-                    {t('portal.up_to_date')}
-                  </Badge>
+                {due > 0 ? (
+                  <div className="space-y-1">
+                    <Button onClick={payNow} disabled={paying} className="w-full sm:w-auto">
+                      {paying ? t('portal.pay_starting') : t('portal.pay_now')}
+                    </Button>
+                    <p className="text-xs text-slate-500">{t('portal.pay_hint')}</p>
+                    {payError ? <Alert tone="danger">{payError}</Alert> : null}
+                  </div>
                 ) : null}
-              </div>
-              {due > 0 ? (
-                <div className="space-y-1">
-                  <Button onClick={payNow} disabled={paying} className="w-full sm:w-auto">
-                    {paying ? t('portal.pay_starting') : t('portal.pay_now')}
-                  </Button>
-                  <p className="text-xs text-slate-500">{t('portal.pay_hint')}</p>
-                  {payError ? <Alert tone="danger">{payError}</Alert> : null}
-                </div>
-              ) : null}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
 
-          {/* Where they live: the human summary of the active lease. */}
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('portal.my_home')}</CardTitle>
-              <Link href="/portal/statement" className="text-xs text-brand-700 hover:underline">
-                {t('portal.nav.statement')}
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {activeLease ? (
-                <dl className="grid gap-4 text-sm sm:grid-cols-3">
-                  <div>
-                    <dt className="text-xs text-slate-500">{t('property.name')}</dt>
-                    <dd className="mt-0.5 font-medium text-slate-900">
-                      {activeLease.property} · {activeLease.unit}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-slate-500">{t('portal.rent_per_period')}</dt>
-                    <dd className="tabular mt-0.5 font-medium text-slate-900">
-                      {formatAmount(activeLease.rentAmountMinor, activeLease.currency, language)}
-                    </dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs text-slate-500">{t('portal.tenant_since')}</dt>
-                    <dd className="mt-0.5 font-medium text-slate-900">
-                      {formatDate(activeLease.startDate, { language, calendar })}
-                    </dd>
-                  </div>
-                </dl>
-              ) : (
-                <EmptyState title={t('portal.no_leases')} description="" />
-              )}
-              {activeLease ? (
-                leaseAgreement ? (
-                  <a
-                    href={api.portalDocumentUrl(leaseAgreement.id)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-4 inline-block text-xs font-medium text-brand-700 hover:underline"
-                  >
-                    {t('portal.lease_download')}
-                  </a>
+            {/* Where they live: the human summary of the active lease. */}
+            <Card>
+              <CardHeader>
+                <CardTitle>{t('portal.my_home')}</CardTitle>
+                <Link href="/portal/statement" className="text-xs text-brand-700 hover:underline">
+                  {t('portal.nav.statement')}
+                </Link>
+              </CardHeader>
+              <CardContent>
+                {activeLease ? (
+                  <dl className="grid gap-4 text-sm sm:grid-cols-3">
+                    <div>
+                      <dt className="text-xs text-slate-500">{t('property.name')}</dt>
+                      <dd className="mt-0.5 font-medium text-slate-900">
+                        {activeLease.property} · {activeLease.unit}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-slate-500">{t('portal.rent_per_period')}</dt>
+                      <dd className="tabular mt-0.5 font-medium text-slate-900">
+                        {formatAmount(activeLease.rentAmountMinor, activeLease.currency, language)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-slate-500">{t('portal.tenant_since')}</dt>
+                      <dd className="mt-0.5 font-medium text-slate-900">
+                        {formatDate(activeLease.startDate, { language, calendar })}
+                      </dd>
+                    </div>
+                  </dl>
                 ) : (
-                  <p className="mt-4 text-[11px] text-slate-400">{t('portal.lease_download_none')}</p>
-                )
-              ) : null}
-            </CardContent>
-          </Card>
+                  <EmptyState title={t('portal.no_leases')} description="" />
+                )}
+                {activeLease ? (
+                  leaseAgreement ? (
+                    <a
+                      href={api.portalDocumentUrl(leaseAgreement.id)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-4 inline-block text-xs font-medium text-brand-700 hover:underline"
+                    >
+                      {t('portal.lease_download')}
+                    </a>
+                  ) : (
+                    <p className="mt-4 text-[11px] text-slate-400">{t('portal.lease_download_none')}</p>
+                  )
+                ) : null}
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
             {/* Notices: reminders and announcements the organization sent. */}
@@ -204,23 +208,22 @@ export default function PortalDashboardPage() {
                 ) : (
                   <ul className="space-y-2">
                     {(notices.data?.items ?? []).slice(0, 4).map((notice) => (
-                      <li key={notice.id} className="flex items-start gap-2.5 rounded-lg bg-slate-50 px-3 py-2.5">
+                      <li
+                        key={notice.id}
+                        className="flex items-start gap-2.5 rounded-lg bg-slate-50 px-3 py-2.5"
+                      >
                         {notice.templateKey === 'notification.payment_received' ? (
-                          <TickCircle
-                            className="mt-0.5 h-4 w-4 shrink-0 text-brand-600"
-                            aria-hidden="true"
-                          />
+                          <TickCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
                         ) : (
-                          <Warning2
-                            className="mt-0.5 h-4 w-4 shrink-0 text-amber-500"
-                            aria-hidden="true"
-                          />
+                          <Warning2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
                         )}
                         <div className="min-w-0">
                           <p className="text-sm text-slate-800">
                             {t(
                               notice.templateKey as never,
-                              ((notice.payload && typeof notice.payload === 'object' && 'values' in notice.payload
+                              ((notice.payload &&
+                              typeof notice.payload === 'object' &&
+                              'values' in notice.payload
                                 ? (notice.payload as { values?: Record<string, string | number> }).values
                                 : notice.payload) ?? {}) as never,
                             )}
@@ -252,7 +255,10 @@ export default function PortalDashboardPage() {
                 ) : (
                   <ul className="divide-y divide-slate-100">
                     {recentPayments.map((payment) => (
-                      <li key={payment.id} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                      <li
+                        key={payment.id}
+                        className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                      >
                         <div className="min-w-0">
                           <p className="truncate text-sm font-medium text-slate-900">
                             {t(`payment.method.${payment.method}` as never)}
@@ -288,11 +294,17 @@ export default function PortalDashboardPage() {
               {requests.loading ? (
                 <Skeleton className="h-16 w-full" />
               ) : openRequests.length === 0 ? (
-                <EmptyState title={t('portal.maintenance_empty')} description={t('portal.maintenance_hint')} />
+                <EmptyState
+                  title={t('portal.maintenance_empty')}
+                  description={t('portal.maintenance_hint')}
+                />
               ) : (
                 <ul className="divide-y divide-slate-100">
                   {openRequests.slice(0, 3).map((item) => (
-                    <li key={item.id} className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
+                    <li
+                      key={item.id}
+                      className="flex items-center justify-between gap-3 py-2.5 first:pt-0 last:pb-0"
+                    >
                       <div className="min-w-0">
                         <p className="truncate text-sm font-medium text-slate-900">{item.title}</p>
                         <p className="text-[11px] text-slate-500">

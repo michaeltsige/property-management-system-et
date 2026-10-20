@@ -84,6 +84,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.due_date': 'የመክፈያ ቀን',
   'portal.amount': 'መጠን',
   'portal.paid': 'የተከፈለ',
+  'portal.billed': 'የተከበረ',
   'portal.status': 'ሁኔታ',
   'portal.receipt': 'ደረሰኝ',
   'portal.reference': 'ማጣቀሻ',
@@ -98,7 +99,8 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'tenant.portal': 'ፖርታል',
   'tenant.portal_enable': 'ፖርታል አብራ',
   'tenant.portal_now': 'የፖርታል መግቢያ አሁን ይፍጠሩ',
-  'tenant.portal_now_hint': 'በ/portal/login ላይ በዚህ ስልክ ቁጥር እና በኤስኤምኤስ በሚላክ ኮድ ይገባሉ። ኋላ ላይ ከተከራይ ዝርዝር መንቃት ይችላሉ።',
+  'tenant.portal_now_hint':
+    'በ/portal/login ላይ በዚህ ስልክ ቁጥር እና በኤስኤምኤስ በሚላክ ኮድ ይገባሉ። ኋላ ላይ ከተከራይ ዝርዝር መንቃት ይችላሉ።',
   'tenant.portal_enable_failed': 'ተከራዩ ተፈጥሯል፣ ግን ፖርታሉን ማብራት አልተቻለም — ኋላ ላይ ከተከራይ ዝርዝር ይሞክሩ።',
   'tenant.portal_disable': 'ፖርታል አጥፋ',
 
@@ -397,7 +399,8 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'payment.proof_download': 'ማረጋገጫ አውርድ',
   'payment.proof_claimed': 'በማረጋገጫው ላይ የተጠየቀ',
   'payment.proof_partial_amount': 'የተቀበለው ትክክለኛ መጠን',
-  'payment.proof_partial_hint': 'ከማረጋገጫው መጠን ያነሰ መጠን ከጻፉ በከፊል እንደተከፈለ ይመዘገባል — ቀሪው ክፍያ ላይ ይቀራል። ማረጋገጫው አይስተካከልም።',
+  'payment.proof_partial_hint':
+    'ከማረጋገጫው መጠን ያነሰ መጠን ከጻፉ በከፊል እንደተከፈለ ይመዘገባል — ቀሪው ክፍያ ላይ ይቀራል። ማረጋገጫው አይስተካከልም።',
   'payment.proof_approved_of_claimed': 'ከ{claimed} ውስጥ',
   'payment.proof_reviewed_at': 'የተገመገመበት',
   'payment.proof_approval_notes': 'ማስታወሻ (አማራጭ)',
@@ -417,8 +420,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'org.gateway_demo_note': 'የማሳያ ሁነታ፡ የኪራይ ቼካውት ከመጀመሪያ እስከ መጨረሻ ይለወሳል፣ ትክክለኛ ገንዘብ አይተላለፍም።',
   'org.gateway_test_note':
     'ሙከራ / ሳንድባክስ፦ የቻፓ ቼክአውት በዚህ መተግበሪያ ውስጥ ይለማመዳል — እስካሁን የቻፓ መለያ አያስፈልግም። የሚስጥር ቁልፍዎን ያስቀምጡ እና ወደ Live ይቀይሩ።',
-  'org.gateway_live_note':
-    'የበቀጥታ ሁነታ በእውነተኛ ገንዘብ ክፍያ ያስቀምጣል። ከመቀየርዎ በፊት የመግቢያ ቁልፎቹንና የክፍያ ሂደቱን በጥንቃቄ ያረጋግጡ።',
+  'org.gateway_live_note': 'የበቀጥታ ሁነታ በእውነተኛ ገንዘብ ክፍያ ያስቀምጣል። ከመቀየርዎ በፊት የመግቢያ ቁልፎቹንና የክፍያ ሂደቱን በጥንቃቄ ያረጋግጡ።',
   'org.gateway_platform_source': 'የድርጅት ጌትዌይ አልተዋቀረም — የመድረኩ ነባሪ አቅራቢ ተግብሯል።',
   'org.gateway_credentials_hint': 'የተቀመጡ እሴቶች ተመስጥረው ይቀመጣሉ፣ እንደገና አይታዩም። ለመተካት አዲስ እሴት ይጻፉ፤ ለማቆየት ባዶ ይተዉ።',
   'org.gateway_missing': 'የጎደሉ ማእዘኖች፡ {fields}',
