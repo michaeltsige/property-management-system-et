@@ -10,6 +10,7 @@ import type { ApiErrorBody } from '@pms/shared';
 
 import { AppError, isAppError, notFound } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
+import { ProviderNotConfiguredError } from '../providers/payments/types.js';
 
 export function notFoundHandler(_req: Request, _res: Response, next: NextFunction): void {
   next(notFound('Route not found'));
@@ -41,6 +42,14 @@ export function errorHandler(error: unknown, req: Request, res: Response, _next:
 
 function normalize(error: unknown, req: Request): AppError {
   if (isAppError(error)) return error;
+
+  if (error instanceof ProviderNotConfiguredError) {
+    // An org configured for (or asking for) a provider whose credentials are
+    // missing is a provider-availability problem, not a server fault. Thrown
+    // from resolveOrgPaymentProvider on every payment path, so it must be
+    // mapped here rather than caught at each call site.
+    return new AppError(502, 'PROVIDER_ERROR', error.message);
+  }
 
   if (error instanceof ZodError) {
     return new AppError(400, 'VALIDATION_ERROR', 'Request validation failed', {
