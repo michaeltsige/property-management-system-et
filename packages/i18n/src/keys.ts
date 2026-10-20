@@ -216,6 +216,9 @@ export const EN_CATALOG = {
   'portal.payment_receipt': 'Receipt {receipt}',
   'portal.payment_success_hint': 'Your payment is recorded with your landlord immediately.',
   'portal.back_to_portal': 'Back to portal',
+  'portal.pay_no_redirect': 'The payment provider did not return a checkout page. Try again in a moment.',
+  'portal.payment_not_found': 'That payment reference was not found. Start the payment again from the portal.',
+  'portal.load_failed': 'This page could not load.',
   // Tenant portal shell, statement and history; non-English entries are unreviewed machine drafts.
   'portal.nav.dashboard': 'Overview',
   'portal.nav.payments': 'Payments',

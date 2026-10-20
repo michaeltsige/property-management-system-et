@@ -2,17 +2,29 @@
 
 /**
  * Every in-app notice the organization sent this tenant, newest first. The
- * dashboard shows the top few; this is the full history.
+ * dashboard shows the top few; this is the full history. Message bodies are
+ * translated on the client from the stored template key, so a tenant switching
+ * language sees their history in the language they switched to.
  */
-
-import { AlertTriangle, CheckCircle2 } from 'lucide-react';
 
 import { formatDate } from '@/lib/format';
 import { useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 
 import { api } from '@/lib/api';
-import { Card, CardContent, EmptyState, Skeleton } from '@/components/ui';
+import { Alert, Button, Card, CardContent, EmptyState, Skeleton } from '@/components/ui';
+import { TickCircle, Warning2 } from '@/components/icons';
+
+/** Notices sent by staff carry `{ values, renderedStatus }`; system notices store flat values. */
+function noticeValues(payload: unknown): Record<string, string | number> {
+  if (payload && typeof payload === 'object' && 'values' in payload) {
+    return ((payload as { values?: Record<string, string | number> }).values ?? {}) as Record<
+      string,
+      string | number
+    >;
+  }
+  return (payload ?? {}) as Record<string, string | number>;
+}
 
 export default function PortalNoticesPage() {
   const { session, ready, language, calendar, t } = usePreferences();
@@ -36,6 +48,15 @@ export default function PortalNoticesPage() {
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-10 w-full" />
             </div>
+          ) : notices.error ? (
+            <div className="space-y-3 p-4">
+              <Alert tone="danger">
+                {t('portal.load_failed')} {notices.error}
+              </Alert>
+              <Button variant="secondary" onClick={() => notices.reload()}>
+                {t('common.retry')}
+              </Button>
+            </div>
           ) : (notices.data?.items.length ?? 0) === 0 ? (
             <div className="p-4">
               <EmptyState title={t('portal.notices_empty')} description="" />
@@ -45,13 +66,13 @@ export default function PortalNoticesPage() {
               {(notices.data?.items ?? []).map((notice) => (
                 <li key={notice.id} className="flex items-start gap-3 px-4 py-3">
                   {notice.templateKey === 'notification.payment_received' ? (
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
+                    <TickCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
                   ) : (
-                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
+                    <Warning2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
                   )}
                   <div className="min-w-0">
                     <p className="text-sm text-slate-800">
-                      {t(notice.templateKey as never, notice.payload as never)}
+                      {t(notice.templateKey as never, noticeValues(notice.payload) as never)}
                     </p>
                     <p className="mt-0.5 text-[11px] text-slate-400">
                       {formatDate(notice.createdAt, { language, calendar })}

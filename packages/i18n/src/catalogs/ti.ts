@@ -50,6 +50,9 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.payment_receipt': 'ሪሲት {receipt}',
   'portal.payment_success_hint': 'ክፍሊትኩም ብወናኒኩም ኣብ ውሽጢ ሕጂ ተመዝጊቡ ኣሎ።',
   'portal.back_to_portal': 'ናብ ፖርታል ተመለስ',
+  'portal.pay_no_redirect': 'እቲ መሰላሕተ ክፍሊ ትሕትና ክፍሊ ኣይረኣኸብን። ጸዓት ተመለስካ ፈትኖ።',
+  'portal.payment_not_found': 'እቲ ቁጽሪ ክፍሊ ኣይተረኸበን። ካብቲ ፖርታል ንክፍሊ ደጊምካ ጅምርዎ።',
+  'portal.load_failed': 'እዚ ገጽ ክመጽእ ኣይኽእለን።',
   // Tenant portal shell, statement and history; unreviewed machine drafts.
   'portal.nav.dashboard': 'ሓፈሻዊ ርእይታ',
   'portal.nav.payments': 'ክፍላታት',

@@ -44,9 +44,9 @@ function ChapaSandboxCheckout() {
       ready && session
         ? providerRef
           ? api.portalPaymentIntent(providerRef)
-          : Promise.reject(new ApiError(404, 'NOT_FOUND', 'Payment not found'))
+          : Promise.reject(new ApiError(404, 'NOT_FOUND', t('portal.payment_not_found')))
         : Promise.resolve(null),
-    [ready, session, providerRef],
+    [ready, session, providerRef, t],
   );
   const { pending: completing, error: completeError, run } = useAction();
   const [completed, setCompleted] = useState<PortalCompletedPayment | null>(null);

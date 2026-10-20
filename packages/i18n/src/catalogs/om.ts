@@ -52,6 +52,9 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.payment_receipt': 'Rasiifii {receipt}',
   'portal.payment_success_hint': 'Kaffaltiin kee abbaa qabeenya kee biratti jijjiirama male galmeffameera.',
   'portal.back_to_portal': "Gara portal deebi'i",
+  'portal.pay_no_redirect': 'Dhaadannoo kaffalaa fuula kaffalaa hin deebisne. Zallaqeensaa irra deebi’ii yaali.',
+  'portal.payment_not_found': 'Wabii kaffalaa kaa argamuu hin dandeene. Kaffalaa portal irraa jalqabi.',
+  'portal.load_failed': 'Fuulli kun fe’uu hin dandeenye.',
   // Tenant portal shell, statement and history; unreviewed machine drafts.
   'portal.nav.dashboard': 'Illeechaa waliigalaa',
   'portal.nav.payments': 'Kaffaltiilee',

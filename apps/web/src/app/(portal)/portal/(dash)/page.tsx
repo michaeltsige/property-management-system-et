@@ -9,7 +9,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { AlertTriangle, CheckCircle2, FileText, User, Wrench } from 'lucide-react';
+import { Document, PathTool, Profile2User, TickCircle, Warning2 } from '@/components/icons';
 
 import { formatAmount, formatDate, statusTone } from '@/lib/format';
 import { useAction, useAsync } from '@/lib/hooks';
@@ -65,7 +65,7 @@ export default function PortalDashboardPage() {
   async function payNow() {
     await runPay(async () => {
       const intent = await api.portalInitiatePayment({});
-      if (!intent.redirectUrl) throw new Error('The payment provider did not return a checkout page');
+      if (!intent.redirectUrl) throw new Error(t('portal.pay_no_redirect'));
       window.location.assign(intent.redirectUrl);
     }).catch(() => undefined);
   }
@@ -120,7 +120,7 @@ export default function PortalDashboardPage() {
                 </div>
                 {due === 0 ? (
                   <Badge tone="brand" className="gap-1.5">
-                    <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+                    <TickCircle className="h-3.5 w-3.5" aria-hidden="true" />
                     {t('portal.up_to_date')}
                   </Badge>
                 ) : null}
@@ -206,19 +206,24 @@ export default function PortalDashboardPage() {
                     {(notices.data?.items ?? []).slice(0, 4).map((notice) => (
                       <li key={notice.id} className="flex items-start gap-2.5 rounded-lg bg-slate-50 px-3 py-2.5">
                         {notice.templateKey === 'notification.payment_received' ? (
-                          <CheckCircle2
+                          <TickCircle
                             className="mt-0.5 h-4 w-4 shrink-0 text-brand-600"
                             aria-hidden="true"
                           />
                         ) : (
-                          <AlertTriangle
+                          <Warning2
                             className="mt-0.5 h-4 w-4 shrink-0 text-amber-500"
                             aria-hidden="true"
                           />
                         )}
                         <div className="min-w-0">
                           <p className="text-sm text-slate-800">
-                            {t(notice.templateKey as never, notice.payload as never)}
+                            {t(
+                              notice.templateKey as never,
+                              ((notice.payload && typeof notice.payload === 'object' && 'values' in notice.payload
+                                ? (notice.payload as { values?: Record<string, string | number> }).values
+                                : notice.payload) ?? {}) as never,
+                            )}
                           </p>
                           <p className="mt-0.5 text-[11px] text-slate-400">
                             {formatDate(notice.createdAt, { language, calendar })}
@@ -272,7 +277,7 @@ export default function PortalDashboardPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Wrench className="h-4 w-4 text-slate-400" aria-hidden="true" />
+                <PathTool className="h-4 w-4 text-slate-400" aria-hidden="true" />
                 {t('portal.open_requests')}
               </CardTitle>
               <Link href="/portal/maintenance" className="text-xs text-brand-700 hover:underline">
@@ -311,14 +316,14 @@ export default function PortalDashboardPage() {
               href="/portal/documents"
               className="flex items-center gap-3 rounded-xl border border-edge bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-card transition-colors hover:border-brand-200 hover:bg-brand-50/50"
             >
-              <FileText className="h-5 w-5 text-brand-600" aria-hidden="true" />
+              <Document className="h-5 w-5 text-brand-600" aria-hidden="true" />
               {t('portal.documents')}
             </Link>
             <Link
               href="/portal/profile"
               className="flex items-center gap-3 rounded-xl border border-edge bg-white px-4 py-3.5 text-sm font-medium text-slate-800 shadow-card transition-colors hover:border-brand-200 hover:bg-brand-50/50"
             >
-              <User className="h-5 w-5 text-brand-600" aria-hidden="true" />
+              <Profile2User className="h-5 w-5 text-brand-600" aria-hidden="true" />
               {t('portal.nav.profile')}
             </Link>
           </div>

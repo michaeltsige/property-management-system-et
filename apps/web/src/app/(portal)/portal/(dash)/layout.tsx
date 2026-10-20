@@ -16,12 +16,14 @@ import { usePathname, useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useEffect, useState } from 'react';
-import { ChevronRight, X } from 'lucide-react';
 import {
+  ArrowRight2,
+  CloseSquare,
   DocumentText,
   Element3,
   Logout,
   Menu as MenuIcon,
+  Notification,
   Profile2User,
   ReceiptItem,
   Setting3,
@@ -29,6 +31,7 @@ import {
 } from '@/components/icons';
 
 import { api } from '@/lib/api';
+import { useDocumentTitle } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
@@ -41,7 +44,7 @@ const NAV_ITEMS = [
   { href: '/portal/statement', labelKey: 'portal.nav.statement', icon: ReceiptItem },
   { href: '/portal/maintenance', labelKey: 'portal.nav.maintenance', icon: Setting3 },
   { href: '/portal/documents', labelKey: 'portal.nav.documents', icon: DocumentText },
-  { href: '/portal/notices', labelKey: 'portal.nav.notices', icon: Element3 },
+  { href: '/portal/notices', labelKey: 'portal.nav.notices', icon: Notification },
   { href: '/portal/profile', labelKey: 'portal.nav.profile', icon: Profile2User },
 ];
 
@@ -102,6 +105,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   const { session, ready, t, signOut } = usePreferences();
   const [menuOpen, setMenuOpen] = useState(false);
   const isTenant = session?.role === 'tenant';
+
+  // The document title is what a screen reader announces on navigation and what
+  // the tab/history show (ADR-0024) — the staff shell does the same per page.
+  const activeItem = NAV_ITEMS.find((item) => item.href === activeHrefFor(pathname));
+  useDocumentTitle(`${activeItem ? t(activeItem.labelKey as never) : t('portal.title')} · ${t('portal.title')}`);
 
   useEffect(() => {
     if (ready && !session) router.replace('/portal/login');
@@ -175,7 +183,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             </span>
             <span className="block truncate text-xs text-slate-400">{t('role.tenant')}</span>
           </span>
-          <ChevronRight
+          <ArrowRight2
             aria-hidden="true"
             className="h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200 group-data-[state=open]:rotate-90"
           />
@@ -241,7 +249,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                   className="text-slate-400 hover:bg-white/10 hover:text-white"
                   aria-label={t('common.close')}
                 >
-                  <X className="h-4 w-4" />
+                  <CloseSquare className="h-4 w-4" />
                 </Button>
               </Dialog.Close>
             </div>

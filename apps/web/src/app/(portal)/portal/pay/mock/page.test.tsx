@@ -102,11 +102,9 @@ describe('mock checkout page', () => {
 
   it('shows a missing reference as an error instead of a checkout', async () => {
     context.get.mockReturnValue(null);
-    vi.mocked(api.portalPaymentIntent).mockRejectedValue(
-      new ApiError(404, 'NOT_FOUND', 'Payment not found'),
-    );
     render(<MockCheckoutPage />);
 
-    expect(await screen.findByText('Payment not found')).toBeDefined();
+    // The client-side rejection is translated like every other user-facing string.
+    expect(await screen.findByText(EN_CATALOG['portal.payment_not_found'])).toBeDefined();
   });
 });

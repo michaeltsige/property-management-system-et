@@ -5,14 +5,16 @@
  * the lines behind the due balance on the overview.
  */
 
-import { formatAmount, formatDate, statusTone } from '@/lib/format';
+import { formatAmount, formatDate, formatPeriodKey, statusTone } from '@/lib/format';
 import { useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
 import { api } from '@/lib/api';
 import {
+  Alert,
   Badge,
+  Button,
   Card,
   CardContent,
   CardHeader,
@@ -54,7 +56,14 @@ export default function PortalStatementPage() {
               <Skeleton className="h-10 w-full" />
             </div>
           ) : charges.error ? (
-            <div className="p-4 text-sm text-red-700">{charges.error}</div>
+            <div className="space-y-3 p-4">
+              <Alert tone="danger">
+                {t('portal.load_failed')} {charges.error}
+              </Alert>
+              <Button variant="secondary" onClick={() => charges.reload()}>
+                {t('common.retry')}
+              </Button>
+            </div>
           ) : (charges.data?.items.length ?? 0) === 0 ? (
             <div className="p-4">
               <EmptyState title={t('portal.statement_empty')} description="" />
@@ -79,7 +88,9 @@ export default function PortalStatementPage() {
                         {charge.description ?? charge.type}
                       </span>
                     </Td>
-                    <Td className="tabular text-slate-600">{charge.periodKey ?? '—'}</Td>
+                    <Td className="text-slate-600">
+                      {charge.periodKey ? formatPeriodKey(charge.periodKey, calendar, language) : '—'}
+                    </Td>
                     <Td>{formatDate(charge.dueDate, { language, calendar })}</Td>
                     <Td className="tabular font-medium text-slate-900">
                       {formatAmount(charge.amountMinor, charge.currency, language)}

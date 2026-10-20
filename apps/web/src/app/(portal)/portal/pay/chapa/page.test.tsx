@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EN_CATALOG } from '@pms/i18n';
 import ChapaSandboxCheckoutPage from '@/app/(portal)/portal/pay/chapa/page';
-import { api, ApiError } from '@/lib/api';
+import { api } from '@/lib/api';
 import type * as ApiModule from '@/lib/api';
 
 const context = vi.hoisted(() => ({
@@ -99,11 +99,9 @@ describe('chapa sandbox checkout page', () => {
 
   it('shows a missing reference as an error instead of a checkout', async () => {
     context.get.mockReturnValue(null);
-    vi.mocked(api.portalPaymentIntent).mockRejectedValue(
-      new ApiError(404, 'NOT_FOUND', 'Payment not found'),
-    );
     render(<ChapaSandboxCheckoutPage />);
 
-    expect(await screen.findByText('Payment not found')).toBeDefined();
+    // The client-side rejection is translated like every other user-facing string.
+    expect(await screen.findByText(EN_CATALOG['portal.payment_not_found'])).toBeDefined();
   });
 });

@@ -50,6 +50,9 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.payment_receipt': 'ደረሰኝ {receipt}',
   'portal.payment_success_hint': 'ክፍያዎ ከባለቤትዎ ዘንድ ወዲያውኑ ተመዝግቧል።',
   'portal.back_to_portal': 'ወደ ፖርታል ተመለስ',
+  'portal.pay_no_redirect': 'የክፍያ አቅራቢው የመክፈያ ገጽ አላመለከተም። ጥቂት ቆይተው እንደገና ይሞክሩ።',
+  'portal.payment_not_found': 'ያንን የክፍያ ማጣቀሻ አግኝተነው ማለት አይቻልም። ከፖርታሉ ክፍያውን እንደገና ይጀምሩ።',
+  'portal.load_failed': 'ይህ ገጽ መጫን አልቻለም።',
   // Tenant portal shell, statement and history; unreviewed machine drafts.
   'portal.nav.dashboard': 'አጠቃላይ እይታ',
   'portal.nav.payments': 'ክፍያዎች',
