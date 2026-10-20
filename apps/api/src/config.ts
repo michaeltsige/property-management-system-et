@@ -32,13 +32,24 @@ const booleanish = z
     typeof value === 'boolean' ? value : ['1', 'true', 'yes', 'on'].includes(value.toLowerCase()),
   );
 
+/**
+ * Optional URL that may be left empty in `.env` — an empty (or whitespace-only)
+ * string counts as unset. `.env.example` ships several of these empty (e.g.
+ * `CHAPA_BASE_URL=`), and a plain `.optional()` rejects the empty string as an
+ * invalid URL, crashing every fresh clone that copied the example verbatim.
+ */
+const optionalUrl = z.preprocess(
+  (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+  z.string().url().optional(),
+);
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
 
   API_PORT: z.coerce.number().int().min(1).max(65535).default(4000),
   API_HOST: z.string().default('0.0.0.0'),
-  API_PUBLIC_URL: z.string().url().optional(),
+  API_PUBLIC_URL: optionalUrl,
   CORS_ORIGINS: z
     .string()
     .default('http://localhost:3000')
@@ -51,7 +62,7 @@ const envSchema = z.object({
   // Explicit origin providers send the payer back to after a portal checkout.
   // Defaults to CORS_ORIGINS[0]; set it when the public URL differs from the
   // first CORS entry (proxies, custom domains, separate portal host).
-  PORTAL_RETURN_ORIGIN: z.string().url().optional(),
+  PORTAL_RETURN_ORIGIN: optionalUrl,
 
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   TEST_DATABASE_URL: z.string().optional(),
@@ -82,7 +93,7 @@ const envSchema = z.object({
   CHAPA_SECRET_KEY: z.string().optional(),
   CHAPA_WEBHOOK_SECRET: z.string().optional(),
   // Live API base URL override; the official value is https://api.chapa.co/v1.
-  CHAPA_BASE_URL: z.string().url().optional(),
+  CHAPA_BASE_URL: optionalUrl,
   TELEBIRR_APP_ID: z.string().optional(),
   TELEBIRR_APP_KEY: z.string().optional(),
   TELEBIRR_PUBLIC_KEY: z.string().optional(),
