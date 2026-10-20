@@ -94,7 +94,9 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'reports.total_outstanding': 'ጠቕሊ ዘይተኸፍለ',
   'tenant.portal': 'ፖርታል',
   'tenant.portal_enable': 'ፖርታል ክፈት',
+  'tenant.portal_now': 'ናይ ፖርታል ሕሳብ ሕጂ ፍጠርዎ',
   'tenant.portal_now_hint': 'ብ/portal/login ብኣዚሂ ቁጽሪ ስልኪን ብኮድ ብSMS እተላእከን ይኣቱ። ድሕሪ እዋን ካብ ዝርዝር ተኻራዪታት ክክፈት ይኽእል።',
+  'tenant.portal_enable_failed': 'ተኻራዪ ተፈጢሩ፣ ግን ምኽፋት ፖርታል ኣይተኻእለን — ድሕሪ እዋን ካብ ዝርዝር ተኻራዪታት ፈትኖ።',
   'tenant.portal_disable': 'ፖርታል ዕጾ',
 
   // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
@@ -561,7 +563,9 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'documents.id_file': 'ቅጅ ሰነድ መንነት',
   'documents.id_file_hint': 'ስእሊ ወይ ቅጅ ናይ ላዕለዎት መንነት። ድሕሪኡ ካብ ሰነዳት ክትውስኾ ወይ ተክእዎ ትኽእል።',
   'documents.id_upload_failed': 'ተኻራዪ ተፈጢሩ፣ ግን እቲ ፋይል ኣይተሰዓረን — ካብ ሰነዳት ደጊምካ ፈትኖ።',
+  'documents.lease_file': 'ዝተፈርመ ውዕላዊ ሰነድ',
   'documents.lease_file_hint': 'እቲ ዝተፈርመ PDF ወይ ስካን፣ ምስእዚ ውዕል ተኣሳሲፉ። ተኻራዪ ኣብ ፖርታሉ ሰነዳት የርኢ።',
+  'documents.lease_upload_failed': 'እቲ ውዕል ተፈጢሩ፣ ግን እቲ ፋይል ኣይተሰዓረን — ካብ ሰነዳት ደጊምካ ፈትኖ።',
   'tenant.employer': 'ኣስራሒ',
   'tenant.emergency_contact': 'ተዛራባይ ህጹጽ',
   'unit.bedrooms': 'ክፍሊ ድቃስ',

@@ -94,7 +94,9 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'reports.total_outstanding': 'ጠቅላላ ያልተከፈለ',
   'tenant.portal': 'ፖርታል',
   'tenant.portal_enable': 'ፖርታል አብራ',
+  'tenant.portal_now': 'የፖርታል መግቢያ አሁን ይፍጠሩ',
   'tenant.portal_now_hint': 'በ/portal/login ላይ በዚህ ስልክ ቁጥር እና በኤስኤምኤስ በሚላክ ኮድ ይገባሉ። ኋላ ላይ ከተከራይ ዝርዝር መንቃት ይችላሉ።',
+  'tenant.portal_enable_failed': 'ተከራዩ ተፈጥሯል፣ ግን ፖርታሉን ማብራት አልተቻለም — ኋላ ላይ ከተከራይ ዝርዝር ይሞክሩ።',
   'tenant.portal_disable': 'ፖርታል አጥፋ',
 
   // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
@@ -562,7 +564,9 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'documents.id_file': 'የመታወቂያ ሰነድ ቅጂ',
   'documents.id_file_hint': 'የላዩን መታወቂያ ፎቶ ወይም ቅጂ። በኋላ ከሰነዶች ማከል ወይም መተካት ይችላሉ።',
   'documents.id_upload_failed': 'ተከራዩ ተፈጥሯል፣ ግን የመታወቂያ ፋይሉ አልተጫነም — ከሰነዶች እንደገና ይሞክሩ።',
+  'documents.lease_file': 'የተፈረመ የውል ሰነድ',
   'documents.lease_file_hint': 'የተፈረመው PDF ወይም ስካን፣ ለዚህ ውል ተያይዞ። ተከራዩም ከፖርታሉ ሰነዶች ውስጥ ያያል።',
+  'documents.lease_upload_failed': 'ውሉ ተፈጥሯል፣ ግን የውሉ ፋይል አልተጫነም — ከሰነዶች እንደገና ይሞክሩ።',
   'tenant.employer': 'አሠሪ',
   'tenant.emergency_contact': 'የድንገተኛ ጊዜ ተጠሪ',
   'unit.bedrooms': 'መኝታ ክፍሎች',
