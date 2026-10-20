@@ -94,6 +94,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'reports.total_outstanding': 'ጠቅላላ ያልተከፈለ',
   'tenant.portal': 'ፖርታል',
   'tenant.portal_enable': 'ፖርታል አብራ',
+  'tenant.portal_now_hint': 'በ/portal/login ላይ በዚህ ስልክ ቁጥር እና በኤስኤምኤስ በሚላክ ኮድ ይገባሉ። ኋላ ላይ ከተከራይ ዝርዝር መንቃት ይችላሉ።',
   'tenant.portal_disable': 'ፖርታል አጥፋ',
 
   // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
@@ -468,6 +469,8 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'notification.payment_received': '{amount} ክፍያዎን ተቀብለናል። እናመሰግናለን።',
   'notification.lease_expiring': 'ውልዎ በ{endDate} ያበቃል',
   'notification.work_order_created': 'የጥገና ጥያቄ ተቀብለናል፡ {title}',
+  'notification.work_order_completed': 'የጥገና ጥያቄ {ticketNumber} ተጠናቋል፡ {title}',
+  'notification.work_order_cancelled': 'የጥገና ጥያቄ {ticketNumber} ተሰርዟል፡ {title}',
 
   'error.generic': 'የሆነ ስህተት ተፈጥሯል። እባክዎ እንደገና ይሞክሩ።',
   'error.network': 'ሰርቨሩ አይደርስም። ግንኙነትዎን ያረጋግጡ።',
@@ -559,6 +562,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'documents.id_file': 'የመታወቂያ ሰነድ ቅጂ',
   'documents.id_file_hint': 'የላዩን መታወቂያ ፎቶ ወይም ቅጂ። በኋላ ከሰነዶች ማከል ወይም መተካት ይችላሉ።',
   'documents.id_upload_failed': 'ተከራዩ ተፈጥሯል፣ ግን የመታወቂያ ፋይሉ አልተጫነም — ከሰነዶች እንደገና ይሞክሩ።',
+  'documents.lease_file_hint': 'የተፈረመው PDF ወይም ስካን፣ ለዚህ ውል ተያይዞ። ተከራዩም ከፖርታሉ ሰነዶች ውስጥ ያያል።',
   'tenant.employer': 'አሠሪ',
   'tenant.emergency_contact': 'የድንገተኛ ጊዜ ተጠሪ',
   'unit.bedrooms': 'መኝታ ክፍሎች',

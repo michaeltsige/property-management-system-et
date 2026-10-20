@@ -260,6 +260,7 @@ export const EN_CATALOG = {
   'reports.total_outstanding': 'Total outstanding',
   'tenant.portal': 'Portal',
   'tenant.portal_enable': 'Enable portal',
+  'tenant.portal_now_hint': 'They sign in at /portal/login with this phone number and a code sent by SMS. You can enable it later from the Tenants list.',
   'tenant.portal_disable': 'Disable portal',
 
   // --- calendar & dates ---------------------------------------------------
@@ -427,6 +428,8 @@ export const EN_CATALOG = {
   'notification.payment_received': 'We received your payment of {amount}. Thank you.',
   'notification.lease_expiring': 'Your lease ends on {endDate}',
   'notification.work_order_created': 'Maintenance request received: {title}',
+  'notification.work_order_completed': 'Maintenance request {ticketNumber} is completed: {title}',
+  'notification.work_order_cancelled': 'Maintenance request {ticketNumber} was cancelled: {title}',
 
   // --- errors and validation ---------------------------------------------
   'error.generic': 'Something went wrong. Please try again.',
@@ -521,6 +524,7 @@ export const EN_CATALOG = {
   'documents.id_file': 'ID document scan',
   'documents.id_file_hint': 'A photo or scan of the ID above. You can add or replace it later from Documents.',
   'documents.id_upload_failed': 'The tenant was created, but the ID file could not be uploaded — try again from Documents.',
+  'documents.lease_file_hint': 'The signed PDF or scan, filed against this lease. The tenant sees it under Documents in their portal.',
   'tenant.employer': 'Employer',
   'tenant.emergency_contact': 'Emergency contact',
   'unit.bedrooms': 'Bedrooms',

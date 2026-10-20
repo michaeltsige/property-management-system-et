@@ -96,6 +96,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'reports.total_outstanding': 'Waliigalaa hafaa',
   'tenant.portal': 'Portaala',
   'tenant.portal_enable': 'Portaala bani',
+  'tenant.portal_now_hint': '/portal/login irratti lakkoobsa bilbilaa kanaan fi koodii SMS tiin seena. Booda Tenants list irraa banuu dandeessu.',
   'tenant.portal_disable': 'Portaala cufi',
 
   // Workspace tabs and unit detail; non-English entries are unreviewed machine drafts.
@@ -480,6 +481,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'notification.payment_received': 'Kaffaltii kee {amount} fudhannee jirra. Galatoomi.',
   'notification.lease_expiring': 'Waliigalteen kee guyyaa {endDate} xumurama',
   'notification.work_order_created': 'Gaaffiin suphaa fudhatameera: {title}',
+  'notification.work_order_completed': 'Gaaffiin suphaa {ticketNumber} xumurameera: {title}',
+  'notification.work_order_cancelled': 'Gaaffiin suphaa {ticketNumber} dhaabameera: {title}',
 
   'error.generic': "Dogoggorri uumameera. Maaloo irra deebi'ii yaali.",
   'error.network': 'Seervara argachuu hin dandeenye. Walqunnamtii kee ilaali.',
@@ -571,6 +574,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'documents.id_file': 'Cuunfaa meeʾadota addaa',
   'documents.id_file_hint': "Fuula yookiin cuunfaa meeʾadichaa olitti. Boodaan Documents irraa dabaluu yookiin jijjiiruu dandeessa.",
   'documents.id_upload_failed': "Kireefiin uumameera, garuu faayiliin meeʾadaa ol hin kaaʾinne — Documents irraa yaali.",
+  'documents.lease_file_hint': "PDF ykn skaanaan mallattoole, waliin kiree kanaa hidhamee. Kireefni portaala isaa Documents jalatti arga.",
   'tenant.employer': 'Hojjechiisaa',
   'tenant.emergency_contact': 'Qunnamtii ariifachiisaa',
   'unit.bedrooms': 'Kutaa rafaa',
