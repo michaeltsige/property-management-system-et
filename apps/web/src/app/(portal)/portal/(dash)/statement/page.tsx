@@ -2,7 +2,10 @@
 
 /**
  * The tenant's rent account: every charge with what has been paid against it —
- * the lines behind the due balance on the overview.
+ * the lines behind the due balance on the overview. A three-number strip
+ * (billed / paid / amount due — the same StatCard pattern the staff side
+ * leads with) sits above the table so the account reads at a glance before
+ * the line items.
  */
 
 import { formatAmount, formatDate, formatPeriodKey, statusTone } from '@/lib/format';
@@ -11,6 +14,8 @@ import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 
 import { api } from '@/lib/api';
+import { statementTotals } from '@/lib/portal';
+import { StatCard } from '@/components/stat-card';
 import {
   Alert,
   Badge,
@@ -30,6 +35,7 @@ export default function PortalStatementPage() {
   const { session, ready, language, calendar, t } = usePreferences();
   const isTenant = session?.role === 'tenant';
 
+  const me = useAsync(() => (isTenant && ready ? api.portalMe() : Promise.resolve(null)), [isTenant, ready]);
   const charges = useAsync(
     () => (isTenant && ready ? api.portalCharges() : Promise.resolve(null)),
     [isTenant, ready],
@@ -37,11 +43,41 @@ export default function PortalStatementPage() {
 
   if (!ready || !isTenant) return null;
 
+  const currency = session.organization.currency;
+  const totals = statementTotals(charges.data?.items ?? []);
+  const dueMinor = me.data ? Number(me.data.dueMinor) : null;
+  const creditMinor = me.data ? Number(me.data.creditMinor ?? '0') : 0;
+
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight text-slate-900">
-        {t('portal.statement_title')}
-      </h1>
+      <h1 className="text-xl font-semibold tracking-tight text-slate-900">{t('portal.statement_title')}</h1>
+
+      {/* The account at a glance — same stat-card language as the staff
+          dashboard, fed by this tenant's own numbers only. "Amount due" comes
+          from the server so it always agrees with the overview's balance. */}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <StatCard
+          label={t('portal.billed')}
+          value={formatAmount(String(totals.billedMinor), currency, language)}
+          loading={charges.loading}
+        />
+        <StatCard
+          label={t('portal.paid')}
+          value={formatAmount(String(totals.paidMinor), currency, language)}
+          loading={charges.loading}
+        />
+        <StatCard
+          label={t('portal.due_balance')}
+          value={dueMinor === null ? '—' : formatAmount(me.data!.dueMinor, currency, language)}
+          tone={dueMinor !== null && dueMinor > 0 ? 'warning' : 'brand'}
+          loading={me.loading}
+          hint={
+            creditMinor > 0
+              ? `${t('portal.credit_on_account')}: ${formatAmount(String(creditMinor), currency, language)}`
+              : undefined
+          }
+        />
+      </div>
 
       <Card>
         <CardHeader>
@@ -89,7 +125,12 @@ export default function PortalStatementPage() {
                       </span>
                     </Td>
                     <Td className="text-slate-600">
-                      {charge.periodKey ? formatPeriodKey(charge.periodKey, calendar, language) : '—'}
+                      {/* A period is an org-billing-calendar concept (month 13 exists in the
+                        Ethiopian calendar), so it renders in the organization's
+                        calendar, not the viewer's display preference. */}
+                      {charge.periodKey
+                        ? formatPeriodKey(charge.periodKey, session.organization.calendar, language)
+                        : '—'}
                     </Td>
                     <Td>{formatDate(charge.dueDate, { language, calendar })}</Td>
                     <Td className="tabular font-medium text-slate-900">
