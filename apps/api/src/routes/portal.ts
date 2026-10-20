@@ -753,7 +753,9 @@ async function portalTenant(
 portalRouter.post(
   '/portal/maintenance-requests',
   requireAuth,
-  requirePermission('portal.use'),
+  // The specific portal permission, so the matrix stays honest: reading the
+  // portal needs `portal.use`, filing a request needs `portal.request_maintenance`.
+  requirePermission('portal.request_maintenance'),
   validate({ body: portalMaintenanceRequestSchema }),
   async (req, res, next) => {
     try {

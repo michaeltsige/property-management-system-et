@@ -73,9 +73,13 @@ export type Permission = (typeof PERMISSIONS)[number];
  * `owner_admin` deliberately receives every permission. The manager is the
  * owner's operational right hand and inherits the full money desk (waive,
  * reconcile, refund, reverse) — the former accountant role was folded into it
- * when the role model was reduced to three roles. `tenant` only reaches the
- * portal surface and their own records, which the API additionally filters by
- * tenancy.
+ * when the role model was reduced to three roles.
+ *
+ * `tenant` reaches ONLY the portal surface (`portal.*`). Staff list endpoints
+ * (documents, leases, charges, payments, org settings) are org-wide by design
+ * — they serve the whole portfolio, so a tenant holding their read permissions
+ * could enumerate every other tenant's files and money. Tenant-facing data
+ * flows exclusively through the tenancy-scoped `/portal/*` routes.
  */
 export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   owner_admin: PERMISSIONS,
@@ -119,16 +123,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'notifications.send',
     'audit.read',
   ],
-  tenant: [
-    'org.read',
-    'portal.use',
-    'portal.pay',
-    'portal.request_maintenance',
-    'leases.read',
-    'charges.read',
-    'payments.read',
-    'documents.read',
-  ],
+  tenant: ['portal.use', 'portal.pay', 'portal.request_maintenance'],
 };
 
 export function roleHasPermission(role: Role, permission: Permission): boolean {
