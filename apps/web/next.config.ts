@@ -19,6 +19,14 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   outputFileTracingRoot: __dirname,
 
+  /**
+   * Adds `.next/standalone` alongside the normal build: a self-contained
+   * server folder (server.js + traced node_modules) for container deploys —
+   * `node server.js` honours PORT, no node_modules tree to ship. `next start`
+   * and dev mode behave exactly as before; this is purely additive.
+   */
+  output: 'standalone',
+
   experimental: {
     /**
      * The webpack dev server is the largest process in the stack (~600 MB without

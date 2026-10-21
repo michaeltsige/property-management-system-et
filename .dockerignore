@@ -1,0 +1,23 @@
+# Keep the build context small; everything below is re-created inside the image
+# by the build stage (pnpm install + pnpm build), so shipping it is pure waste.
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+node_modules
+**/node_modules
+**/.next
+**/dist
+**/build
+**/*.tsbuildinfo
+.turbo
+**/.turbo
+coverage
+**/coverage
+storage
+**/storage
+*.log
+.DS_Store
+docs/screenshots
+apps/web/public/images/login-hero.jpg.bak

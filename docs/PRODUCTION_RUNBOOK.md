@@ -8,6 +8,8 @@ Chapa key arrives, and an honest answer on a Flutter port.
 
 Everything here is written for the actual setup: one Alpine Linux box,
 Postgres already installed, the apps run with pnpm, CI already green.
+For container deploys (JustRunMy.App free tier and other small PaaS hosts),
+see `DEPLOY_JUSTRUNMY.md` — the Dockerfile targets and env tables live there.
 
 ---
 
