@@ -61,9 +61,68 @@ export const Menu = wrap('Menu');
 export const SearchNormal1 = wrap('SearchNormal1');
 export const Notification = wrap('Notification');
 export const Global = wrap('Global');
-// Portal status and document icons
-export const TickCircle = wrap('TickCircle');
-export const Warning2 = wrap('Warning2');
-export const Document = wrap('Document');
-export const PathTool = wrap('PathTool');
+
+/*
+ * Screens and components (previously lucide-react — one icon library per app,
+ * so every icon shares the same rounded Iconsax geometry). Naming keeps the
+ * Iconsax voice; the two glyphs Iconsax only ships inside a container
+ * (CloseCircle, TickCircle) are drawn here bare so a modal's X still reads as
+ * an X, not a badge.
+ */
+export const Add = wrap('Add');
+export const ArrowLeft2 = wrap('ArrowLeft2');
+export const Calendar = wrap('Calendar');
+export const CalendarAdd = wrap('CalendarAdd');
 export const CloseSquare = wrap('CloseSquare');
+export const Document = wrap('Document');
+export const Export = wrap('Export');
+export const Import = wrap('Import');
+export const Moon = wrap('Moon');
+export const PathTool = wrap('PathTool');
+export const PlayCircle = wrap('PlayCircle');
+export const Profile = wrap('Profile');
+export const ProfileAdd = wrap('ProfileAdd');
+export const Refresh = wrap('Refresh');
+export const Save2 = wrap('Save2');
+export const Sun = wrap('Sun');
+export const TickCircle = wrap('TickCircle');
+export const Trash = wrap('Trash');
+export const TrendDown = wrap('TrendDown');
+export const TrendUp = wrap('TrendUp');
+export const Warning2 = wrap('Warning2');
+
+const GLYPH_PROPS = {
+  xmlns: 'http://www.w3.org/2000/svg',
+  viewBox: '0 0 24 24',
+  fill: 'none',
+  stroke: 'currentColor',
+  strokeWidth: 1.5,
+  strokeLinecap: 'round' as const,
+  strokeLinejoin: 'round' as const,
+};
+
+/** The bare X (close). Iconsax only ships it inside a circle/square. */
+export const Close = forwardRef<SVGSVGElement, IconProps>(function Close(
+  { size = 24, className, color },
+  ref,
+) {
+  return (
+    <svg ref={ref} width={size} height={size} className={className} {...GLYPH_PROPS} color={color} aria-hidden="true">
+      <path d="M18 6 6 18" />
+      <path d="m6 6 12 12" />
+    </svg>
+  );
+});
+
+/** The bare check. Iconsax only ships it inside a circle/square. */
+export const Tick = forwardRef<SVGSVGElement, IconProps>(function Tick(
+  { size = 24, className, color },
+  ref,
+) {
+  return (
+    <svg ref={ref} width={size} height={size} className={className} {...GLYPH_PROPS} color={color} aria-hidden="true">
+      <path d="m5 12.5 4.5 4.5L19 7" />
+    </svg>
+  );
+});
+>>>>>>> 96c4c35 (refactor(ui): one icon set — lucide-react out, the iconsax wrapper covers everything)

@@ -11,7 +11,7 @@
  * always visible, because a rent due date has to be unambiguous to both parties.
  */
 
-import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft2, ArrowRight2, Calendar } from './icons';
 import { useMemo, useState } from 'react';
 
 import {
@@ -162,7 +162,7 @@ export function DateField({ value, onChange, label, required, id, calendar, disa
                 <span className="text-slate-400">{t('calendar.select_date')}</span>
               )}
             </span>
-            <CalendarDays className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+            <Calendar className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
           </button>
         }
       >
@@ -175,7 +175,7 @@ export function DateField({ value, onChange, label, required, id, calendar, disa
               onClick={() => setViewPeriod(previousPeriod(viewPeriod))}
               aria-label={t('calendar.previous_month')}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ArrowLeft2 className="h-4 w-4" />
             </Button>
             <div className="min-w-0 text-center">
               <p className="truncate text-sm font-semibold text-slate-900">
@@ -194,7 +194,7 @@ export function DateField({ value, onChange, label, required, id, calendar, disa
               onClick={() => setViewPeriod(nextPeriod(viewPeriod))}
               aria-label={t('calendar.next_month')}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ArrowRight2 className="h-4 w-4" />
             </Button>
           </div>
 

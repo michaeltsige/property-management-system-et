@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { X } from 'lucide-react';
+import { Close } from './icons';
 import { roleHasPermission, type Role } from '@pms/shared';
 import { api } from '@/lib/api';
 import { useAsync } from '@/lib/hooks';
@@ -124,7 +124,7 @@ export function WorkspaceTabs() {
                       : 'text-slate-400 hover:bg-white/70 hover:text-slate-700',
                   )}
                 >
-                  <X className="h-3.5 w-3.5" aria-hidden="true" />
+                  <Close className="h-3.5 w-3.5" aria-hidden="true" />
                 </button>
               </li>
             );

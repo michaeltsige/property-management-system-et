@@ -1,7 +1,7 @@
 'use client';
 
 import * as Dialog from '@radix-ui/react-dialog';
-import { X } from 'lucide-react';
+import { Close } from './icons';
 
 import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
@@ -46,7 +46,7 @@ export function Modal({
             </div>
             <Dialog.Close asChild>
               <Button variant="ghost" size="icon" aria-label={t('common.close')}>
-                <X className="h-4 w-4" />
+                <Close className="h-4 w-4" />
               </Button>
             </Dialog.Close>
           </div>

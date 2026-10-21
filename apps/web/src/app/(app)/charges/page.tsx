@@ -1,6 +1,6 @@
 'use client';
 
-import { PlayCircle } from 'lucide-react';
+import { PlayCircle } from '@/components/icons';
 import { useMemo, useState } from 'react';
 
 import { useCalendarPeriod } from '@/lib/use-calendar-period';

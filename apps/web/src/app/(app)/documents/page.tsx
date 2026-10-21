@@ -1,6 +1,6 @@
 'use client';
 
-import { Download, Plus, Trash2 } from 'lucide-react';
+import { Add, Import, Trash } from '@/components/icons';
 import { Suspense, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -168,7 +168,7 @@ function DocumentsView() {
         description={`${ALLOWED_UPLOAD_MIME_TYPES.length} accepted file types · ${maxMb} MB maximum`}
         actions={
           <Button onClick={() => setOpen(true)}>
-            <Plus className="h-4 w-4" />
+            <Add className="h-4 w-4" />
             {t('documents.upload')}
           </Button>
         }
@@ -437,7 +437,7 @@ function DocumentTable({
                 title={t('documents.download')}
                 onClick={() => void onDownload(document.id, document.title ?? 'document')}
               >
-                <Download className="h-4 w-4" />
+                <Import className="h-4 w-4" />
               </Button>
               <Button
                 variant="ghost"
@@ -445,7 +445,7 @@ function DocumentTable({
                 title={t('common.delete')}
                 onClick={() => void onRemove(document.id)}
               >
-                <Trash2 className="h-4 w-4" />
+                <Trash className="h-4 w-4" />
               </Button>
             </Td>
           </tr>

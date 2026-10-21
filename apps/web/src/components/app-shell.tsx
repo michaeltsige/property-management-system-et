@@ -34,12 +34,13 @@ import { usePathname, useRouter } from 'next/navigation';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { useEffect, useState } from 'react';
-import { ChevronRight, X } from 'lucide-react';
 import {
+  ArrowRight2,
   Building3,
   Calendar2,
   Chart,
   ClipboardText,
+  Close,
   DocumentText,
   Element3,
   Home2,
@@ -267,7 +268,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
               <span className="block truncate text-xs text-slate-400">{session.user.email}</span>
             </span>
-            <ChevronRight
+            <ArrowRight2
               aria-hidden="true"
               className="h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200 group-data-[state=open]:rotate-90"
             />
@@ -350,7 +351,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   className="text-slate-400 hover:bg-white/10 hover:text-white"
                   aria-label={t('common.close')}
                 >
-                  <X className="h-4 w-4" />
+                  <Close className="h-4 w-4" />
                 </Button>
               </Dialog.Close>
             </div>

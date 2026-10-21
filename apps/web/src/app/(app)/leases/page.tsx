@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus } from 'lucide-react';
+import { Add } from '@/components/icons';
 import { useEffect, useRef, useState } from 'react';
 
 import { BILLING_FREQUENCIES, DEPOSIT_TYPES, LEASE_STATUSES, type BillingFrequency, type DepositType, type LeaseStatus } from '@pms/shared';
@@ -171,7 +171,7 @@ export default function LeasesPage() {
           <>
             <ExportCsvButton kind="leases" />
             <Button onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4" />
+              <Add className="h-4 w-4" />
               {t('common.create')}
             </Button>
           </>

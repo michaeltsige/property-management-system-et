@@ -2,7 +2,7 @@
 
 import { roleHasPermission, type Role } from '@pms/shared';
 import { CsvImport } from '@/components/csv-import';
-import { Plus } from 'lucide-react';
+import { Add } from '@/components/icons';
 import { useMemo, useState } from 'react';
 
 import { api } from '@/lib/api';
@@ -162,7 +162,7 @@ export default function TenantsPage() {
               className="h-9 w-40"
             />
             <Button onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4" />
+              <Add className="h-4 w-4" />
               {t('common.create')}
             </Button>
           </>

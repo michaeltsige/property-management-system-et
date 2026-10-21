@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus } from 'lucide-react';
+import { Add } from '@/components/icons';
 import { useState } from 'react';
 
 import { ETHIOPIAN_REGIONS, PROPERTY_TYPES, roleHasPermission, type Role } from '@pms/shared';
@@ -107,7 +107,7 @@ export default function PropertiesPage() {
             disabled={!canWrite || (canReadOwners && (owners.loading || !!owners.error))}
             onClick={() => setOpen(true)}
           >
-            <Plus className="h-4 w-4" />
+            <Add className="h-4 w-4" />
             {t('common.create')}
           </Button>
         }

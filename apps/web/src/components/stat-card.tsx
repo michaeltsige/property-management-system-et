@@ -1,6 +1,6 @@
 'use client';
 
-import { TrendingDown, TrendingUp } from 'lucide-react';
+import { TrendDown, TrendUp } from './icons';
 
 import { cn } from '@/lib/utils';
 
@@ -62,10 +62,10 @@ export function StatCard({
     delta === undefined
       ? undefined
       : delta.direction === 'up'
-        ? { icon: TrendingUp, classes: 'bg-brand-50 text-brand-800' }
+        ? { icon: TrendUp, classes: 'bg-brand-50 text-brand-800' }
         : delta.direction === 'down'
-          ? { icon: TrendingDown, classes: 'bg-red-50 text-red-800' }
-          : { icon: TrendingDown, classes: 'bg-slate-100 text-slate-600' };
+          ? { icon: TrendDown, classes: 'bg-red-50 text-red-800' }
+          : { icon: TrendDown, classes: 'bg-slate-100 text-slate-600' };
 
   return (
     <Card className={className}>

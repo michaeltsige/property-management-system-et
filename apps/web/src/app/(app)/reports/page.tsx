@@ -1,7 +1,7 @@
 'use client';
 
 import { useCalendarPeriod } from '@/lib/use-calendar-period';
-import { Download } from 'lucide-react';
+import { Import } from '@/components/icons';
 import { useState } from 'react';
 
 import { todayIn } from '@pms/calendar';
@@ -118,7 +118,7 @@ export default function ReportsPage() {
                 }
               }}
             >
-              <Download className="h-4 w-4" />
+              <Import className="h-4 w-4" />
               {t('reports.export_csv')}
             </Button>
           </>

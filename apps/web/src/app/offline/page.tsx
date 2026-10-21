@@ -7,7 +7,7 @@
  * after hydration, and it offers exactly one action: try again.
  */
 
-import { RefreshCw } from 'lucide-react';
+import { Refresh } from '@/components/icons';
 
 import { usePreferences } from '@/lib/preferences';
 
@@ -26,7 +26,7 @@ export default function OfflinePage() {
         <p className="mt-1 max-w-sm text-sm text-slate-600">{t('offline.body')}</p>
       </div>
       <Button onClick={() => window.location.reload()}>
-        <RefreshCw className="h-4 w-4" aria-hidden="true" />
+        <Refresh className="h-4 w-4" aria-hidden="true" />
         {t('offline.retry')}
       </Button>
     </div>

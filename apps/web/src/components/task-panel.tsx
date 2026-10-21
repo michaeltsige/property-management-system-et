@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ClipboardList, Receipt, TrendingDown } from 'lucide-react';
+import { ReceiptItem, Setting3, TrendDown } from './icons';
 import { roleHasPermission, type Role } from '@pms/shared';
 import { api } from '@/lib/api';
 import { useAsync } from '@/lib/hooks';
@@ -42,19 +42,19 @@ export function TaskPanel() {
         href: '/charges?status=overdue',
         label: t('tasks.overdue_charges'),
         count: overdue.data?.total ?? 0,
-        icon: Receipt,
+        icon: ReceiptItem,
       },
       canMaintenance && {
         href: '/maintenance',
         label: t('tasks.open_work_orders'),
         count: workOrders.data?.openCount ?? 0,
-        icon: ClipboardList,
+        icon: Setting3,
       },
       canReports && {
         href: '/reports',
         label: t('tasks.arrears_review'),
         count: arrears.data?.rows.length ?? 0,
-        icon: TrendingDown,
+        icon: TrendDown,
       },
     ] as (Task | false)[]
   ).filter((task): task is Task => Boolean(task));

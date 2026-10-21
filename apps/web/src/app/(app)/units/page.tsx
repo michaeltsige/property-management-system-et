@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus } from 'lucide-react';
+import { Add } from '@/components/icons';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
@@ -186,7 +186,7 @@ export default function UnitsPage() {
               onClick={() => setOpen(true)}
               disabled={!canWrite || (properties.data?.properties.length ?? 0) === 0}
             >
-              <Plus className="h-4 w-4" />
+              <Add className="h-4 w-4" />
               {t('common.create')}
             </Button>
           </>

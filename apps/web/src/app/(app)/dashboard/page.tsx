@@ -3,7 +3,7 @@
 import { useCalendarPeriod } from '@/lib/use-calendar-period';
 import Link from 'next/link';
 import { useMemo } from 'react';
-import { Building2, CalendarPlus, TrendingDown, TrendingUp, UserPlus, Wallet } from 'lucide-react';
+import { Building3, CalendarAdd, ProfileAdd, TrendDown, TrendUp, Wallet3 } from '@/components/icons';
 
 import { formatAmount, formatPeriodKey } from '@/lib/format';
 import { useAsync } from '@/lib/hooks';
@@ -34,10 +34,10 @@ import {
  * and gets the one primary button on this screen; the rest stay quiet.
  */
 const QUICK_ACTIONS = [
-  { href: '/payments?new=1', labelKey: 'money.record_payment', icon: Wallet, primary: true },
-  { href: '/leases?new=1', labelKey: 'dashboard.quick.lease', icon: CalendarPlus, primary: false },
-  { href: '/tenants?new=1', labelKey: 'dashboard.quick.tenant', icon: UserPlus, primary: false },
-  { href: '/properties?new=1', labelKey: 'dashboard.onboarding_cta', icon: Building2, primary: false },
+  { href: '/payments?new=1', labelKey: 'money.record_payment', icon: Wallet3, primary: true },
+  { href: '/leases?new=1', labelKey: 'dashboard.quick.lease', icon: CalendarAdd, primary: false },
+  { href: '/tenants?new=1', labelKey: 'dashboard.quick.tenant', icon: ProfileAdd, primary: false },
+  { href: '/properties?new=1', labelKey: 'dashboard.onboarding_cta', icon: Building3, primary: false },
 ];
 
 export default function DashboardPage() {
@@ -158,7 +158,7 @@ export default function DashboardPage() {
             <div className="flex justify-center pb-6">
               <Button asChild>
                 <Link href="/properties?new=1">
-                  <Building2 className="h-4 w-4" aria-hidden="true" />
+                  <Building3 className="h-4 w-4" aria-hidden="true" />
                   {t('dashboard.onboarding_cta')}
                 </Link>
               </Button>
@@ -302,9 +302,9 @@ export default function DashboardPage() {
                   className="gap-1 tabular"
                 >
                   {trendDelta.direction === 'down' ? (
-                    <TrendingDown className="h-3 w-3" aria-hidden="true" />
+                    <TrendDown className="h-3 w-3" aria-hidden="true" />
                   ) : (
-                    <TrendingUp className="h-3 w-3" aria-hidden="true" />
+                    <TrendUp className="h-3 w-3" aria-hidden="true" />
                   )}
                   {trendDelta.value} {t('dashboard.delta_completed_periods')}
                 </Badge>

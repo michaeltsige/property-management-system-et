@@ -11,7 +11,7 @@ import * as LabelPrimitive from '@radix-ui/react-label';
 import * as SelectPrimitive from '@radix-ui/react-select';
 import * as SeparatorPrimitive from '@radix-ui/react-separator';
 import { cva, type VariantProps } from 'class-variance-authority';
-import { Check, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowDown2, ArrowUp2, Tick } from '../icons';
 import {
   Children,
   Fragment,
@@ -178,7 +178,7 @@ export function Select({
       >
         <SelectPrimitive.Value />
         <SelectPrimitive.Icon className="shrink-0 opacity-50">
-          <ChevronDown className="h-4 w-4" aria-hidden="true" />
+          <ArrowDown2 className="h-4 w-4" aria-hidden="true" />
         </SelectPrimitive.Icon>
       </SelectPrimitive.Trigger>
       <SelectPrimitive.Portal>
@@ -188,7 +188,7 @@ export function Select({
           className="relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md bg-white text-slate-900 shadow-float"
         >
           <SelectPrimitive.ScrollUpButton className="flex h-6 items-center justify-center">
-            <ChevronUp className="h-4 w-4" aria-hidden="true" />
+            <ArrowUp2 className="h-4 w-4" aria-hidden="true" />
           </SelectPrimitive.ScrollUpButton>
           <SelectPrimitive.Viewport className="p-1">
             {options.map((option) => (
@@ -200,13 +200,13 @@ export function Select({
               >
                 <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
                 <SelectPrimitive.ItemIndicator className="absolute right-2 inline-flex items-center">
-                  <Check className="h-4 w-4" aria-hidden="true" />
+                  <Tick className="h-4 w-4" aria-hidden="true" />
                 </SelectPrimitive.ItemIndicator>
               </SelectPrimitive.Item>
             ))}
           </SelectPrimitive.Viewport>
           <SelectPrimitive.ScrollDownButton className="flex h-6 items-center justify-center">
-            <ChevronDown className="h-4 w-4" aria-hidden="true" />
+            <ArrowDown2 className="h-4 w-4" aria-hidden="true" />
           </SelectPrimitive.ScrollDownButton>
         </SelectPrimitive.Content>
       </SelectPrimitive.Portal>

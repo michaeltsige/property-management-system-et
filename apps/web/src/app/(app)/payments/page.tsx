@@ -1,6 +1,6 @@
 'use client';
 
-import { Plus } from 'lucide-react';
+import { Add } from '@/components/icons';
 import { useMemo, useState } from 'react';
 
 import { MANUAL_PAYMENT_METHODS, PAYMENT_METHODS } from '@pms/shared';
@@ -147,7 +147,7 @@ export default function PaymentsPage() {
             </Select>
             <ExportCsvButton kind="payments" />
             <Button onClick={() => setOpen(true)}>
-              <Plus className="h-4 w-4" />
+              <Add className="h-4 w-4" />
               {t('money.record_payment')}
             </Button>
           </>
