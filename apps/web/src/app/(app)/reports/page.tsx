@@ -125,7 +125,7 @@ export default function ReportsPage() {
         }
       />
 
-      <div className="mb-3 flex flex-wrap gap-1 border-b border-slate-200">
+      <div className="mb-3 flex flex-wrap gap-1 border-b border-line">
         {TABS.map((item) => (
           <button
             key={item.id}
@@ -135,7 +135,7 @@ export default function ReportsPage() {
               '-mb-px border-b-2 px-3 py-2 text-sm',
               tab === item.id
                 ? 'border-brand-600 font-medium text-brand-800'
-                : 'border-transparent text-slate-500 hover:text-slate-800',
+                : 'border-transparent text-muted hover:text-strong',
             )}
           >
             {t(item.labelKey as never)}
@@ -191,7 +191,7 @@ export default function ReportsPage() {
                     {rentRoll.data?.rows.map((row) => (
                       <tr key={row.leaseId}>
                         <Td>{row.property.name}</Td>
-                        <Td className="font-medium text-slate-900">{row.unit.label}</Td>
+                        <Td className="font-medium text-strong">{row.unit.label}</Td>
                         <Td>{row.tenant.fullName}</Td>
                         <Td className="tabular">
                           {formatAmount(row.periodDueMinor, row.currency, language)}
@@ -202,7 +202,7 @@ export default function ReportsPage() {
                         <Td
                           className={cn(
                             'tabular',
-                            Number(row.outstandingMinor) > 0 && 'font-medium text-red-600',
+                            Number(row.outstandingMinor) > 0 && 'font-medium text-red-600 dark:text-red-400',
                           )}
                         >
                           {formatAmount(row.outstandingMinor, row.currency, language)}
@@ -232,7 +232,7 @@ export default function ReportsPage() {
             <Card className="lg:col-span-2">
               <CardHeader>
                 <CardTitle>{t('reports.arrears')}</CardTitle>
-                <span className="tabular text-sm font-semibold text-red-600">
+                <span className="tabular text-sm font-semibold text-red-600 dark:text-red-400">
                   {formatAmount(arrears.data?.totalMinor ?? '0', currency, language)}
                 </span>
               </CardHeader>
@@ -261,7 +261,7 @@ export default function ReportsPage() {
               <CardContent className="space-y-2">
                 {(arrears.data?.buckets ?? []).map((bucket) => (
                   <div key={bucket.key} className="flex items-center justify-between text-sm">
-                    <span className="text-slate-600">{bucket.label}</span>
+                    <span className="text-soft">{bucket.label}</span>
                     <span className="tabular font-medium">
                       {formatAmount(bucket.totalMinor, currency, language)}
                     </span>
@@ -292,7 +292,7 @@ export default function ReportsPage() {
                         <Td>
                           {row.tenant?.fullName ?? '—'}
                           {row.tenant?.phone ? (
-                            <span className="block text-[11px] tabular text-slate-500">
+                            <span className="block text-[11px] tabular text-muted">
                               {row.tenant.phone}
                             </span>
                           ) : null}
@@ -300,10 +300,10 @@ export default function ReportsPage() {
                         <Td>
                           {row.property?.name ?? '—'}
                           {row.unit?.label ? (
-                            <span className="block text-[11px] text-slate-500">{row.unit.label}</span>
+                            <span className="block text-[11px] text-muted">{row.unit.label}</span>
                           ) : null}
                         </Td>
-                        <Td className="tabular font-medium text-red-600">
+                        <Td className="tabular font-medium text-red-600 dark:text-red-400">
                           {formatAmount(row.totalMinor, currency, language)}
                         </Td>
                         <Td>
@@ -315,7 +315,7 @@ export default function ReportsPage() {
                                 : '1–30'}
                           </Badge>
                         </Td>
-                        <Td className="text-[11px] text-slate-500">
+                        <Td className="text-[11px] text-muted">
                           {row.oldestDueDate ? formatDate(row.oldestDueDate, { language, calendar }) : '—'}
                         </Td>
                       </tr>
@@ -349,7 +349,7 @@ export default function ReportsPage() {
                 <tbody>
                   {occupancy.data?.rows.map((row) => (
                     <tr key={row.propertyId}>
-                      <Td className="font-medium text-slate-900">{row.name}</Td>
+                      <Td className="font-medium text-strong">{row.name}</Td>
                       <Td className="tabular">{row.totalUnits}</Td>
                       <Td className="tabular">{row.occupiedUnits}</Td>
                       <Td className="tabular">{row.vacantUnits}</Td>
@@ -394,12 +394,12 @@ export default function ReportsPage() {
                     .reverse()
                     .map((row) => (
                       <tr key={row.periodKey}>
-                        <Td className="font-medium text-slate-900">
+                        <Td className="font-medium text-strong">
                           {formatPeriodKey(row.periodKey, calendar, language)}
                         </Td>
                         <Td className="tabular">{row.paymentCount}</Td>
                         <Td className="tabular">{formatAmount(row.totalMinor, currency, language)}</Td>
-                        <Td className="text-[11px] text-slate-500">
+                        <Td className="text-[11px] text-muted">
                           {Object.entries(row.byMethod)
                             .map(
                               ([method, total]) =>

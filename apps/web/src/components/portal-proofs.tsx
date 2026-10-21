@@ -84,12 +84,12 @@ export function PortalPaymentProofs({ currency }: { currency: string }) {
   return (
     <Card>
       <CardContent className="p-0">
-        <div className="border-b border-slate-200 px-4 py-3 text-sm font-medium text-slate-900">
+        <div className="border-b border-line px-4 py-3 text-sm font-medium text-strong">
           {t('payment.proof_title')}
         </div>
 
         <form className="space-y-2 px-4 py-3" onSubmit={submit}>
-          <p className="text-xs text-slate-500">{t('payment.proof_hint')}</p>
+          <p className="text-xs text-muted">{t('payment.proof_hint')}</p>
           <MoneyInput label={t('money.amount')} value={amount} onChange={setAmount} required />
           <div className="grid gap-2 sm:grid-cols-2">
             <div className="space-y-1">
@@ -139,7 +139,7 @@ export function PortalPaymentProofs({ currency }: { currency: string }) {
           </Button>
         </form>
 
-        <div className="border-t border-slate-200">
+        <div className="border-t border-line">
           {proofs.loading ? null : proofs.error ? (
             <div className="p-4">
               <Alert tone="danger">{proofs.error}</Alert>
@@ -149,21 +149,21 @@ export function PortalPaymentProofs({ currency }: { currency: string }) {
               <EmptyState title={t('payment.proof_empty')} description="" />
             </div>
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-line-soft">
               {(proofs.data?.items ?? []).map((proof) => (
                 <li key={proof.id} className="flex items-center justify-between gap-2 px-4 py-3">
                   <div>
-                    <p className="text-sm font-medium tabular text-slate-900">
+                    <p className="text-sm font-medium tabular text-strong">
                       {formatAmount(proof.amountMinor, proof.currency, language)}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-slate-500">
+                    <p className="mt-0.5 text-[11px] text-muted">
                       {t(`payment.method.${proof.method}` as never)}
                       {proof.reference ? ` · ${proof.reference}` : ''}
                       {' · '}
                       {formatDate(proof.createdAt, { language, calendar })}
                     </p>
                     {proof.status === 'rejected' && proof.reviewNotes ? (
-                      <p className="mt-1 text-[11px] text-red-700">{proof.reviewNotes}</p>
+                      <p className="mt-1 text-[11px] text-red-700 dark:text-red-300">{proof.reviewNotes}</p>
                     ) : null}
                   </div>
                   <Badge

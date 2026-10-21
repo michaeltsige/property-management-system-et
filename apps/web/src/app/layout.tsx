@@ -8,6 +8,14 @@ import { PwaRegister } from '@/components/pwa-register';
 import './globals.css';
 
 /**
+ * Applies the device theme class before first paint: an explicit choice wins,
+ * otherwise the OS preference. Kept tiny and dependency-free on purpose — it
+ * runs synchronously before any markup paints, so there is no light flash on
+ * a dark reload. lib/theme.ts owns everything after hydration.
+ */
+const THEME_BOOTSTRAP = `(function(){try{var s=localStorage.getItem('pms.theme');var d=s==='dark'||(s!=='light'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`;
+
+/**
  * Plus Jakarta Sans is the one UI face — the owner picked it from the sidebar
  * typeface trial (the "Properties" entry). Ge'ez script has no glyphs in it,
  * so the stack in globals.css falls through to Noto Sans Ethiopic; Amharic and
@@ -47,8 +55,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    // suppressHydrationWarning: the bootstrap script may add `.dark` to <html>
+    // before React hydrates — that attribute difference is the one we want.
+    <html lang="en" suppressHydrationWarning>
       <body className={jakarta.variable}>
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
         <PreferencesProvider>
           <OrgSettingsProvider>{children}</OrgSettingsProvider>
         </PreferencesProvider>

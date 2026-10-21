@@ -233,7 +233,7 @@ function DocumentsView() {
             <Card>
               <CardHeader>
                 <CardTitle>{viewTitle}</CardTitle>
-                <span className="text-xs text-slate-500 tabular">{rows.length}</span>
+                <span className="text-xs text-muted tabular">{rows.length}</span>
               </CardHeader>
               {/*
                 A stable frame: the table area never collapses below 24rem nor
@@ -288,7 +288,7 @@ function DocumentsView() {
               onChange={(event) => setFile(event.target.files?.[0] ?? null)}
               required
             />
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-muted">
               PDF, JPEG, PNG, WebP, Word or Excel · up to {maxMb} MB
             </p>
           </div>
@@ -369,14 +369,14 @@ function RailItem({
       className={cn(
         'flex w-full items-center gap-2 whitespace-nowrap rounded-md border px-3 py-2 text-left text-sm transition-colors',
         active
-          ? 'border-edge bg-white font-medium text-ink-900 shadow-card'
-          : 'border-transparent text-slate-600 hover:bg-white/60 hover:text-ink-900',
+          ? 'border-edge bg-surface font-medium text-strong shadow-card'
+          : 'border-transparent text-soft hover:bg-white/60 hover:text-strong dark:hover:bg-white/5',
       )}
     >
-      <span className={cn('min-w-0 truncate', emphasized && !active && 'font-medium text-slate-700')}>
+      <span className={cn('min-w-0 truncate', emphasized && !active && 'font-medium text-body')}>
         {label}
       </span>
-      <span className={cn('ml-auto shrink-0 text-xs tabular', active ? 'text-slate-600' : 'text-slate-400')}>
+      <span className={cn('ml-auto shrink-0 text-xs tabular', active ? 'text-soft' : 'text-faint')}>
         {count}
       </span>
     </button>
@@ -420,10 +420,10 @@ function DocumentTable({
         {items.map((document) => (
           <tr key={document.id}>
             <Td>
-              <span className="font-medium text-slate-900">
+              <span className="font-medium text-strong">
                 {document.title ?? document.id.slice(0, 8)}
               </span>
-              <span className="block text-[11px] text-slate-500">{document.mimeType}</span>
+              <span className="block text-[11px] text-muted">{document.mimeType}</span>
             </Td>
             <Td>
               <Badge>{document.category.replace(/_/g, ' ')}</Badge>

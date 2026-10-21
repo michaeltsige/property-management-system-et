@@ -146,7 +146,7 @@ export default function OrganizationPage() {
                     </option>
                   ))}
                 </Select>
-                <p className="text-[11px] text-slate-500">{t('org.display_calendar_hint')}</p>
+                <p className="text-[11px] text-muted">{t('org.display_calendar_hint')}</p>
               </div>
 
               {/* The personal language preference moved here from the top bar:
@@ -165,7 +165,7 @@ export default function OrganizationPage() {
                     </option>
                   ))}
                 </Select>
-                <p className="text-[11px] text-slate-500">{t('org.display_language_hint')}</p>
+                <p className="text-[11px] text-muted">{t('org.display_language_hint')}</p>
               </div>
             </CardContent>
           </Card>
@@ -212,7 +212,7 @@ export default function OrganizationPage() {
                         </option>
                       ))}
                     </Select>
-                    <p className="text-[11px] text-slate-500">{t('org.billing_calendar_hint')}</p>
+                    <p className="text-[11px] text-muted">{t('org.billing_calendar_hint')}</p>
                   </div>
 
                   <div className="space-y-1">
@@ -247,7 +247,7 @@ export default function OrganizationPage() {
                       defaultValue={Number(current.overdueReminderEveryDays ?? 7)}
                       onBlur={(event) => void save({ overdueReminderEveryDays: Number(event.target.value) })}
                     />
-                    <p className="text-[11px] text-slate-500">{t('org.overdue_reminder_hint')}</p>
+                    <p className="text-[11px] text-muted">{t('org.overdue_reminder_hint')}</p>
                   </div>
 
                   <div className="space-y-1">
@@ -260,7 +260,7 @@ export default function OrganizationPage() {
                       <option value="no">{t('common.none')}</option>
                       <option value="yes">{t('common.total')}</option>
                     </Select>
-                    <p className="text-[11px] text-amber-700">{t('org.late_fee_hint')}</p>
+                    <p className="text-[11px] text-amber-700 dark:text-amber-300">{t('org.late_fee_hint')}</p>
                   </div>
                 </>
               )}

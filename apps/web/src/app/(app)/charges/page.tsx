@@ -168,14 +168,14 @@ export default function ChargesPage() {
                     <tr key={charge.id}>
                       <Td>
                         {formatPeriodKey(charge.periodKey, charge.periodCalendar, language)}
-                        <span className="block text-[11px] text-slate-500">{charge.description}</span>
+                        <span className="block text-[11px] text-muted">{charge.description}</span>
                       </Td>
                       <Td>{charge.type}</Td>
                       <Td className="tabular">
                         {formatAmount(charge.amountMinor, charge.currency, language)}
                       </Td>
                       <Td className="tabular">{formatAmount(charge.paidMinor, charge.currency, language)}</Td>
-                      <Td className={cn('tabular', outstanding > 0 && 'font-medium text-red-600')}>
+                      <Td className={cn('tabular', outstanding > 0 && 'font-medium text-red-600 dark:text-red-400')}>
                         {formatAmount(String(outstanding), charge.currency, language)}
                       </Td>
                       <Td>{formatDate(charge.dueDate, { language, calendar })}</Td>
@@ -231,7 +231,7 @@ export default function ChargesPage() {
             onChange={(event) => setReason(event.target.value)}
             placeholder="Why is this charge being waived?"
           />
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-muted">
             The charge stays in the ledger; a negative entry cancels the amount owed and the reason is kept.
           </p>
           {error ? <Alert tone="danger">{error}</Alert> : null}

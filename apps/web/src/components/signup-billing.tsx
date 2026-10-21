@@ -19,7 +19,7 @@ export function SignupBillingForm({
   const update = (patch: Partial<SignupBilling>) => onChange({ ...value, ...patch });
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-600">{t('onboarding.billing_hint')}</p>
+      <p className="text-sm text-soft">{t('onboarding.billing_hint')}</p>
       <Label htmlFor="billing-calendar">{t('lease.billing_calendar')}</Label>
       <Select
         id="billing-calendar"

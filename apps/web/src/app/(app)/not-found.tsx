@@ -17,8 +17,8 @@ export default function AppNotFound() {
     <div className="flex min-h-[60vh] items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardContent className="space-y-3 p-6 text-center">
-          <p className="text-sm font-semibold text-slate-900">404</p>
-          <p className="text-sm text-slate-600">{t('error.not_found')}</p>
+          <p className="text-sm font-semibold text-strong">404</p>
+          <p className="text-sm text-soft">{t('error.not_found')}</p>
           <Link href="/dashboard">
             <Button variant="secondary">{t('nav.dashboard')}</Button>
           </Link>

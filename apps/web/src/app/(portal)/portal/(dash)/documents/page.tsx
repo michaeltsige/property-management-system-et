@@ -34,7 +34,7 @@ export default function PortalDocumentsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight text-slate-900">{t('portal.documents')}</h1>
+      <h1 className="text-xl font-semibold tracking-tight text-strong">{t('portal.documents')}</h1>
 
       <Card>
         <CardHeader>
@@ -72,13 +72,13 @@ export default function PortalDocumentsPage() {
                 .map((document) => (
                   <li
                     key={document.id}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-edge bg-white px-3 py-2.5"
+                    className="flex items-center justify-between gap-3 rounded-lg border border-edge bg-surface px-3 py-2.5"
                   >
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-slate-900">
+                      <p className="truncate text-sm font-medium text-strong">
                         {document.title ?? document.category}
                       </p>
-                      <p className="mt-0.5 truncate text-[11px] text-slate-500">
+                      <p className="mt-0.5 truncate text-[11px] text-muted">
                         {[document.property, document.unit].filter(Boolean).join(' · ')}
                         {document.property || document.unit ? ' · ' : ''}
                         {formatDate(document.createdAt, { language, calendar })}
@@ -88,7 +88,7 @@ export default function PortalDocumentsPage() {
                       href={api.portalDocumentUrl(document.id)}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="shrink-0 rounded-md border border-slate-200 px-2.5 py-1.5 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                      className="shrink-0 rounded-md border border-line px-2.5 py-1.5 text-xs font-medium text-body transition-colors hover:bg-wash"
                     >
                       {t('portal.download')}
                     </a>

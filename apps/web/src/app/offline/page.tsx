@@ -22,8 +22,8 @@ export default function OfflinePage() {
         ቤ
       </div>
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">{t('offline.title')}</h1>
-        <p className="mt-1 max-w-sm text-sm text-slate-600">{t('offline.body')}</p>
+        <h1 className="text-xl font-semibold tracking-tight text-strong">{t('offline.title')}</h1>
+        <p className="mt-1 max-w-sm text-sm text-soft">{t('offline.body')}</p>
       </div>
       <Button onClick={() => window.location.reload()}>
         <Refresh className="h-4 w-4" aria-hidden="true" />

@@ -41,14 +41,14 @@ export function StatCard({
   className?: string;
 }) {
   const toneClasses: Record<string, string> = {
-    default: 'text-slate-900',
-    brand: 'text-brand-700',
-    warning: 'text-amber-600',
-    danger: 'text-red-600',
-    gold: 'text-gold-600',
+    default: 'text-strong',
+    brand: 'text-brand-700 dark:text-brand-300',
+    warning: 'text-amber-600 dark:text-amber-400',
+    danger: 'text-red-600 dark:text-red-400',
+    gold: 'text-gold-600 dark:text-gold-400',
   };
   const barTone: Record<string, string> = {
-    default: 'bg-slate-400',
+    default: 'bg-faint',
     brand: 'bg-brand-600',
     warning: 'bg-amber-500',
     danger: 'bg-red-600',
@@ -64,14 +64,14 @@ export function StatCard({
       : delta.direction === 'up'
         ? { icon: TrendUp, classes: 'bg-brand-50 text-brand-800' }
         : delta.direction === 'down'
-          ? { icon: TrendDown, classes: 'bg-red-50 text-red-800' }
-          : { icon: TrendDown, classes: 'bg-slate-100 text-slate-600' };
+          ? { icon: TrendDown, classes: 'bg-red-50 text-red-800 dark:text-red-300' }
+          : { icon: TrendDown, classes: 'bg-wash-strong text-soft' };
 
   return (
     <Card className={className}>
       <CardContent className={size === 'hero' ? 'space-y-1 py-4' : 'space-y-1 py-3'}>
         <div className="flex items-center justify-between gap-2">
-          <p className="text-xs font-medium text-slate-500">{label}</p>
+          <p className="text-xs font-medium text-muted">{label}</p>
           {delta && deltaTone ? (
             <span
               className={cn(
@@ -105,12 +105,12 @@ export function StatCard({
             aria-valuemax={100}
             aria-valuenow={Math.round(clamped)}
             aria-label={label}
-            className="h-1 w-full overflow-hidden rounded-full bg-slate-100"
+            className="h-1 w-full overflow-hidden rounded-full bg-wash-strong"
           >
             <div className={cn('h-full rounded-full', barTone[tone])} style={{ width: `${clamped}%` }} />
           </div>
         ) : null}
-        {hint ? <p className="text-xs text-slate-500">{hint}</p> : null}
+        {hint ? <p className="text-xs text-muted">{hint}</p> : null}
       </CardContent>
     </Card>
   );

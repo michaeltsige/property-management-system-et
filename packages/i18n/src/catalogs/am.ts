@@ -112,6 +112,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'unit.no_work_orders': 'እስካሁን በዚህ ክፍል ላይ ጥገና የለም።',
   'tabs.label': 'ክፍት የስህተት ገጾች',
   'tabs.close': 'ትሩን ዝጋ',
+  'theme.toggle': 'ጨለማ ሁነታን ቀይር',
   'dashboard.vacant_units': 'ባዶ ክፍሎች',
   'dashboard.view_units': 'ክፍሎችን ይመልከቱ',
 

@@ -130,7 +130,7 @@ export function DateField({ value, onChange, label, required, id, calendar, disa
       {label ? (
         <Label htmlFor={id}>
           {label}
-          {required ? <span className="text-red-600"> *</span> : null}
+          {required ? <span className="text-red-600 dark:text-red-400"> *</span> : null}
         </Label>
       ) : null}
       <Popover
@@ -145,24 +145,24 @@ export function DateField({ value, onChange, label, required, id, calendar, disa
             aria-haspopup="dialog"
             aria-expanded={open}
             className={cn(
-              'flex h-9 w-full items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 text-left text-sm shadow-sm transition-colors',
+              'flex h-9 w-full items-center justify-between gap-2 rounded-md border border-line bg-surface px-3 text-left text-sm shadow-sm transition-colors',
               'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600',
-              'disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400',
+              'disabled:cursor-not-allowed disabled:bg-wash disabled:text-faint',
             )}
           >
             <span className="min-w-0 truncate">
               {selected ? (
                 <>
-                  <span className="text-slate-800">
+                  <span className="text-strong">
                     {formatCivilDate(selected, { language, showEra: true })} {suffixOf(selected.calendar)}
                   </span>
-                  <span className="ml-2 text-xs text-slate-500">{dual(selected, language)}</span>
+                  <span className="ml-2 text-xs text-muted">{dual(selected, language)}</span>
                 </>
               ) : (
-                <span className="text-slate-400">{t('calendar.select_date')}</span>
+                <span className="text-faint">{t('calendar.select_date')}</span>
               )}
             </span>
-            <Calendar className="h-4 w-4 shrink-0 text-slate-400" aria-hidden="true" />
+            <Calendar className="h-4 w-4 shrink-0 text-faint" aria-hidden="true" />
           </button>
         }
       >
@@ -178,12 +178,12 @@ export function DateField({ value, onChange, label, required, id, calendar, disa
               <ArrowLeft2 className="h-4 w-4" />
             </Button>
             <div className="min-w-0 text-center">
-              <p className="truncate text-sm font-semibold text-slate-900">
+              <p className="truncate text-sm font-semibold text-strong">
                 {periodLabel(viewPeriod, language)} {viewPeriod.year}
                 {' '}
                 {suffixOf(viewPeriod.calendar)}
               </p>
-              <p className="truncate text-[11px] text-slate-600">
+              <p className="truncate text-[11px] text-soft">
                 {dualRange(viewPeriod, language)}
               </p>
             </div>
@@ -200,7 +200,7 @@ export function DateField({ value, onChange, label, required, id, calendar, disa
 
           <div className="mb-1 grid grid-cols-7 gap-1">
             {headers.map((header) => (
-              <div key={header} className="py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+              <div key={header} className="py-1 text-center text-[10px] font-semibold uppercase tracking-wide text-muted">
                 {header}
               </div>
             ))}
@@ -222,12 +222,12 @@ export function DateField({ value, onChange, label, required, id, calendar, disa
                       onClick={() => (inMonth ? pick(civil) : setViewPeriod(periodForDate(civil)))}
                       className={cn(
                         'tabular rounded-md py-1.5 text-xs transition-colors',
-                        inMonth ? 'text-slate-700' : 'text-slate-400',
+                        inMonth ? 'text-body' : 'text-faint',
                         inMonth && 'hover:bg-brand-50',
                         isSelectedDay
                           ? 'bg-brand-600 font-semibold text-white hover:bg-brand-600'
                           : isToday
-                            ? 'border border-gold-400 text-gold-700'
+                            ? 'border border-gold-400 text-gold-700 dark:text-gold-400'
                             : 'border border-transparent',
                       )}
                     >
@@ -239,7 +239,7 @@ export function DateField({ value, onChange, label, required, id, calendar, disa
             ))}
           </div>
 
-          <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
+          <div className="mt-3 flex items-center gap-2 border-t border-line-soft pt-3">
             <Button
               type="button"
               variant="secondary"

@@ -20,7 +20,13 @@
  */
 
 import * as echarts from 'echarts';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useSyncExternalStore } from 'react';
+
+import {
+  SERVER_RESOLVED_THEME,
+  getResolvedTheme,
+  subscribeTheme,
+} from '@/lib/theme';
 
 export type EChartsOption = echarts.EChartsOption;
 
@@ -28,7 +34,12 @@ export type EChartsOption = echarts.EChartsOption;
  *
  * Chart internals use the ink-tinted greys of the depth system (edge/
  * canvas family) rather than neutral slate, so a chart drawn inside a crisp
- * container belongs to the same world as the border around it. */
+ * container belongs to the same world as the border around it.
+ *
+ * These are LIGHT values: ECharts draws to a canvas and cannot read CSS
+ * variables, so when the theme is dark the `EChart` wrapper swaps each step
+ * for its night counterpart from `DARK_CHART_STEPS` below — by string
+ * identity, in one place, with the call sites none the wiser. */
 export const CHART_COLORS = {
   brand: '#1d6753',
   brandSoft: 'rgba(29, 103, 83, 0.10)',
@@ -43,6 +54,45 @@ export const CHART_COLORS = {
   axisLabel: '#475569',
   axisLine: '#b7c9c1',
 } as const;
+
+/** Night counterparts of the light chart steps (same key order). The empty
+ * ring / bar tracks (#eef4f0) and the red severity base join the map because
+ * they are hardcoded at their call sites — string identity makes that safe. */
+const DARK_CHART_STEPS: Record<string, string> = {
+  [CHART_COLORS.brand]: '#4fae90',
+  [CHART_COLORS.brandSoft]: 'rgba(79, 174, 144, 0.16)',
+  [CHART_COLORS.grid]: '#263830',
+  [CHART_COLORS.axisLabel]: '#9db3a7',
+  [CHART_COLORS.axisLine]: '#31463c',
+  [CHART_COLORS.danger]: '#ef4444',
+  '#eef4f0': '#22302a',
+  'rgba(13, 47, 40, 0.04)': 'rgba(255, 255, 255, 0.05)',
+};
+
+/** Walks an option and swaps every known light step for its dark step, then
+ * skins the tooltip (whose white default would glare on a dark card). */
+function retintOption(value: unknown): unknown {
+  if (typeof value === 'string') return DARK_CHART_STEPS[value] ?? value;
+  if (Array.isArray(value)) return value.map(retintOption);
+  if (value && typeof value === 'object') {
+    const out: Record<string, unknown> = {};
+    for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+      if (typeof child === 'function') {
+        out[key] = child;
+      } else {
+        out[key] = retintOption(child);
+      }
+    }
+    if ('trigger' in out && !('backgroundColor' in out)) {
+      // A tooltip this option never styled: give it the dark float treatment.
+      out.backgroundColor = '#1c2923';
+      out.borderColor = '#2e4239';
+      out.textStyle = { ...(out.textStyle as object | undefined), color: '#e9f1ec' };
+    }
+    return out;
+  }
+  return value;
+}
 
 const AXIS_LABEL = { fontSize: 11, color: CHART_COLORS.axisLabel };
 
@@ -67,6 +117,15 @@ export function EChart({
   const container = useRef<HTMLDivElement | null>(null);
   const chart = useRef<echarts.ECharts | null>(null);
 
+  // The theme, as React state: when it flips, the retinted option below
+  // changes and the update effect redraws the canvas.
+  const resolvedTheme = useSyncExternalStore(
+    subscribeTheme,
+    getResolvedTheme,
+    () => SERVER_RESOLVED_THEME,
+  );
+  const isDark = resolvedTheme === 'dark';
+
   // ECharts draws text on a canvas, which never inherits the CSS font stack:
   // read the composed family from the container (Plus Jakarta Sans via
   // --font-sans on <body>) and set it as the global ECharts default.
@@ -89,7 +148,7 @@ export function EChart({
     document.fonts?.ready
       .then(() => {
         if (chart.current && container.current) {
-          chart.current.setOption(fontAwareOption(latestOption.current), true);
+          chart.current.setOption(fontAwareOption(themedOption.current), true);
           chart.current.resize();
         }
       })
@@ -102,13 +161,15 @@ export function EChart({
   }, []);
 
   // Keep the latest option in a ref so the font-ready redraw (above) and the
-  // update effect below share one code path.
-  const latestOption = useRef(option);
-  latestOption.current = option;
+  // update effect below share one code path. The retint runs on every option
+  // identity change (and on theme flips), so the canvas never shows a stale
+  // palette.
+  const themedOption = useRef(option);
+  themedOption.current = isDark ? (retintOption(option) as EChartsOption) : option;
 
   useEffect(() => {
-    chart.current?.setOption(fontAwareOption(option), true);
-  }, [option]);
+    chart.current?.setOption(fontAwareOption(themedOption.current), true);
+  }, [option, isDark]);
 
   // The summary rides inside the image's accessible name instead of a hidden
   // DOM table: screen readers still hear the numbers, but nothing renders (or
@@ -206,10 +267,10 @@ export function ChargesByStatusChart({
           }}
         />
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-0.5">
-          <p className="text-lg font-semibold tracking-tight text-slate-900 tabular">
+          <p className="text-lg font-semibold tracking-tight text-strong tabular">
             {currencyLabel} {Math.round(total).toLocaleString()}
           </p>
-          <p className="text-[11px] text-slate-500">{totalLabel}</p>
+          <p className="text-[11px] text-muted">{totalLabel}</p>
         </div>
       </div>
       <ul className="mt-3 space-y-1.5">
@@ -220,11 +281,11 @@ export function ChargesByStatusChart({
               className="h-2.5 w-2.5 shrink-0 rounded-[4px]"
               style={{ background: part.color }}
             />
-            <span className="truncate text-slate-600">{part.name}</span>
-            <span className="ml-auto shrink-0 font-medium text-slate-900 tabular">{share(part.value)}</span>
+            <span className="truncate text-soft">{part.name}</span>
+            <span className="ml-auto shrink-0 font-medium text-strong tabular">{share(part.value)}</span>
           </li>
         ))}
-        <li className="flex items-center gap-2 border-t border-slate-100 pt-1.5 text-[11px] text-slate-500">
+        <li className="flex items-center gap-2 border-t border-line-soft pt-1.5 text-[11px] text-muted">
           <span className="truncate">{`${count} ${countLabel}`}</span>
         </li>
       </ul>
@@ -414,8 +475,8 @@ export function ArrearsChart({
   return (
     <div>
       <div className="mb-1 flex items-baseline justify-end gap-2">
-        <span className="text-[11px] text-slate-500">{totalLabel}</span>
-        <span className="tabular text-sm font-semibold text-slate-900">
+        <span className="text-[11px] text-muted">{totalLabel}</span>
+        <span className="tabular text-sm font-semibold text-strong">
           {currencyLabel} {Math.round(total).toLocaleString()}
         </span>
       </div>
@@ -488,8 +549,8 @@ export function ArrearsChart({
               className="h-2.5 w-2.5 shrink-0 rounded-[4px]"
               style={{ background: index === 0 ? CHART_COLORS.gold : index >= buckets.length - 2 ? CHART_COLORS.danger : CHART_COLORS.warning }}
             />
-            <span className="truncate text-slate-600">{bucket.label}</span>
-            <span className="ml-auto shrink-0 font-medium text-slate-900 tabular">
+            <span className="truncate text-soft">{bucket.label}</span>
+            <span className="ml-auto shrink-0 font-medium text-strong tabular">
               {total > 0 ? `${Math.round((bucket.value / total) * 100)}%` : '0%'}
             </span>
           </li>

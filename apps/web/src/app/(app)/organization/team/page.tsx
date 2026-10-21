@@ -93,7 +93,7 @@ export default function TeamPage() {
                   onChange={(event) => setInvite((current) => ({ ...current, fullName: event.target.value }))}
                 />
               </div>
-              <p className="sm:col-span-2 text-xs text-slate-500">
+              <p className="sm:col-span-2 text-xs text-muted">
                 {t('user.invite_hint')}
               </p>
               <div className="sm:col-span-2">
@@ -131,7 +131,7 @@ export default function TeamPage() {
               <tbody>
                 {members.data?.members.map((member) => (
                   <tr key={member.id}>
-                    <Td className="font-medium text-slate-900">{member.fullName}</Td>
+                    <Td className="font-medium text-strong">{member.fullName}</Td>
                     <Td className="text-xs">{member.email}</Td>
                     <Td>
                       <Badge tone={member.role === 'owner_admin' ? 'brand' : 'neutral'}>

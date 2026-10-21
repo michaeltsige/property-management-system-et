@@ -28,7 +28,7 @@ export function DoorLanguagePicker() {
         className="rounded-full border border-white/30 bg-ink-950/40 py-1.5 pl-3 pr-2 text-xs font-medium text-white shadow-float backdrop-blur-sm transition-colors hover:bg-ink-950/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
       >
         {LANGUAGES.map((option) => (
-          <option key={option.code} value={option.code} className="text-slate-900">
+          <option key={option.code} value={option.code} className="text-strong">
             {option.label} · {option.english}
           </option>
         ))}

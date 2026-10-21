@@ -210,13 +210,13 @@ export default function LeasesPage() {
                 {visibleLeases.map((lease) => (
                   <tr key={lease.id}>
                     <Td>
-                      <span className="font-medium text-slate-900">{lease.unit.label}</span>
-                      <span className="block text-[11px] text-slate-500">{lease.unit.property.name}</span>
+                      <span className="font-medium text-strong">{lease.unit.label}</span>
+                      <span className="block text-[11px] text-muted">{lease.unit.property.name}</span>
                     </Td>
                     <Td>
                       {lease.tenant.fullName}
                       {lease.tenant.phone ? (
-                        <span className="block text-[11px] text-slate-500 tabular">{lease.tenant.phone}</span>
+                        <span className="block text-[11px] text-muted tabular">{lease.tenant.phone}</span>
                       ) : null}
                     </Td>
                     <Td className="tabular">
@@ -236,8 +236,8 @@ export default function LeasesPage() {
                         'tabular',
                         // Owed reads red, credit reads grey: a negative balance is
                         // money the landlord holds, not a debt of the tenant.
-                        Number(lease.balanceMinor) > 0 && 'font-medium text-red-600',
-                        Number(lease.balanceMinor) < 0 && 'text-slate-400',
+                        Number(lease.balanceMinor) > 0 && 'font-medium text-red-600 dark:text-red-400',
+                        Number(lease.balanceMinor) < 0 && 'text-faint',
                       )}
                       title={
                         Number(lease.balanceMinor) < 0 ? t('money.balance_credit_hint') : undefined
@@ -323,11 +323,11 @@ export default function LeasesPage() {
 
           <div className="space-y-1">
             <Label>{t('lease.billing_calendar')}</Label>
-            <p className="flex h-9 items-center rounded-md border border-slate-200 bg-slate-50 px-3 text-sm text-slate-600">
+            <p className="flex h-9 items-center rounded-md border border-line bg-wash px-3 text-sm text-soft">
               {billingCalendar === 'gregorian' ? t('calendar.gregorian') : t('calendar.ethiopian')}
-              <span className="ml-1 text-xs text-slate-400">({t('common.organization_default')})</span>
+              <span className="ml-1 text-xs text-faint">({t('common.organization_default')})</span>
             </p>
-            <p className="text-[11px] text-slate-500">{t('lease.billing_calendar_inherited')}</p>
+            <p className="text-[11px] text-muted">{t('lease.billing_calendar_inherited')}</p>
           </div>
 
           <div className="space-y-1">
@@ -409,7 +409,7 @@ export default function LeasesPage() {
               ))}
             </Select>
             {depositMode === 'months_of_rent' ? (
-              <p className="text-[11px] text-slate-500">{t('lease.deposit_advance_hint')}</p>
+              <p className="text-[11px] text-muted">{t('lease.deposit_advance_hint')}</p>
             ) : null}
           </div>
 
@@ -478,7 +478,7 @@ export default function LeasesPage() {
             value={terminateReason}
             onChange={(event) => setTerminateReason(event.target.value)}
           />
-          <p className="text-[11px] text-slate-500">{t('lease.terminate_hint')}</p>
+          <p className="text-[11px] text-muted">{t('lease.terminate_hint')}</p>
         </div>
         {error ? (
           <Alert tone="danger" className="mt-3">

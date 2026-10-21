@@ -81,7 +81,7 @@ export function OwnerEditor({ owner, onSaved }: { owner?: Owner; onSaved: () => 
           onChange={(e) => setFee(e.target.value)}
           aria-describedby={`${prefix}-hint`}
         />
-        <p id={`${prefix}-hint`} className="text-xs text-slate-500">
+        <p id={`${prefix}-hint`} className="text-xs text-muted">
           {t('portfolio.fee_hint')}
         </p>
       </div>

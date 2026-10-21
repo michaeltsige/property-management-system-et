@@ -67,6 +67,7 @@ import { Button } from './ui';
 import { GlobalSearch } from './global-search';
 import { PropertySwitcher } from './property-switcher';
 import { TaskPanel } from './task-panel';
+import { ThemeToggle } from './theme-toggle';
 import { WorkspaceTabs, isTabbedRoute } from './workspace-tabs';
 import { openWorkspaceTab } from '@/lib/workspace-tabs';
 
@@ -205,7 +206,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!ready || !session) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
+      <div className="flex min-h-screen items-center justify-center text-sm text-muted">
         {t('common.loading')}
       </div>
     );
@@ -225,7 +226,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   const brand = (
     <div className="flex min-w-0 items-center gap-3">
-      <Logo size={48} className="shrink-0" />
+      <Logo size={48} onDark className="shrink-0" />
       <p className="truncate text-base font-semibold text-white">{t('app.name')}</p>
     </div>
   );
@@ -255,7 +256,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <span className="relative shrink-0">
               <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-ink-800 ring-1 ring-white/10">
-                <Logo size={34} />
+                <Logo size={34} onDark />
               </span>
               <span
                 aria-hidden="true"
@@ -279,23 +280,23 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             side="top"
             align="start"
             sideOffset={8}
-            className="z-50 w-64 rounded-xl bg-white p-1.5 shadow-float"
+            className="z-50 w-64 rounded-xl bg-surface p-1.5 shadow-float"
           >
             <DropdownMenu.Label className="px-2.5 py-2">
-              <span className="block truncate text-sm font-semibold text-slate-900">
+              <span className="block truncate text-sm font-semibold text-strong">
                 {session.user.fullName}
               </span>
-              <span className="block truncate text-xs text-slate-500">
+              <span className="block truncate text-xs text-muted">
                 {t(`role.${session.role}` as never)}
               </span>
             </DropdownMenu.Label>
-            <DropdownMenu.Separator className="my-1 h-px bg-slate-100" />
+            <DropdownMenu.Separator className="my-1 h-px bg-wash-strong" />
             <DropdownMenu.Item asChild>
               <Link
                 href="/organization"
-                className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-slate-700 outline-none transition-colors hover:bg-slate-100 focus:bg-slate-100"
+                className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-body outline-none transition-colors hover:bg-wash-strong focus:bg-wash-strong"
               >
-                <Setting2 className="h-4 w-4 text-slate-500" aria-hidden="true" />
+                <Setting2 className="h-4 w-4 text-muted" aria-hidden="true" />
                 {t('nav.organization')}
               </Link>
             </DropdownMenu.Item>
@@ -303,7 +304,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               onSelect={() => {
                 void handleSignOut();
               }}
-              className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-red-600 outline-none transition-colors hover:bg-red-50 focus:bg-red-50"
+              className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-red-600 dark:text-red-400 outline-none transition-colors hover:bg-red-50 focus:bg-red-50 dark:hover:bg-red-950/40 dark:focus:bg-red-950/40"
             >
               <Logout className="h-4 w-4" aria-hidden="true" />
               {t('auth.sign_out')}
@@ -318,7 +319,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-canvas">
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-brand-800 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-brand-800 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
       >
         {t('a11y.skip_to_content')}
       </a>
@@ -327,7 +328,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           scope sits at the top (it reframes every list below it) and the
           account card at the bottom, so the rail reads top-to-bottom as:
           workspace → navigation → account. */}
-      <aside className="hidden h-full w-72 shrink-0 flex-col bg-ink-900 lg:flex">
+      <aside className="hidden h-full w-72 shrink-0 flex-col bg-ink-900 dark:border-r dark:border-white/[0.06] lg:flex">
         <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-3.5">{brand}</div>
         <div className="border-b border-white/10 px-3 py-3">
           <PropertySwitcher id="sidebar-property-context" />
@@ -369,7 +370,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex h-full min-w-0 flex-1 flex-col">
         {/* The top bar carries no border: the gradient hairline under it does
             that job with a little brand warmth. */}
-        <header className="flex items-center gap-3 bg-white px-4 py-2.5">
+        <header className="flex items-center gap-3 bg-surface px-4 py-2.5">
           <Button
             variant="ghost"
             size="icon"
@@ -381,10 +382,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <MenuIcon className="h-5 w-5" />
           </Button>
-          <span className="truncate text-sm font-semibold text-slate-900 lg:hidden">{t('app.name')}</span>
+          <span className="truncate text-sm font-semibold text-strong lg:hidden">{t('app.name')}</span>
           <div className="flex min-w-0 flex-1 justify-center md:px-6">
             <GlobalSearch />
           </div>
+          <ThemeToggle />
         </header>
         <div
           aria-hidden="true"
@@ -398,7 +400,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </main>
         </div>
 
-        <footer className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-2 text-[11px] text-slate-500">
+        <footer className="flex items-center justify-between border-t border-line bg-surface px-4 py-2 text-[11px] text-muted">
           <span className="truncate">
             {t('app.name')} · {session.organization.slug}
           </span>
@@ -432,8 +434,8 @@ export function PageHeader({
   return (
     <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900">{title}</h1>
-        {description ? <p className="mt-0.5 text-sm text-slate-500">{description}</p> : null}
+        <h1 className="text-xl font-semibold tracking-tight text-strong">{title}</h1>
+        {description ? <p className="mt-0.5 text-sm text-muted">{description}</p> : null}
       </div>
       {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
     </div>

@@ -70,10 +70,10 @@ function ChapaSandboxCheckout() {
 
   return (
     <div className="min-h-screen bg-canvas">
-      <header className="border-b border-slate-200 bg-white">
+      <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3">
           <Logo size={34} onDark={false} />
-          <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+          <p className="flex items-center gap-2 text-sm font-semibold text-strong">
             {t('portal.chapa_title')}
             <Badge tone="warning">{t('org.gateway_mode_test')}</Badge>
           </p>
@@ -98,17 +98,17 @@ function ChapaSandboxCheckout() {
               {completed || alreadySucceeded ? (
                 <>
                   <div>
-                    <p className="text-sm font-semibold text-slate-900">{t('portal.payment_success')}</p>
-                    <p className="mt-1 text-2xl font-semibold tabular text-slate-900">
+                    <p className="text-sm font-semibold text-strong">{t('portal.payment_success')}</p>
+                    <p className="mt-1 text-2xl font-semibold tabular text-strong">
                       {formatAmount(intent.data.amountMinor, intent.data.currency, language)}
                     </p>
                     {completed ? (
-                      <p className="mt-1 text-xs text-slate-500">
+                      <p className="mt-1 text-xs text-muted">
                         {t('portal.payment_receipt', { receipt: completed.receiptNumber })}
                       </p>
                     ) : null}
                   </div>
-                  <p className="text-xs text-slate-500">{t('portal.payment_success_hint')}</p>
+                  <p className="text-xs text-muted">{t('portal.payment_success_hint')}</p>
                   <div className="space-y-2">
                     <a
                       href={`/api/v1/portal/payments/${encodeURIComponent(providerRef)}/receipt.pdf`}
@@ -126,11 +126,11 @@ function ChapaSandboxCheckout() {
               ) : (
                 <>
                   <div>
-                    <p className="text-xs text-slate-500">{t('portal.due_balance')}</p>
-                    <p className="mt-1 text-2xl font-semibold tabular text-slate-900">
+                    <p className="text-xs text-muted">{t('portal.due_balance')}</p>
+                    <p className="mt-1 text-2xl font-semibold tabular text-strong">
                       {formatAmount(intent.data.amountMinor, intent.data.currency, language)}
                     </p>
-                    <p className="mt-1 text-xs text-slate-500">
+                    <p className="mt-1 text-xs text-muted">
                       {session.organization.name} · {intent.data.providerRef}
                     </p>
                   </div>
@@ -138,7 +138,7 @@ function ChapaSandboxCheckout() {
                     {(['telebirr', 'cbe_birr', 'amole', 'chapa'] as const).map((method) => (
                       <span
                         key={method}
-                        className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs font-medium text-slate-600"
+                        className="rounded-full border border-line bg-wash px-2.5 py-1 text-xs font-medium text-soft"
                       >
                         {t(`payment.method.${method}` as never)}
                       </span>

@@ -143,7 +143,7 @@ export function GlobalSearch() {
   return (
     <div ref={rootRef} className="relative w-full max-w-md">
       <SearchNormal1
-        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-faint"
         aria-hidden="true"
       />
       <input
@@ -155,7 +155,7 @@ export function GlobalSearch() {
         aria-activedescendant={hits[active] ? `search-hit-${hits[active].id}` : undefined}
         aria-label={t('search.placeholder')}
         placeholder={t('search.placeholder')}
-        className="h-9 w-full rounded-full border border-slate-200 bg-slate-50 pl-9 pr-16 text-sm transition-colors focus-visible:border-brand-500 focus-visible:bg-white focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
+        className="h-9 w-full rounded-full border border-line bg-wash pl-9 pr-16 text-sm transition-colors focus-visible:border-brand-500 focus-visible:bg-surface focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500"
         value={query}
         onChange={(event) => {
           setQuery(event.target.value);
@@ -178,7 +178,7 @@ export function GlobalSearch() {
       />
       <kbd
         aria-hidden="true"
-        className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded-md border border-slate-200 bg-white px-1.5 py-0.5 font-sans text-[10px] font-medium text-slate-500 sm:block"
+        className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded-md border border-line bg-surface px-1.5 py-0.5 font-sans text-[10px] font-medium text-muted sm:block"
       >
         {shortcutHint}
       </kbd>
@@ -187,10 +187,10 @@ export function GlobalSearch() {
           id="global-search-results"
           role="listbox"
           aria-label={t('search.placeholder')}
-          className="absolute z-30 mt-1 w-full rounded-md bg-white py-1 shadow-float"
+          className="absolute z-30 mt-1 w-full rounded-md bg-surface py-1 shadow-float"
         >
           {hits.length === 0 ? (
-            <li className="px-3 py-2 text-sm text-slate-500">
+            <li className="px-3 py-2 text-sm text-muted">
               {data ? t('search.no_results') : t('app.loading')}
             </li>
           ) : (
@@ -209,8 +209,8 @@ export function GlobalSearch() {
                   index === active ? 'cursor-pointer bg-brand-50 px-3 py-1.5' : 'cursor-pointer px-3 py-1.5'
                 }
               >
-                <p className="text-sm text-slate-800">{hit.title}</p>
-                <p className="text-[11px] text-slate-500">
+                <p className="text-sm text-strong">{hit.title}</p>
+                <p className="text-[11px] text-muted">
                   {t(`search.${hit.kind}` as never)} · {hit.subtitle}
                 </p>
               </li>

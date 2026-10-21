@@ -192,7 +192,7 @@ export default function PaymentsPage() {
               <tbody>
                 {rows.map((payment) => (
                   <tr key={payment.id}>
-                    <Td className="font-medium tabular text-slate-900">{payment.receiptNumber ?? '—'}</Td>
+                    <Td className="font-medium tabular text-strong">{payment.receiptNumber ?? '—'}</Td>
                     <Td>{t(`payment.method.${payment.method}` as never)}</Td>
                     <Td className="tabular">
                       {formatAmount(payment.amountMinor, payment.currency, language)}
@@ -340,7 +340,7 @@ export default function PaymentsPage() {
             value={reverseReason}
             onChange={(event) => setReverseReason(event.target.value)}
           />
-          <p className="text-[11px] text-slate-500">{t('payment.reverse_hint')}</p>
+          <p className="text-[11px] text-muted">{t('payment.reverse_hint')}</p>
           {error ? <Alert tone="danger">{error}</Alert> : null}
         </div>
       </Modal>

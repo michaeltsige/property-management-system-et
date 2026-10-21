@@ -105,8 +105,8 @@ export function PaymentProofsReview({ onChanged }: { onChanged?: () => void }) {
   return (
     <Card>
       <CardContent className="p-0">
-        <div className="border-b border-slate-200 px-4 pt-3">
-          <p className="pb-3 text-sm font-medium text-slate-900">{t('payment.proof_review_title')}</p>
+        <div className="border-b border-line px-4 pt-3">
+          <p className="pb-3 text-sm font-medium text-strong">{t('payment.proof_review_title')}</p>
           <div role="tablist" aria-label={t('payment.proof_review_title')} className="flex gap-1">
             {PAYMENT_PROOF_STATUSES.map((status) => (
               <button
@@ -119,7 +119,7 @@ export function PaymentProofsReview({ onChanged }: { onChanged?: () => void }) {
                   'rounded-t-md border-b-2 px-3 py-2 text-sm transition-colors',
                   tab === status
                     ? 'border-brand-600 font-medium text-brand-800'
-                    : 'border-transparent text-slate-500 hover:text-slate-700',
+                    : 'border-transparent text-muted hover:text-body',
                 )}
               >
                 {t(`payment.proof_status.${status}` as never)}
@@ -170,13 +170,13 @@ export function PaymentProofsReview({ onChanged }: { onChanged?: () => void }) {
                   proof.approvedAmountMinor !== null && proof.approvedAmountMinor !== proof.amountMinor;
                 return (
                   <tr key={proof.id}>
-                    <Td className="font-medium text-slate-900">{proof.tenant?.fullName ?? '—'}</Td>
+                    <Td className="font-medium text-strong">{proof.tenant?.fullName ?? '—'}</Td>
                     <Td className="tabular">
                       {proof.approvedAmountMinor !== null ? (
                         partial ? (
                           <span title={`${proof.amountMinor} claimed`}>
                             {formatAmount(proof.approvedAmountMinor, proof.currency, language)}
-                            <span className="ml-1 text-xs text-slate-400">
+                            <span className="ml-1 text-xs text-faint">
                               {t('payment.proof_approved_of_claimed', {
                                 claimed: formatAmount(proof.amountMinor, proof.currency, language),
                               })}
@@ -197,7 +197,7 @@ export function PaymentProofsReview({ onChanged }: { onChanged?: () => void }) {
                         <div className="space-y-0.5">
                           <span>{proof.reviewedAt ? formatDate(proof.reviewedAt, { language, calendar }) : '—'}</span>
                           {proof.reviewNotes ? (
-                            <p className="max-w-52 truncate text-xs text-slate-500" title={proof.reviewNotes}>
+                            <p className="max-w-52 truncate text-xs text-muted" title={proof.reviewNotes}>
                               {proof.reviewNotes}
                             </p>
                           ) : null}
@@ -280,7 +280,7 @@ export function PaymentProofsReview({ onChanged }: { onChanged?: () => void }) {
             value={approveAmount}
             onChange={setApproveAmount}
           />
-          <p className="text-[11px] text-slate-500">{t('payment.proof_partial_hint')}</p>
+          <p className="text-[11px] text-muted">{t('payment.proof_partial_hint')}</p>
           <div className="space-y-1">
             <Label htmlFor="approve-notes">{t('payment.proof_approval_notes')}</Label>
             <Input

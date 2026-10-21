@@ -133,7 +133,7 @@ export function PaymentGatewaySettings() {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <p className="text-xs text-slate-500">{t('org.gateway_hint')}</p>
+        <p className="text-xs text-muted">{t('org.gateway_hint')}</p>
 
         {message ? <Alert tone="success">{message}</Alert> : null}
         {error ? <Alert tone="danger">{error}</Alert> : null}
@@ -204,7 +204,7 @@ export function PaymentGatewaySettings() {
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-slate-500">{t('org.gateway_credentials_hint')}</p>
+              <p className="text-[11px] text-muted">{t('org.gateway_credentials_hint')}</p>
             </div>
           ) : null}
 

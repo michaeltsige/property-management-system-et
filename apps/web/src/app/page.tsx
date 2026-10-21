@@ -16,5 +16,5 @@ export default function HomePage() {
     router.replace((session ?? loadSession()) ? '/dashboard' : '/login');
   }, [ready, session, router]);
 
-  return <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">Loading…</div>;
+  return <div className="flex min-h-screen items-center justify-center text-sm text-muted">Loading…</div>;
 }

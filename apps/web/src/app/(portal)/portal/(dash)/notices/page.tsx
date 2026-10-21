@@ -39,7 +39,7 @@ export default function PortalNoticesPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight text-slate-900">{t('portal.notices_title')}</h1>
+      <h1 className="text-xl font-semibold tracking-tight text-strong">{t('portal.notices_title')}</h1>
 
       <Card>
         <CardContent className="p-0">
@@ -62,19 +62,19 @@ export default function PortalNoticesPage() {
               <EmptyState title={t('portal.notices_empty')} description="" />
             </div>
           ) : (
-            <ul className="divide-y divide-slate-100">
+            <ul className="divide-y divide-line-soft">
               {(notices.data?.items ?? []).map((notice) => (
                 <li key={notice.id} className="flex items-start gap-3 px-4 py-3">
                   {notice.templateKey === 'notification.payment_received' ? (
-                    <TickCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-600" aria-hidden="true" />
+                    <TickCircle className="mt-0.5 h-4 w-4 shrink-0 text-brand-600 dark:text-brand-300" aria-hidden="true" />
                   ) : (
                     <Warning2 className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" aria-hidden="true" />
                   )}
                   <div className="min-w-0">
-                    <p className="text-sm text-slate-800">
+                    <p className="text-sm text-strong">
                       {t(notice.templateKey as never, noticeValues(notice.payload) as never)}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-slate-400">
+                    <p className="mt-0.5 text-[11px] text-faint">
                       {formatDate(notice.createdAt, { language, calendar })}
                     </p>
                   </div>

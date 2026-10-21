@@ -89,7 +89,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                     : 'text-slate-300 hover:bg-white/5 hover:text-white',
                 )}
               >
-                <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-white' : 'text-slate-400')} />
+                <Icon className={cn('h-5 w-5 shrink-0', active ? 'text-white' : 'text-faint')} />
                 <span className="truncate">{t(item.labelKey as never)}</span>
               </Link>
             </li>
@@ -146,8 +146,8 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     return (
       <div className="flex min-h-screen items-center justify-center bg-canvas px-4">
         <div className="w-full max-w-sm space-y-3 text-center">
-          <p className="text-sm text-slate-600">{t('portal.not_tenant')}</p>
-          <Link href="/portal/login" className="text-sm font-medium text-brand-700 underline">
+          <p className="text-sm text-soft">{t('portal.not_tenant')}</p>
+          <Link href="/portal/login" className="text-sm font-medium text-brand-700 dark:text-brand-300 underline">
             {t('portal.title')}
           </Link>
         </div>
@@ -182,11 +182,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </span>
           <span className="min-w-0 flex-1">
             <span className="block truncate text-sm font-semibold text-white">{session.user.fullName}</span>
-            <span className="block truncate text-xs text-slate-400">{t('role.tenant')}</span>
+            <span className="block truncate text-xs text-faint">{t('role.tenant')}</span>
           </span>
           <ArrowRight2
             aria-hidden="true"
-            className="h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200 group-data-[state=open]:rotate-90"
+            className="h-4 w-4 shrink-0 text-muted transition-transform duration-200 group-data-[state=open]:rotate-90"
           />
         </button>
       </DropdownMenu.Trigger>
@@ -195,20 +195,20 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           side="top"
           align="start"
           sideOffset={8}
-          className="z-50 w-60 rounded-xl bg-white p-1.5 shadow-float"
+          className="z-50 w-60 rounded-xl bg-surface p-1.5 shadow-float"
         >
           <DropdownMenu.Label className="px-2.5 py-2">
-            <span className="block truncate text-sm font-semibold text-slate-900">
+            <span className="block truncate text-sm font-semibold text-strong">
               {session.user.fullName}
             </span>
-            <span className="block truncate text-xs text-slate-500">{session.organization.name}</span>
+            <span className="block truncate text-xs text-muted">{session.organization.name}</span>
           </DropdownMenu.Label>
-          <DropdownMenu.Separator className="my-1 h-px bg-slate-100" />
+          <DropdownMenu.Separator className="my-1 h-px bg-wash-strong" />
           <DropdownMenu.Item
             onSelect={() => {
               void handleSignOut();
             }}
-            className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-red-600 outline-none transition-colors hover:bg-red-50 focus:bg-red-50"
+            className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-red-600 dark:text-red-400 outline-none transition-colors hover:bg-red-50 focus:bg-red-50"
           >
             <Logout className="h-4 w-4" aria-hidden="true" />
             {t('auth.sign_out')}
@@ -222,7 +222,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     <div className="flex h-screen overflow-hidden bg-canvas">
       <a
         href="#portal-main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-white focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-brand-800 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-brand-800 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
       >
         {t('a11y.skip_to_content')}
       </a>
@@ -247,7 +247,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-slate-400 hover:bg-white/10 hover:text-white"
+                  className="text-faint hover:bg-white/10 hover:text-white"
                   aria-label={t('common.close')}
                 >
                   <CloseSquare className="h-4 w-4" />
@@ -262,7 +262,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
       <div className="flex h-full min-w-0 flex-1 flex-col">
         {/* Phone-only top bar; on desktop the rail carries the identity. */}
-        <header className="flex items-center gap-3 border-b border-edge bg-white px-4 py-2.5 lg:hidden">
+        <header className="flex items-center gap-3 border-b border-edge bg-surface px-4 py-2.5 lg:hidden">
           <Button
             variant="ghost"
             size="icon"
@@ -275,7 +275,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           </Button>
           <div className="flex min-w-0 items-center gap-2">
             <Logo size={28} onDark={false} className="shrink-0" />
-            <span className="truncate text-sm font-semibold text-slate-900">{t('portal.title')}</span>
+            <span className="truncate text-sm font-semibold text-strong">{t('portal.title')}</span>
           </div>
         </header>
 
@@ -286,7 +286,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         {/* The staff shell's footer strip, in the tenant's register: who this
             portal belongs to on the left, today in their calendar on the
             right. showEra appends the E.C./G.C. suffix itself. */}
-        <footer className="flex items-center justify-between border-t border-slate-200 bg-white px-4 py-2 text-[11px] text-slate-500">
+        <footer className="flex items-center justify-between border-t border-line bg-surface px-4 py-2 text-[11px] text-muted">
           <span className="truncate">
             {t('portal.title')} · {session.organization.name}
           </span>

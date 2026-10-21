@@ -50,7 +50,7 @@ export default function PortalStatementPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight text-slate-900">{t('portal.statement_title')}</h1>
+      <h1 className="text-xl font-semibold tracking-tight text-strong">{t('portal.statement_title')}</h1>
 
       {/* The account at a glance — same stat-card language as the staff
           dashboard, fed by this tenant's own numbers only. "Amount due" comes
@@ -82,7 +82,7 @@ export default function PortalStatementPage() {
       <Card>
         <CardHeader>
           <CardTitle>{t('portal.statement_title')}</CardTitle>
-          <p className="text-xs text-slate-500">{t('portal.statement_hint')}</p>
+          <p className="text-xs text-muted">{t('portal.statement_hint')}</p>
         </CardHeader>
         <CardContent className="p-0">
           {charges.loading ? (
@@ -120,11 +120,11 @@ export default function PortalStatementPage() {
                 {(charges.data?.items ?? []).map((charge) => (
                   <tr key={charge.id}>
                     <Td className="max-w-56">
-                      <span className="block truncate font-medium text-slate-900">
+                      <span className="block truncate font-medium text-strong">
                         {charge.description ?? charge.type}
                       </span>
                     </Td>
-                    <Td className="text-slate-600">
+                    <Td className="text-soft">
                       {/* A period is an org-billing-calendar concept (month 13 exists in the
                         Ethiopian calendar), so it renders in the organization's
                         calendar, not the viewer's display preference. */}
@@ -133,10 +133,10 @@ export default function PortalStatementPage() {
                         : '—'}
                     </Td>
                     <Td>{formatDate(charge.dueDate, { language, calendar })}</Td>
-                    <Td className="tabular font-medium text-slate-900">
+                    <Td className="tabular font-medium text-strong">
                       {formatAmount(charge.amountMinor, charge.currency, language)}
                     </Td>
-                    <Td className="tabular text-slate-600">
+                    <Td className="tabular text-soft">
                       {formatAmount(charge.paidMinor, charge.currency, language)}
                     </Td>
                     <Td>

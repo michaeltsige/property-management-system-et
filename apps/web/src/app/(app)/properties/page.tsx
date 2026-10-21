@@ -119,7 +119,7 @@ export default function PropertiesPage() {
           <h2 className="text-lg font-semibold">{t('portfolio.owners')}</h2>
           {!owners.data?.owners.length && <p>{t('portfolio.no_owners')}</p>}
           {owners.data?.owners.map((owner) => (
-            <details key={owner.id} className="rounded-md border bg-white p-3">
+            <details key={owner.id} className="rounded-md border bg-surface p-3">
               <summary className="cursor-pointer">
                 {owner.name}
                 {owner.managementFeeBps !== null ? ` · ${feeText(owner.managementFeeBps)}%` : ''}
@@ -136,7 +136,7 @@ export default function PropertiesPage() {
             </details>
           ))}
           {canWriteOwners && (
-            <details className="rounded-md border bg-white p-3">
+            <details className="rounded-md border bg-surface p-3">
               <summary className="cursor-pointer">{t('portfolio.add_owner')}</summary>
               <OwnerEditor onSaved={owners.reload} />
             </details>
@@ -173,7 +173,7 @@ export default function PropertiesPage() {
               <tbody>
                 {visibleProperties.map((property) => (
                   <tr key={property.id}>
-                    <Td className="font-medium text-slate-900">{property.name}</Td>
+                    <Td className="font-medium text-strong">{property.name}</Td>
                     {managed && <Td>{property.owner?.name ?? '—'}</Td>}
                     <Td>
                       <Button variant="secondary" onClick={() => setDetailsId(property.id)}>

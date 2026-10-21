@@ -54,7 +54,7 @@ export default function OnboardingPage() {
       <h1 className="mb-4 text-xl font-semibold">{t('onboarding.first_property')}</h1>
       <Card>
         <CardContent>
-          <p className="mb-4 text-sm text-slate-600">{t('onboarding.property_hint')}</p>
+          <p className="mb-4 text-sm text-soft">{t('onboarding.property_hint')}</p>
           <form
             className="space-y-3"
             onSubmit={(e) => {

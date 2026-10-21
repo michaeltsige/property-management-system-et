@@ -98,8 +98,8 @@ export default function RegisterPage() {
     <div className="flex min-h-screen items-center justify-center bg-canvas px-4 py-8">
       <div className="w-full max-w-md">
         <div className="mb-6 text-center">
-          <h1 className="text-xl font-semibold tracking-tight text-slate-900">{t('auth.register_organization')}</h1>
-          <p className="text-xs text-slate-500">{t('app.tagline')}</p>
+          <h1 className="text-xl font-semibold tracking-tight text-strong">{t('auth.register_organization')}</h1>
+          <p className="text-xs text-muted">{t('app.tagline')}</p>
         </div>
 
         <Card>
@@ -109,7 +109,7 @@ export default function RegisterPage() {
                 <li
                   key={name}
                   aria-current={step === i ? 'step' : undefined}
-                  className={step === i ? 'font-semibold text-brand-700' : ''}
+                  className={step === i ? 'font-semibold text-brand-700 dark:text-brand-300' : ''}
                 >
                   {i + 1}. {t(`onboarding.${name}` as never)}
                 </li>
@@ -198,7 +198,7 @@ export default function RegisterPage() {
                     value={form.password}
                     onChange={(event) => update('password', event.target.value)}
                   />
-                  <p className="text-[11px] text-slate-500">
+                  <p className="text-[11px] text-muted">
                     At least 10 characters, including at least one letter and one number.
                   </p>
                 </div>
@@ -218,7 +218,7 @@ export default function RegisterPage() {
                         </option>
                       ))}
                     </Select>
-                    <p className="text-[11px] text-slate-500">{t('org.default_currency_hint')}</p>
+                    <p className="text-[11px] text-muted">{t('org.default_currency_hint')}</p>
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="language">{t('org.default_language')}</Label>
@@ -306,8 +306,8 @@ export default function RegisterPage() {
           </CardContent>
         </Card>
 
-        <p className="mt-4 text-center text-xs text-slate-500">
-          <Link href="/login" className="text-brand-700 underline-offset-2 hover:underline">
+        <p className="mt-4 text-center text-xs text-muted">
+          <Link href="/login" className="text-brand-700 dark:text-brand-300 underline-offset-2 hover:underline">
             {t('auth.sign_in')}
           </Link>
         </p>

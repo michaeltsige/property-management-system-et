@@ -23,6 +23,10 @@ export const EN_CATALOG = {
   'unit.no_work_orders': 'No maintenance on this unit yet.',
   'tabs.label': 'Open workspaces',
   'tabs.close': 'Close tab',
+
+  // Theme toggle (the device light/dark switch); non-English entries are
+  // unreviewed machine drafts.
+  'theme.toggle': 'Toggle dark mode',
   'dashboard.vacant_units': 'Vacant units',
   'dashboard.view_units': 'View units',
 

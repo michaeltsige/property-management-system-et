@@ -61,10 +61,10 @@ export function MoneyInput({
     <div className="space-y-1">
       <Label htmlFor={inputId}>
         {label}
-        {required ? <span className="text-red-600"> *</span> : null}
+        {required ? <span className="text-red-600 dark:text-red-400"> *</span> : null}
       </Label>
       <div className="relative">
-        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-slate-500">
+        <span className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-xs text-muted">
           {currency === 'ETB' ? 'Br' : currency}
         </span>
         <Input
@@ -78,11 +78,11 @@ export function MoneyInput({
         />
       </div>
       {error ? (
-        <p className="text-xs text-red-600" role="alert">
+        <p className="text-xs text-red-600 dark:text-red-400" role="alert">
           {error}
         </p>
       ) : null}
-      <p className="text-[11px] text-slate-500" id={`${inputId}-hint`}>
+      <p className="text-[11px] text-muted" id={`${inputId}-hint`}>
         {currency} · {t('money.amount')}
       </p>
     </div>
@@ -122,7 +122,7 @@ export function PeriodPicker({
 
   return (
     <div className="flex items-center gap-2">
-      {label ? <span className="text-xs text-slate-500">{label}</span> : null}
+      {label ? <span className="text-xs text-muted">{label}</span> : null}
       <Select
         value={periodKey}
         onChange={(event) => onChange(event.target.value)}
@@ -158,7 +158,7 @@ export function MonthAccordion({
         <Button variant="ghost" size="sm" onClick={() => setYear(year - 1)}>
           {year - 1}
         </Button>
-        <span className="text-sm font-semibold text-slate-800">
+        <span className="text-sm font-semibold text-strong">
           {year}
           {calendar === 'ethiopian' ? ' E.C.' : ' G.C.'}
         </span>
@@ -177,8 +177,8 @@ export function MonthAccordion({
               className={cn(
                 'rounded-md border px-1 py-1 text-[11px]',
                 isPagume
-                  ? 'border-gold-400 text-gold-600'
-                  : 'border-slate-200 text-slate-600 hover:bg-slate-50',
+                  ? 'border-gold-400 text-gold-600 dark:text-gold-400'
+                  : 'border-line text-soft hover:bg-wash',
               )}
               title={`${daysInMonth({ year, month, calendar })} days`}
             >

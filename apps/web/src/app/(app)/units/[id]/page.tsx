@@ -80,14 +80,14 @@ export default function UnitDetailPage() {
       <div className="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Card>
           <CardContent>
-            <p className="text-xs font-medium text-slate-500">{t('unit.status')}</p>
+            <p className="text-xs font-medium text-muted">{t('unit.status')}</p>
             <Badge className={cn(statusTone[unit.status])}>{t(`unit.status.${unit.status}` as never)}</Badge>
           </CardContent>
         </Card>
         <Card>
           <CardContent>
-            <p className="text-xs font-medium text-slate-500">{t('unit.market_rent')}</p>
-            <p className="text-lg font-semibold text-slate-900">
+            <p className="text-xs font-medium text-muted">{t('unit.market_rent')}</p>
+            <p className="text-lg font-semibold text-strong">
               {unit.marketRentMinor === null
                 ? '—'
                 : formatAmount(unit.marketRentMinor, unit.currency, language)}
@@ -96,14 +96,14 @@ export default function UnitDetailPage() {
         </Card>
         <Card>
           <CardContent>
-            <p className="text-xs font-medium text-slate-500">{t('unit.bedrooms')}</p>
-            <p className="text-lg font-semibold text-slate-900">{unit.bedrooms ?? '—'}</p>
+            <p className="text-xs font-medium text-muted">{t('unit.bedrooms')}</p>
+            <p className="text-lg font-semibold text-strong">{unit.bedrooms ?? '—'}</p>
           </CardContent>
         </Card>
         <Card>
           <CardContent>
-            <p className="text-xs font-medium text-slate-500">{t('unit.area_sqm')}</p>
-            <p className="text-lg font-semibold text-slate-900">{unit.areaSqm ?? '—'}</p>
+            <p className="text-xs font-medium text-muted">{t('unit.area_sqm')}</p>
+            <p className="text-lg font-semibold text-strong">{unit.areaSqm ?? '—'}</p>
           </CardContent>
         </Card>
       </div>
@@ -129,7 +129,7 @@ export default function UnitDetailPage() {
                 <tbody>
                   {unitLeases.map((lease) => (
                     <tr key={lease.id}>
-                      <Td className="font-medium text-slate-900">{lease.tenant.fullName}</Td>
+                      <Td className="font-medium text-strong">{lease.tenant.fullName}</Td>
                       <Td>{formatAmount(lease.rentAmountMinor, lease.currency, language)}</Td>
                       <Td>{formatDate(lease.startDate, { language, calendar: lease.billingCalendar })}</Td>
                       <Td>
@@ -166,7 +166,7 @@ export default function UnitDetailPage() {
                 <tbody>
                   {unitJobs.map((job) => (
                     <tr key={job.id}>
-                      <Td className="font-medium text-slate-900">{job.title}</Td>
+                      <Td className="font-medium text-strong">{job.title}</Td>
                       <Td>{t(`work_order.priority.${job.priority}` as never)}</Td>
                       <Td>
                         <Badge className={cn(statusTone[job.status])}>

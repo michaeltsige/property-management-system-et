@@ -112,6 +112,7 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'unit.no_work_orders': 'ኣብዚ ክፍሊ እዚ ገና ጽገና የለን።',
   'tabs.label': 'ክፉታት ቦታታት ስራሕ',
   'tabs.close': 'ታብ ዕጾ',
+  'theme.toggle': 'ጸልማት ሁነታ ቅይር',
   'dashboard.vacant_units': 'ባዶ ክፍልታት',
   'dashboard.view_units': 'ክፍልታት ርኣዩ',
 

@@ -196,20 +196,20 @@ export default function MaintenancePage() {
                 {rows.map((row) => (
                   <tr
                     key={row.id}
-                    className="cursor-pointer hover:bg-slate-50"
+                    className="cursor-pointer hover:bg-wash"
                     onClick={() => setDetailFor(row.id)}
                   >
-                    <Td className="tabular text-xs text-slate-500">{row.ticketNumber}</Td>
+                    <Td className="tabular text-xs text-muted">{row.ticketNumber}</Td>
                     <Td>
-                      <span className="font-medium text-slate-900">{row.title}</span>
-                      <span className="block text-[11px] text-slate-500">
+                      <span className="font-medium text-strong">{row.title}</span>
+                      <span className="block text-[11px] text-muted">
                         {row.category ?? '—'} · {formatDate(row.reportedAt, { language, calendar })}
                       </span>
                     </Td>
                     <Td>
                       {row.property?.name ?? '—'}
                       {row.unit?.label ? (
-                        <span className="block text-[11px] text-slate-500">{row.unit.label}</span>
+                        <span className="block text-[11px] text-muted">{row.unit.label}</span>
                       ) : null}
                     </Td>
                     <Td>{row.tenant?.fullName ?? '—'}</Td>
@@ -331,7 +331,7 @@ export default function MaintenancePage() {
               <option key={vendor.id} value={vendor.name} />
             ))}
           </datalist>
-          <p className="text-xs text-slate-500">{t('maintenance.maintainer_hint')}</p>
+          <p className="text-xs text-muted">{t('maintenance.maintainer_hint')}</p>
           {error ? <Alert tone="danger">{error}</Alert> : null}
         </div>
       </Modal>
@@ -401,31 +401,31 @@ export default function MaintenancePage() {
               >
                 {t(`work_order.priority.${order.priority}` as never)}
               </Badge>
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-muted">
                 {order.property?.name ?? '—'}
                 {order.unit?.label ? ` · ${order.unit.label}` : ''} ·{' '}
                 {formatDate(order.reportedAt, { language, calendar })}
               </span>
             </div>
 
-            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-              <span className="font-medium text-slate-700">{t('maintenance.reported_by')}:</span>{' '}
+            <div className="rounded-lg border border-line bg-wash px-3 py-2 text-xs text-soft">
+              <span className="font-medium text-body">{t('maintenance.reported_by')}:</span>{' '}
               {order.tenant?.fullName ?? t('common.none')}
               {order.tenant?.phone ? ` · ${order.tenant.phone}` : ''}
               <span className="mx-2 text-slate-300">|</span>
-              <span className="font-medium text-slate-700">{t('maintenance.maintainer')}:</span>{' '}
+              <span className="font-medium text-body">{t('maintenance.maintainer')}:</span>{' '}
               {order.maintainerName ?? order.vendor?.name ?? t('common.none')}
             </div>
 
             {!['completed', 'cancelled'].includes(order.status) ? (
-              <div className="rounded-lg border border-slate-200 px-3 py-3">
+              <div className="rounded-lg border border-line px-3 py-3">
                 <MoneyInput
                   label={t('maintenance.estimate')}
                   value={estimate}
                   onChange={setEstimate}
                 />
                 <div className="mt-2 flex items-center justify-between gap-3">
-                  <p className="text-[11px] text-slate-500">{t('maintenance.estimate_hint')}</p>
+                  <p className="text-[11px] text-muted">{t('maintenance.estimate_hint')}</p>
                   <Button size="sm" variant="secondary" disabled={pending} onClick={() => void saveEstimate()}>
                     {t('common.save')}
                   </Button>
@@ -434,25 +434,25 @@ export default function MaintenancePage() {
             ) : null}
 
             {order.description ? (
-              <p className="whitespace-pre-wrap text-sm text-slate-700">{order.description}</p>
+              <p className="whitespace-pre-wrap text-sm text-body">{order.description}</p>
             ) : null}
 
             <div>
-              <p className="mb-2 text-sm font-medium text-slate-900">{t('maintenance.notes')}</p>
+              <p className="mb-2 text-sm font-medium text-strong">{t('maintenance.notes')}</p>
               {(order.notes ?? []).length === 0 ? (
-                <p className="text-xs text-slate-500">{t('common.no_results')}</p>
+                <p className="text-xs text-muted">{t('common.no_results')}</p>
               ) : (
                 <ul className="space-y-2">
                   {(order.notes ?? []).map((note) => (
-                    <li key={note.id} className="rounded-lg border border-slate-200 px-3 py-2">
-                      <div className="mb-1 flex items-center gap-2 text-[11px] text-slate-500">
-                        <span className="font-medium text-slate-700">{note.authorName}</span>
+                    <li key={note.id} className="rounded-lg border border-line px-3 py-2">
+                      <div className="mb-1 flex items-center gap-2 text-[11px] text-muted">
+                        <span className="font-medium text-body">{note.authorName}</span>
                         <span>{formatDate(note.createdAt, { language, calendar })}</span>
                         {note.internal ? (
                           <Badge tone="warning">{t('maintenance.internal_note')}</Badge>
                         ) : null}
                       </div>
-                      <p className="whitespace-pre-wrap text-sm text-slate-700">{note.body}</p>
+                      <p className="whitespace-pre-wrap text-sm text-body">{note.body}</p>
                     </li>
                   ))}
                 </ul>
@@ -467,10 +467,10 @@ export default function MaintenancePage() {
                     onChange={(event) => setNoteBody(event.target.value)}
                   />
                   <div className="flex items-center justify-between gap-3">
-                    <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+                    <label className="flex cursor-pointer items-center gap-2 text-xs text-soft">
                       <input
                         type="checkbox"
-                        className="h-4 w-4 rounded border-slate-300"
+                        className="h-4 w-4 rounded border-line"
                         checked={noteInternal}
                         onChange={(event) => setNoteInternal(event.target.checked)}
                       />
@@ -526,15 +526,15 @@ export default function MaintenancePage() {
             value={closingNote}
             onChange={(event) => setClosingNote(event.target.value)}
           />
-          <p className="text-xs text-slate-500">{t('maintenance.closing_note_hint')}</p>
+          <p className="text-xs text-muted">{t('maintenance.closing_note_hint')}</p>
           {canDecide && closeFor?.status === 'completed' ? (
-            <div className="rounded-lg border border-slate-200 px-3 py-3">
+            <div className="rounded-lg border border-line px-3 py-3">
               <MoneyInput
                 label={t('maintenance.closing_cost')}
                 value={closingCost}
                 onChange={setClosingCost}
               />
-              <p className="mt-1 text-[11px] text-slate-500">{t('maintenance.closing_cost_hint')}</p>
+              <p className="mt-1 text-[11px] text-muted">{t('maintenance.closing_cost_hint')}</p>
             </div>
           ) : null}
           {error ? <Alert tone="danger">{error}</Alert> : null}

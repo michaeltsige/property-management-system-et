@@ -227,9 +227,9 @@ export default function UnitsPage() {
           {propertyGroups.map((group) => (
             <Card key={group.id}>
               <CardContent className="p-0">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
-                  <p className="text-sm font-medium text-slate-900">{group.name}</p>
-                  <p className="flex items-center gap-2 text-xs text-slate-500">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line px-4 py-3">
+                  <p className="text-sm font-medium text-strong">{group.name}</p>
+                  <p className="flex items-center gap-2 text-xs text-muted">
                     <span className="tabular">
                       {group.items.length} {t('units.total_suffix')}
                     </span>
@@ -256,8 +256,8 @@ export default function UnitsPage() {
                   <tbody>
                     {group.items.map((unit) => (
                       <tr key={unit.id}>
-                        <Td className="font-medium text-slate-900">
-                          <Link href={`/units/${unit.id}`} className="text-brand-700 hover:underline">
+                        <Td className="font-medium text-strong">
+                          <Link href={`/units/${unit.id}`} className="text-brand-700 dark:text-brand-300 hover:underline">
                             {unit.label}
                           </Link>
                         </Td>
@@ -463,7 +463,7 @@ export default function UnitsPage() {
               ))}
             </Select>
             {rentTypeForm.propertyId && typesInProperty.length === 0 ? (
-              <p className="text-xs text-slate-500">{t('units.no_types')}</p>
+              <p className="text-xs text-muted">{t('units.no_types')}</p>
             ) : null}
           </div>
 
@@ -473,7 +473,7 @@ export default function UnitsPage() {
             onChange={setRentTypeValue}
             required
           />
-          <p className="text-xs text-slate-500">{t('units.rent_by_type_hint')}</p>
+          <p className="text-xs text-muted">{t('units.rent_by_type_hint')}</p>
 
           {error ? <Alert tone="danger">{error}</Alert> : null}
         </form>

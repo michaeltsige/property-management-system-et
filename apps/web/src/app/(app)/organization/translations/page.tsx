@@ -141,7 +141,7 @@ export default function TranslationsPage() {
               <Import className="h-4 w-4" />
               {t('translation.export')}
             </Button>
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm">
+            <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-line bg-surface px-3 py-2 text-sm">
               <Export className="h-4 w-4" />
               {t('translation.import')}
               <input
@@ -179,7 +179,7 @@ export default function TranslationsPage() {
               'rounded-full border px-3 py-1 text-xs',
               filter === item.id
                 ? 'border-brand-600 bg-brand-50 text-brand-800'
-                : 'border-slate-200 text-slate-600',
+                : 'border-line text-soft',
             )}
           >
             {t(item.labelKey as never)}
@@ -210,7 +210,7 @@ export default function TranslationsPage() {
               <tbody>
                 {visible.map((row) => (
                   <tr key={row.key}>
-                    <Td className="font-mono text-[11px] text-slate-500">{row.key}</Td>
+                    <Td className="font-mono text-[11px] text-muted">{row.key}</Td>
                     <Td className="max-w-xs text-xs">{row.english}</Td>
                     <Td>
                       <Input
@@ -237,11 +237,11 @@ export default function TranslationsPage() {
                         {t(`translation.status.${row.status}` as never)}
                       </Badge>
                       {row.overridden ? (
-                        <span className="mt-1 block text-[10px] text-brand-700">
+                        <span className="mt-1 block text-[10px] text-brand-700 dark:text-brand-300">
                           {t('translation.override')}
                         </span>
                       ) : (
-                        <span className="mt-1 block text-[10px] text-slate-500">{row.source}</span>
+                        <span className="mt-1 block text-[10px] text-muted">{row.source}</span>
                       )}
                     </Td>
                     <Td>

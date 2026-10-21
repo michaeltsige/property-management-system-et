@@ -51,7 +51,7 @@ export default function PortalProfilePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight text-slate-900">{t('portal.profile_title')}</h1>
+      <h1 className="text-xl font-semibold tracking-tight text-strong">{t('portal.profile_title')}</h1>
 
       {error ? <Alert tone="danger">{error}</Alert> : null}
       {savedLanguage ? <Alert tone="success">{t('portal.language_saved')}</Alert> : null}
@@ -75,22 +75,22 @@ export default function PortalProfilePage() {
           ) : me.data ? (
             <dl className="grid gap-4 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-xs text-slate-500">{t('tenant.full_name')}</dt>
-                <dd className="mt-0.5 font-medium text-slate-900">{me.data.tenant.fullName}</dd>
+                <dt className="text-xs text-muted">{t('tenant.full_name')}</dt>
+                <dd className="mt-0.5 font-medium text-strong">{me.data.tenant.fullName}</dd>
               </div>
               <div>
-                <dt className="text-xs text-slate-500">{t('portal.phone')}</dt>
-                <dd className="tabular mt-0.5 font-medium text-slate-900">
+                <dt className="text-xs text-muted">{t('portal.phone')}</dt>
+                <dd className="tabular mt-0.5 font-medium text-strong">
                   {me.data.tenant.phone ?? '—'}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-slate-500">{t('portal.signed_in_as')}</dt>
-                <dd className="mt-0.5 font-medium text-slate-900">{session.user.email}</dd>
+                <dt className="text-xs text-muted">{t('portal.signed_in_as')}</dt>
+                <dd className="mt-0.5 font-medium text-strong">{session.user.email}</dd>
               </div>
               <div>
-                <dt className="text-xs text-slate-500">{t('property.name')}</dt>
-                <dd className="mt-0.5 font-medium text-slate-900">{session.organization.name}</dd>
+                <dt className="text-xs text-muted">{t('property.name')}</dt>
+                <dd className="mt-0.5 font-medium text-strong">{session.organization.name}</dd>
               </div>
             </dl>
           ) : null}
@@ -116,7 +116,7 @@ export default function PortalProfilePage() {
               </option>
             ))}
           </Select>
-          <p className="text-xs text-slate-500">{t('portal.language_hint')}</p>
+          <p className="text-xs text-muted">{t('portal.language_hint')}</p>
         </CardContent>
       </Card>
     </div>

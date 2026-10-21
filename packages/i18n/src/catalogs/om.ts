@@ -117,6 +117,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'unit.no_work_orders': 'Suphaan kanaan dura kuttaa kana irratti hin jiru.',
   'tabs.label': 'Iddoo hojii banaa',
   'tabs.close': 'Tab cufii',
+  'theme.toggle': 'Haala duukkanaa jijjiiri',
   'dashboard.vacant_units': 'Kutaalee duwwaa',
   'dashboard.view_units': 'Kutaalee ilaali',
 

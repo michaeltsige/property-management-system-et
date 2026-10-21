@@ -225,13 +225,13 @@ export default function DashboardPage() {
               {
                 label: t('dashboard.open_work_orders'),
                 value: summary.data?.portfolio.openWorkOrders,
-                tone: Number(summary.data?.portfolio.openWorkOrders ?? 0) > 0 ? 'text-amber-600' : undefined,
+                tone: Number(summary.data?.portfolio.openWorkOrders ?? 0) > 0 ? 'text-amber-600 dark:text-amber-400' : undefined,
                 loading: summary.loading,
               },
               {
                 label: t('dashboard.vacant_units'),
                 value: occupancy.data?.totals?.vacantUnits,
-                tone: Number(occupancy.data?.totals?.vacantUnits ?? 0) > 0 ? 'text-amber-600' : undefined,
+                tone: Number(occupancy.data?.totals?.vacantUnits ?? 0) > 0 ? 'text-amber-600 dark:text-amber-400' : undefined,
                 loading: occupancy.loading,
               },
               {
@@ -244,12 +244,12 @@ export default function DashboardPage() {
               },
             ] as { label: string; value?: string | number; tone?: string; loading: boolean }[]
           ).map((item) => (
-            <div key={item.label} className="px-4 text-left lg:border-l lg:border-slate-100 lg:first:border-l-0">
-              <p className="text-xs text-slate-500">{item.label}</p>
+            <div key={item.label} className="px-4 text-left lg:border-l lg:border-line-soft lg:first:border-l-0">
+              <p className="text-xs text-muted">{item.label}</p>
               {item.loading ? (
                 <Skeleton className="mt-0.5 h-5 w-14" />
               ) : (
-                <p className={`tabular mt-0 text-base font-semibold text-slate-900 ${item.tone ?? ''}`}>
+                <p className={`tabular mt-0 text-base font-semibold text-strong ${item.tone ?? ''}`}>
                   {item.value ?? '—'}
                 </p>
               )}
@@ -262,7 +262,7 @@ export default function DashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle>{t('dashboard.charges_by_status')}</CardTitle>
-            <Link href="/charges" className="text-xs text-brand-700 hover:underline">
+            <Link href="/charges" className="text-xs text-brand-700 dark:text-brand-300 hover:underline">
               {t('nav.charges')}
             </Link>
           </CardHeader>

@@ -107,9 +107,9 @@ export default function AuditPage() {
                   <Badge>{entry.action}</Badge>
                 </Td>
                 <Td>
-                  <span className="text-slate-900">{entry.entityType}</span>
+                  <span className="text-strong">{entry.entityType}</span>
                   {entry.entityId ? (
-                    <span className="ml-1 font-mono text-[11px] text-slate-400">
+                    <span className="ml-1 font-mono text-[11px] text-faint">
                       {entry.entityId.slice(0, 8)}
                     </span>
                   ) : null}

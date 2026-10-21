@@ -50,7 +50,7 @@ export function BulkUnitForm({
         }).catch(() => undefined);
       }}
     >
-      <p className="text-sm text-slate-600">{t('bulk.hint')}</p>
+      <p className="text-sm text-soft">{t('bulk.hint')}</p>
       <Label htmlFor="bulk-property">{t('nav.properties')}</Label>
       <Select
         id="bulk-property"
@@ -133,7 +133,7 @@ export function BulkUnitForm({
           value={typeLabel}
           onChange={(e) => setTypeLabel(e.target.value)}
         />
-        <p className="mt-1 text-[11px] text-slate-500">{t('bulk.type_hint')}</p>
+        <p className="mt-1 text-[11px] text-muted">{t('bulk.type_hint')}</p>
       </div>
       <MoneyInput label={t('bulk.market_rent_optional')} value={marketRent} onChange={setMarketRent} />
       <p className="break-words text-sm" aria-live="polite">

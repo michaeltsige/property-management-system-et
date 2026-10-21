@@ -1,6 +1,15 @@
 @import 'tailwindcss';
 
 /*
+ * Dark mode is CLASS-based (a `.dark` class on <html>), not media-based: the
+ * user's choice must win over the OS. The class is applied before first paint
+ * by a tiny inline script in app/layout.tsx (no flash), and re-applied by
+ * lib/theme.ts on every change. `@custom-variant` is what makes `dark:`
+ * utilities respond to the class in Tailwind v4.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
  * Noto Sans Ethiopic is loaded from Google Fonts so the Ge'ez script renders
  * everywhere (Amharic, Tigrinya). Production deployments should self-host the
  * font file to avoid a third-party request — see docs/DECISIONS.md (ADR-0012).
@@ -55,20 +64,40 @@
    * - `canvas` is the page background: a quiet green mist so white surfaces
    *   read as objects ON a surface instead of floating in white. One token,
    *   one line to change if the tone is tuned later.
+   * - `surface` is the container/card/topbar background (was hardcoded
+   *   `bg-white`): the object ON the canvas.
    * - `edge` is the crisp container border: a visible, ink-tinted line
    *   (≈1.6:1 against white — nothing like the old near-invisible slate-200)
    *   used by cards/containers and chart boxes only.
+   * - `line` / `line-soft` are the hairlines INSIDE a container (table rows,
+   *   separators — the old border-slate-200/100), one step quieter than edge.
+   * - `wash` / `wash-strong` are recessed fills (search field, hover states,
+   *   skeleton, the neutral badge) — the old bg-slate-50/100.
+   * - `strong` / `body` / `soft` / `muted` / `faint` are the text ramp
+   *   (the old text-slate-900/700/600/500/400) — five fixed steps instead of
+   *   open-ended slate, so dark mode re-points five values, not a palette.
    * - `shadow-card` / `shadow-float` are the two elevation levels. Both are
    *   tinted toward the ink (Vercel guideline: shadows take the surface's
    *   hue, not neutral black). Float = layered ambient+direct for popovers,
    *   selects, menus and the date picker: the layer that must read as
    *   hovering ABOVE the page.
    *
-   * All four tokens are plain color/step values, so a dark theme later only
-   * re-points them (dark mode deliberately deferred — see worklog).
+   * Every token is a plain value re-pointed under `.dark` — light and dark
+   * share the SAME vocabulary, only the values swap (see the .dark block at
+   * the bottom of this file).
    */
   --color-canvas: #e9f1ec;
+  --color-surface: #ffffff;
   --color-edge: #b7c9c1;
+  --color-line: #e2e8f0;
+  --color-line-soft: #f1f5f9;
+  --color-wash: #f8fafc;
+  --color-wash-strong: #f1f5f9;
+  --color-strong: #0f172a;
+  --color-body: #334155;
+  --color-soft: #475569;
+  --color-muted: #64748b;
+  --color-faint: #94a3b8;
 
   --shadow-card:
     0 1px 2px 0 rgb(13 47 40 / 0.06),
@@ -92,8 +121,16 @@ body {
   height: 100%;
 }
 
+html {
+  color-scheme: light;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
 body {
-  @apply bg-canvas text-slate-900 antialiased;
+  @apply bg-canvas text-strong antialiased;
 }
 
 /*
@@ -147,7 +184,7 @@ tbody tr {
 }
 
 tbody tr:hover {
-  background-color: var(--color-slate-50);
+  background-color: var(--color-wash);
 }
 
 /* A user who asked the system for less motion gets less motion. */
@@ -165,4 +202,53 @@ tbody tr:hover {
 /* Money, dates and counts align down their column: digits share one width. */
 .tabular {
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * The dark theme: every depth/semantic token re-pointed to its ink-tinted
+ * night value. Nothing else in the codebase changes color by theme — a
+ * component uses `bg-surface text-body`, and the value it gets depends on
+ * the class on <html>. The pale brand steps (50/100/200) are re-pointed too:
+ * they only ever serve as light-surface washes (card headers, table heads,
+ * hover chips, the success alert border), and the ink text steps (800/900)
+ * only ever sit on those washes — so one re-point covers every call site.
+ * Mid brand steps (400–700) stay put: buttons keep brand-600 fills with
+ * white text in both themes; link text gets an explicit dark: step where
+ * it sits directly on a surface.
+ */
+.dark {
+  --color-canvas: #0d1613;
+  --color-surface: #151f1a;
+  --color-edge: #2e4239;
+  --color-line: #24322b;
+  --color-line-soft: #1d2923;
+  --color-wash: #101915;
+  --color-wash-strong: #1c2923;
+  --color-strong: #e9f1ec;
+  --color-body: #c6d4cb;
+  --color-soft: #a7bab0;
+  --color-muted: #8ba398;
+  --color-faint: #71887d;
+
+  --color-brand-50: #1a2b23;
+  --color-brand-100: #20362c;
+  --color-brand-200: #2e5a4a;
+  --color-brand-800: #9ed1bd;
+  --color-brand-900: #c3e3d6;
+
+  /* Shadows deepen instead of disappearing: on a dark canvas the card edge
+     alone cannot separate layers, so the ambient layer carries more. */
+  --shadow-card:
+    0 1px 2px 0 rgb(4 10 8 / 0.5),
+    0 1px 1px 0 rgb(4 10 8 / 0.35);
+  --shadow-float:
+    0 2px 4px -1px rgb(4 10 8 / 0.4),
+    0 10px 24px -4px rgb(4 10 8 / 0.55),
+    0 24px 48px -12px rgb(4 10 8 / 0.45);
+}
+
+/* The brand-600 focus ring that reads on white sits too close to a dark
+   canvas; one step lighter restores the same pop. */
+.dark :focus-visible {
+  outline-color: var(--color-brand-400);
 }

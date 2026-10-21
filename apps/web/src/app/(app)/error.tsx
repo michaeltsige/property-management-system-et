@@ -28,8 +28,8 @@ export default function AppError({
     <div className="flex min-h-[60vh] items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardContent className="space-y-3 p-6 text-center">
-          <p className="text-sm font-semibold text-slate-900">{t('error.generic')}</p>
-          {error.digest ? <p className="font-mono text-[11px] text-slate-400">{error.digest}</p> : null}
+          <p className="text-sm font-semibold text-strong">{t('error.generic')}</p>
+          {error.digest ? <p className="font-mono text-[11px] text-faint">{error.digest}</p> : null}
           <Button onClick={reset} variant="secondary">
             {t('common.retry')}
           </Button>

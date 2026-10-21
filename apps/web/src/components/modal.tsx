@@ -30,18 +30,18 @@ export function Modal({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-900/40" />
+        <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-900/40 dark:bg-black/60" />
         <Dialog.Content
           className={cn(
-            'fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[95vw] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-white p-0 shadow-float',
+            'fixed left-1/2 top-1/2 z-50 max-h-[90vh] w-[95vw] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-xl bg-surface p-0 shadow-float',
             width,
           )}
         >
-          <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-4 py-3">
+          <div className="flex items-start justify-between gap-4 border-b border-line-soft px-4 py-3">
             <div>
-              <Dialog.Title className="text-sm font-semibold text-slate-900">{title}</Dialog.Title>
+              <Dialog.Title className="text-sm font-semibold text-strong">{title}</Dialog.Title>
               {description ? (
-                <Dialog.Description className="text-xs text-slate-500">{description}</Dialog.Description>
+                <Dialog.Description className="text-xs text-muted">{description}</Dialog.Description>
               ) : null}
             </div>
             <Dialog.Close asChild>
@@ -52,7 +52,7 @@ export function Modal({
           </div>
           <div className="px-4 py-4">{children}</div>
           {footer ? (
-            <div className="flex justify-end gap-2 border-t border-slate-100 px-4 py-3">{footer}</div>
+            <div className="flex justify-end gap-2 border-t border-line-soft px-4 py-3">{footer}</div>
           ) : null}
         </Dialog.Content>
       </Dialog.Portal>

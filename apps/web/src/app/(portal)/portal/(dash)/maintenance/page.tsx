@@ -59,7 +59,7 @@ export default function PortalMaintenancePage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight text-slate-900">{t('portal.maintenance_title')}</h1>
+      <h1 className="text-xl font-semibold tracking-tight text-strong">{t('portal.maintenance_title')}</h1>
 
       {/* Desktop: the request thread on the left, the report form on the right —
           filing a new issue never loses sight of the existing ones. Phones keep
@@ -87,29 +87,29 @@ export default function PortalMaintenancePage() {
                 />
               </div>
             ) : (
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-line-soft">
                 {(requests.data?.items ?? []).map((item) => (
                   <li key={item.id} className="px-4 py-3">
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium text-slate-900">{item.title}</p>
+                      <p className="text-sm font-medium text-strong">{item.title}</p>
                       <Badge className={cn(statusTone[item.status])}>
                         {t(`work_order.status.${item.status}` as never)}
                       </Badge>
                     </div>
-                    <p className="mt-0.5 text-[11px] text-slate-500">
+                    <p className="mt-0.5 text-[11px] text-muted">
                       {item.ticketNumber ?? ''}
                       {item.ticketNumber ? ' · ' : ''}
                       {formatDate(item.reportedAt, { language, calendar })}
                     </p>
                     {item.description ? (
-                      <p className="mt-1 whitespace-pre-wrap text-xs text-slate-600">{item.description}</p>
+                      <p className="mt-1 whitespace-pre-wrap text-xs text-soft">{item.description}</p>
                     ) : null}
                     {(item.notes ?? []).length > 0 ? (
                       <ul className="mt-2 space-y-1">
                         {(item.notes ?? []).map((note) => (
-                          <li key={note.id} className="rounded-md bg-slate-50 px-2 py-1.5">
-                            <p className="whitespace-pre-wrap text-xs text-slate-700">{note.body}</p>
-                            <p className="mt-0.5 text-[10px] text-slate-400">
+                          <li key={note.id} className="rounded-md bg-wash px-2 py-1.5">
+                            <p className="whitespace-pre-wrap text-xs text-body">{note.body}</p>
+                            <p className="mt-0.5 text-[10px] text-faint">
                               {note.authorName} · {formatDate(note.createdAt, { language, calendar })}
                             </p>
                           </li>
@@ -126,7 +126,7 @@ export default function PortalMaintenancePage() {
         <Card className="lg:col-span-2">
           <CardContent className="py-4">
             <form className="space-y-2" onSubmit={submit}>
-              <p className="text-xs text-slate-500">{t('portal.maintenance_hint')}</p>
+              <p className="text-xs text-muted">{t('portal.maintenance_hint')}</p>
               <div className="space-y-1">
                 <Label htmlFor="request-title">{t('maintenance.title')}</Label>
                 <Input

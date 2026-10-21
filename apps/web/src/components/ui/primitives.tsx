@@ -28,7 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 
 export function Label({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
-  return <LabelPrimitive.Root className={cn('text-xs font-medium text-slate-600', className)} {...props} />;
+  return <LabelPrimitive.Root className={cn('text-xs font-medium text-soft', className)} {...props} />;
 }
 
 export function Input({
@@ -40,7 +40,7 @@ export function Input({
     <input
       ref={ref}
       className={cn(
-        'flex h-9 w-full rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-slate-500 focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-60',
+        'flex h-9 w-full rounded-md border border-line bg-surface px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-60',
         className,
       )}
       {...props}
@@ -52,7 +52,7 @@ export function Textarea({ className, ...props }: TextareaHTMLAttributes<HTMLTex
   return (
     <textarea
       className={cn(
-        'flex min-h-20 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm placeholder:text-slate-500 focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500',
+        'flex min-h-20 w-full rounded-md border border-line bg-surface px-3 py-2 text-sm shadow-sm placeholder:text-muted focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500',
         className,
       )}
       {...props}
@@ -172,7 +172,7 @@ export function Select({
         aria-labelledby={ariaLabelledBy}
         aria-required={required || undefined}
         className={cn(
-          'flex h-9 w-full items-center justify-between gap-1 rounded-md border border-slate-200 bg-white px-3 py-1 text-sm shadow-sm transition-colors focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-60 data-[state=open]:border-brand-500 data-[state=open]:ring-1 data-[state=open]:ring-brand-500 [&>span]:min-w-0 [&>span]:truncate',
+          'flex h-9 w-full items-center justify-between gap-1 rounded-md border border-line bg-surface px-3 py-1 text-sm shadow-sm transition-colors focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-60 data-[state=open]:border-brand-500 data-[state=open]:ring-1 data-[state=open]:ring-brand-500 [&>span]:min-w-0 [&>span]:truncate',
           className,
         )}
       >
@@ -185,7 +185,7 @@ export function Select({
         <SelectPrimitive.Content
           position="popper"
           sideOffset={4}
-          className="relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md bg-white text-slate-900 shadow-float"
+          className="relative z-50 max-h-[var(--radix-select-content-available-height)] min-w-[var(--radix-select-trigger-width)] overflow-hidden rounded-md bg-surface text-strong shadow-float"
         >
           <SelectPrimitive.ScrollUpButton className="flex h-6 items-center justify-center">
             <ArrowUp2 className="h-4 w-4" aria-hidden="true" />
@@ -196,7 +196,7 @@ export function Select({
                 key={option.value}
                 value={option.value === '' ? SELECT_EMPTY : option.value}
                 disabled={option.disabled}
-                className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-slate-100 data-[highlighted]:text-slate-900"
+                className="relative flex w-full cursor-pointer select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-wash-strong data-[highlighted]:text-strong"
               >
                 <SelectPrimitive.ItemText>{option.label}</SelectPrimitive.ItemText>
                 <SelectPrimitive.ItemIndicator className="absolute right-2 inline-flex items-center">
@@ -242,7 +242,7 @@ export function Select({
  * (CardHeader) and the borderless floating overlays.
  */
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn('rounded-lg border border-edge bg-white shadow-card', className)} {...props} />;
+  return <div className={cn('rounded-lg border border-edge bg-surface shadow-card', className)} {...props} />;
 }
 
 export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
@@ -261,11 +261,11 @@ export function CardHeader({ className, ...props }: HTMLAttributes<HTMLDivElemen
 }
 
 export function CardTitle({ className, ...props }: HTMLAttributes<HTMLHeadingElement>) {
-  return <h3 className={cn('text-sm font-semibold text-slate-900', className)} {...props} />;
+  return <h3 className={cn('text-sm font-semibold text-strong', className)} {...props} />;
 }
 
 export function CardDescription({ className, ...props }: HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn('text-xs text-slate-500', className)} {...props} />;
+  return <p className={cn('text-xs text-muted', className)} {...props} />;
 }
 
 export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
@@ -279,12 +279,12 @@ const badgeVariants = cva(
   {
     variants: {
       tone: {
-        neutral: 'bg-slate-100 text-slate-700',
+        neutral: 'bg-wash-strong text-body',
         brand: 'bg-brand-100 text-brand-800',
-        warning: 'bg-amber-100 text-amber-800',
-        danger: 'bg-red-100 text-red-800',
-        info: 'bg-sky-100 text-sky-800',
-        gold: 'bg-gold-400/20 text-gold-600',
+        warning: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
+        danger: 'bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300',
+        info: 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300',
+        gold: 'bg-gold-400/20 text-gold-600 dark:text-gold-400',
       },
     },
     defaultVariants: { tone: 'neutral' },
@@ -298,20 +298,21 @@ export function Badge({ className, tone, ...props }: BadgeProps) {
 }
 
 export function Separator({ className, ...props }: React.ComponentProps<typeof SeparatorPrimitive.Root>) {
-  return <SeparatorPrimitive.Root className={cn('my-2 h-px w-full bg-slate-200', className)} {...props} />;
+  return <SeparatorPrimitive.Root className={cn('my-2 h-px w-full bg-line', className)} {...props} />;
 }
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden="true" className={cn('animate-pulse rounded-md bg-slate-200', className)} />;
+  return <div aria-hidden="true" className={cn('animate-pulse rounded-md bg-line', className)} />;
 }
 
 const alertVariants = cva('rounded-md border px-3 py-2 text-sm', {
   variants: {
     tone: {
-      info: 'border-sky-200 bg-sky-50 text-sky-900',
+      info: 'border-sky-200 bg-sky-50 text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/40 dark:text-sky-200',
       success: 'border-brand-200 bg-brand-50 text-brand-900',
-      warning: 'border-amber-200 bg-amber-50 text-amber-900',
-      danger: 'border-red-200 bg-red-50 text-red-900',
+      warning:
+        'border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200',
+      danger: 'border-red-200 bg-red-50 text-red-900 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200',
     },
   },
   defaultVariants: { tone: 'info' },
@@ -355,7 +356,7 @@ export function Th({ className, scope = 'col', ...props }: ThHTMLAttributes<HTML
       className={cn(
         // Normal-case column headers (the operations-console convention):
         // shouting uppercase on every screen was one of the "vibecoded" tells.
-        'border-b border-edge/50 bg-brand-50/60 px-3 py-2 text-left text-xs font-semibold text-slate-600',
+        'border-b border-edge/50 bg-brand-50/60 px-3 py-2 text-left text-xs font-semibold text-soft',
         className,
       )}
       {...props}
@@ -366,7 +367,7 @@ export function Th({ className, scope = 'col', ...props }: ThHTMLAttributes<HTML
 export function Td({ className, ...props }: HTMLAttributes<HTMLTableCellElement>) {
   return (
     <td
-      className={cn('border-b border-slate-100 px-3 py-2.5 align-middle text-slate-700', className)}
+      className={cn('border-b border-line-soft px-3 py-2.5 align-middle text-body', className)}
       {...props}
     />
   );
@@ -375,8 +376,8 @@ export function Td({ className, ...props }: HTMLAttributes<HTMLTableCellElement>
 export function EmptyState({ title, description }: { title: string; description?: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-1 px-4 py-12 text-center">
-      <p className="text-sm font-medium text-slate-700">{title}</p>
-      {description ? <p className="max-w-md text-xs text-slate-500">{description}</p> : null}
+      <p className="text-sm font-medium text-body">{title}</p>
+      {description ? <p className="max-w-md text-xs text-muted">{description}</p> : null}
     </div>
   );
 }

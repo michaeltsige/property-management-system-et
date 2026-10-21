@@ -32,7 +32,7 @@ export function Popover({
           align="start"
           sideOffset={4}
           aria-label={ariaLabel}
-          className="z-50 rounded-lg bg-white shadow-float outline-none"
+          className="z-50 rounded-lg bg-surface shadow-float outline-none"
         >
           {children}
         </PopoverPrimitive.Content>

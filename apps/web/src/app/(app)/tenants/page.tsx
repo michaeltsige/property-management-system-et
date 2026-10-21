@@ -196,13 +196,13 @@ export default function TenantsPage() {
               <tbody>
                 {tenantsInScope.map((tenant) => (
                   <tr key={tenant.id}>
-                    <Td className="font-medium text-slate-900">{tenant.fullName}</Td>
+                    <Td className="font-medium text-strong">{tenant.fullName}</Td>
                     <Td className="tabular">{tenant.phone ?? '—'}</Td>
                     <Td>{tenant.employer ?? '—'}</Td>
                     <Td>
                       {tenant.emergencyContactName ?? '—'}
                       {tenant.emergencyContactPhone ? (
-                        <span className="block text-[11px] text-slate-500">
+                        <span className="block text-[11px] text-muted">
                           {tenant.emergencyContactPhone}
                         </span>
                       ) : null}
@@ -346,7 +346,7 @@ export default function TenantsPage() {
               accept="application/pdf,image/jpeg,image/png,image/webp"
               onChange={(event) => setIdFile(event.target.files?.[0] ?? null)}
             />
-            <p className="text-[11px] text-slate-500">{t('documents.id_file_hint')}</p>
+            <p className="text-[11px] text-muted">{t('documents.id_file_hint')}</p>
           </div>
 
           <div className="sm:col-span-2">

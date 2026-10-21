@@ -78,8 +78,8 @@ export function WorkspaceTabs() {
      * any subpixel seam between tab and page. Inactive tabs stay flat and
      * quiet inside the slot until hovered.
      */
-    <nav aria-label={t('tabs.label')} className="bg-white px-2 pt-1.5">
-      <div className="flex items-end overflow-x-auto rounded-t-lg bg-ink-900/[0.06] px-1.5 pt-1.5 shadow-[inset_0_1px_2px_rgba(13,47,40,0.07)]">
+    <nav aria-label={t('tabs.label')} className="bg-surface px-2 pt-1.5">
+      <div className="flex items-end overflow-x-auto rounded-t-lg bg-ink-900/[0.06] px-1.5 pt-1.5 shadow-[inset_0_1px_2px_rgba(13,47,40,0.07)] dark:bg-ink-950/60 dark:shadow-none">
         <ul className="flex w-max items-end gap-1">
           {tabs.map((path) => {
             const active = path === pathname;
@@ -100,7 +100,7 @@ export function WorkspaceTabs() {
                   'relative flex shrink-0 items-center rounded-t-lg border border-transparent pr-1 transition-colors',
                   active
                     ? 'border-x-edge border-t-edge border-b-transparent bg-canvas shadow-[0_1px_2px_rgba(13,47,40,0.08),0_-2px_8px_-2px_rgba(13,47,40,0.16)] after:absolute after:inset-x-px after:bottom-0 after:h-px after:bg-canvas after:content-[""]'
-                    : 'hover:bg-white/60',
+                    : 'hover:bg-white/60 dark:hover:bg-white/5',
                 )}
               >
                 <Link
@@ -108,7 +108,7 @@ export function WorkspaceTabs() {
                   aria-current={active ? 'page' : undefined}
                   className={cn(
                     'flex items-center gap-1.5 py-1.5 pl-2.5 text-xs transition-colors',
-                    active ? 'font-semibold text-ink-900' : 'text-slate-600 hover:text-ink-900',
+                    active ? 'font-semibold text-strong' : 'text-soft hover:text-strong',
                   )}
                 >
                   {labelFor(path)}
@@ -120,8 +120,8 @@ export function WorkspaceTabs() {
                   className={cn(
                     'rounded p-0.5 transition-colors',
                     active
-                      ? 'text-slate-500 hover:bg-white hover:text-ink-900'
-                      : 'text-slate-400 hover:bg-white/70 hover:text-slate-700',
+                      ? 'text-muted hover:bg-surface hover:text-strong'
+                      : 'text-faint hover:bg-white/70 hover:text-body dark:hover:bg-white/5',
                   )}
                 >
                   <Close className="h-3.5 w-3.5" aria-hidden="true" />

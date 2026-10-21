@@ -65,7 +65,7 @@ export function CsvImportForm({
     }).catch(() => undefined);
   return (
     <div className="space-y-3">
-      <p className="text-sm text-slate-600">{t('csv.hint')}</p>
+      <p className="text-sm text-soft">{t('csv.hint')}</p>
       <Button
         variant="secondary"
         onClick={() => download(`${kind}-template.csv`, CSV_HEADERS[kind].join(',') + '\r\n')}

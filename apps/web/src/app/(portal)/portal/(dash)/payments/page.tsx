@@ -39,7 +39,7 @@ export default function PortalPaymentsPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold tracking-tight text-slate-900">{t('portal.nav.payments')}</h1>
+      <h1 className="text-xl font-semibold tracking-tight text-strong">{t('portal.nav.payments')}</h1>
 
       {/* Desktop: history on the left, the transfer-proof upload on the right —
           the two things a tenant comes to this page for, without a second trip.
@@ -85,10 +85,10 @@ export default function PortalPaymentsPage() {
                     <tr key={payment.id}>
                       <Td>{formatDate(payment.paidAt, { language, calendar })}</Td>
                       <Td>{t(`payment.method.${payment.method}` as never)}</Td>
-                      <Td className="max-w-40 truncate text-slate-600">
+                      <Td className="max-w-40 truncate text-soft">
                         {payment.reference ?? payment.receiptNumber ?? '—'}
                       </Td>
-                      <Td className="tabular font-medium text-slate-900">
+                      <Td className="tabular font-medium text-strong">
                         {formatAmount(payment.amountMinor, payment.currency ?? currency, language)}
                       </Td>
                       <Td>
@@ -97,12 +97,12 @@ export default function PortalPaymentsPage() {
                             href={api.portalReceiptUrl(payment.id)}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs font-medium text-brand-700 hover:underline"
+                            className="text-xs font-medium text-brand-700 dark:text-brand-300 hover:underline"
                           >
                             {t('portal.download')}
                           </a>
                         ) : (
-                          <span className="text-xs text-slate-400">—</span>
+                          <span className="text-xs text-faint">—</span>
                         )}
                       </Td>
                     </tr>

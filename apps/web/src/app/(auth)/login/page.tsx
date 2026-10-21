@@ -54,7 +54,7 @@ export default function LoginPage() {
       <DoorLanguagePicker />
       <div className="relative w-full max-w-sm">
         <div className="mb-6 text-center">
-          <Logo size={88} className="mx-auto mb-3" />
+          <Logo size={88} onDark className="mx-auto mb-3" />
           <h1 className="text-xl font-semibold tracking-tight text-white">{t('app.name')}</h1>
           <p className="mt-1 text-xs text-white/70">{t('app.tagline')}</p>
         </div>
