@@ -156,11 +156,17 @@ localhost automatically — and sign in with `owner@demo.test` / `DemoPass123`.
 | Hot reload does not trigger                      | Same cause: file watching only works inside the WSL filesystem.                                                                                             |
 | `docker: permission denied`                      | Docker Desktop: enable WSL integration for this distro. Native: `sudo usermod -aG docker $USER`, reopen the terminal.                                       |
 | The wrong Node runs (`/mnt/c/...` in the path)    | Work inside the Ubuntu terminal: `which node` must print an nvm or `/usr/bin` path, never `/mnt/c/...`.                                                     |
+| Web process dies: `JavaScript heap out of memory` | `dev-all.mjs` caps each process's V8 heap so small machines survive (the banner prints the caps). Give the web app room: `WEB_HEAP_MB=2048 pnpm dev:all`, or put `WEB_HEAP_MB=2048` in `.env`. |
+| WSL sees only ~6.9 GB of a 16 GB PC (`6877 MB detected`) | By default WSL2 gets **half the PC's RAM, capped at 8 GB** — it is a default, not a hardware limit. Raise it: create `C:\Users\<you>\.wslconfig` containing `[wsl2]` and `memory=10GB`, then `wsl --shutdown` in PowerShell, reopen Ubuntu and check `free -h` (~9.4 GB). |
 
-Memory needs are the same as documented below (~1.5 GB total with all four
-processes); default WSL2 memory — half of the PC's RAM — is fine from 8 GB up.
-Stop the stack with `Ctrl-C` in the Ubuntu terminal; `wsl --shutdown` gives the
-machine back.
+Memory: in dev mode Next.js keeps every compiled route's module graph in RAM
+(the dashboard alone is ~4,000 modules), so the warm-up needs real headroom —
+that is why `dev-all.mjs` prints heap caps at startup. Default WSL2 memory —
+half the PC's RAM, max 8 GB — works: a 16 GB PC gives WSL ~6.9 GB, which now
+also qualifies for the roomy 2 GB web-heap cap. If Windows-side apps start
+gasping, or you want more headroom, raise the VM with a `.wslconfig` file (see
+the table above). Stop the stack with `Ctrl-C` in the Ubuntu terminal;
+`wsl --shutdown` gives the machine back.
 
 ---
 
@@ -365,6 +371,7 @@ that guard is deliberate. `docker compose up -d` creates both `pms_dev` and
 | Login returns 401 with the seeded credentials         | The database has no demo data (or was recreated): `pnpm db:seed:force`.                                                                                                                    |
 | Changes to the demo data keep coming back             | `pnpm db:seed` is idempotent and stops when the demo organization exists; run it only with `--force` when you want a clean slate.                                                          |
 | The API cannot find a variable you set in `.env`      | The API reads the root `.env` and `apps/api/.env`; real environment variables always win over both. Restart the API after editing.                                                         |
+| Web dies with `JavaScript heap out of memory`         | `dev-all.mjs` caps each process's heap to fit the machine (caps are printed in the startup banner). Raise the web one: `WEB_HEAP_MB=2048 pnpm dev:all`. Under WSL, also see the Windows section above — the VM itself may only have half the PC's RAM. |
 
 ## Why the browser never calls the API directly
 

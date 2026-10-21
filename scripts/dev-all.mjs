@@ -46,6 +46,16 @@ const WEB_DIR = resolve(ROOT, 'apps/web');
 const WORKSPACE_PACKAGES = ['calendar', 'shared', 'i18n'];
 const IN_CLOUD_SHELL = process.env.CLOUD_SHELL === 'true';
 
+/** True under WSL (either generation): the kernel release carries "microsoft". */
+function runningInWsl() {
+  try {
+    return /microsoft/i.test(readFileSync('/proc/sys/kernel/osrelease', 'utf8'));
+  } catch {
+    return false;
+  }
+}
+const IN_WSL = runningInWsl();
+
 /**
  * Path to a binary in a workspace's own node_modules/.bin directory. Running it
  * directly instead of through `pnpm exec` removes a Node wrapper process per app,
@@ -154,7 +164,10 @@ const SMALL_MACHINE = TOTAL_MB <= 2400; // Cloud Shell, small VMs, containers
 const API_HEAP_MB = process.env.API_HEAP_MB ?? (SMALL_MACHINE ? '320' : '512');
 // Next dev holds the module graph of every compiled route; on roomy machines
 // the warm-up below needs headroom or the web process dies mid-startup.
-const WEB_HEAP_MB = process.env.WEB_HEAP_MB ?? (SMALL_MACHINE ? '512' : TOTAL_MB >= 7000 ? '2048' : '1024');
+// 6000, not 7000: WSL2 gives its VM half of the PC's RAM, max 8 GB, and such a
+// VM reports MemTotal of ~6.9 GB ("6877 MB detected") — an "8 GB machine" that
+// missed a 7000 threshold, silently got the 1024 cap, and OOM-died mid warm-up.
+const WEB_HEAP_MB = process.env.WEB_HEAP_MB ?? (SMALL_MACHINE ? '512' : TOTAL_MB >= 6000 ? '2048' : '1024');
 const WORKER_HEAP_MB = process.env.WORKER_HEAP_MB ?? (SMALL_MACHINE ? '256' : '384');
 
 const children = [];
@@ -459,6 +472,13 @@ function banner() {
     '',
     '  demo login: owner@demo.test / DemoPass123   (fake data only)',
   ];
+  if (IN_WSL && TOTAL_MB < 7500) {
+    lines.push(
+      '',
+      '  WSL2 note: Windows gives this VM half the PC\'s RAM by default, capped at 8 GB.',
+      '  Raise it with C:\\Users\\<you>\\.wslconfig → [wsl2] memory=10GB, then wsl --shutdown.',
+    );
+  }
   if (preview) {
     lines.push('', '  Cloud Shell Web Preview (any port in 2000-65000 works; the menu also lists them):');
     lines.push(`    ${preview}`);
