@@ -441,7 +441,7 @@ export default function LeasesPage() {
               accept="application/pdf,image/jpeg,image/png,image/webp"
               onChange={(event) => setLeaseFile(event.target.files?.[0] ?? null)}
             />
-            <p className="text-[11px] text-slate-500">{t('documents.lease_file_hint')}</p>
+            <p className="text-[11px] text-muted">{t('documents.lease_file_hint')}</p>
           </div>
 
           {error ? (

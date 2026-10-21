@@ -125,4 +125,3 @@ export const Tick = forwardRef<SVGSVGElement, IconProps>(function Tick(
     </svg>
   );
 });
->>>>>>> 96c4c35 (refactor(ui): one icon set — lucide-react out, the iconsax wrapper covers everything)

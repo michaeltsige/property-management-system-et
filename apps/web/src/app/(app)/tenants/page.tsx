@@ -350,16 +350,16 @@ export default function TenantsPage() {
           </div>
 
           <div className="sm:col-span-2">
-            <label className="flex cursor-pointer items-start gap-2 text-xs text-slate-600">
+            <label className="flex cursor-pointer items-start gap-2 text-xs text-soft">
               <input
                 type="checkbox"
-                className="mt-0.5 h-4 w-4 rounded border-slate-300"
+                className="mt-0.5 h-4 w-4 rounded border-line"
                 checked={portalNow}
                 onChange={(event) => setPortalNow(event.target.checked)}
               />
               <span>
-                <span className="font-medium text-slate-800">{t('tenant.portal_now')}</span>
-                <span className="mt-0.5 block text-[11px] text-slate-500">
+                <span className="font-medium text-strong">{t('tenant.portal_now')}</span>
+                <span className="mt-0.5 block text-[11px] text-muted">
                   {t('tenant.portal_now_hint')}
                 </span>
               </span>

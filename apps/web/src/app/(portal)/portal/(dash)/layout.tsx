@@ -208,7 +208,7 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
             onSelect={() => {
               void handleSignOut();
             }}
-            className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-red-600 dark:text-red-400 outline-none transition-colors hover:bg-red-50 focus:bg-red-50"
+            className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-red-600 dark:text-red-400 outline-none transition-colors hover:bg-red-50 focus:bg-red-50 dark:hover:bg-red-950/40 dark:focus:bg-red-950/40"
           >
             <Logout className="h-4 w-4" aria-hidden="true" />
             {t('auth.sign_out')}

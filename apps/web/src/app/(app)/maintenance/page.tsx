@@ -412,7 +412,7 @@ export default function MaintenancePage() {
               <span className="font-medium text-body">{t('maintenance.reported_by')}:</span>{' '}
               {order.tenant?.fullName ?? t('common.none')}
               {order.tenant?.phone ? ` · ${order.tenant.phone}` : ''}
-              <span className="mx-2 text-slate-300">|</span>
+              <span className="mx-2 text-faint">|</span>
               <span className="font-medium text-body">{t('maintenance.maintainer')}:</span>{' '}
               {order.maintainerName ?? order.vendor?.name ?? t('common.none')}
             </div>
