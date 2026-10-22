@@ -95,6 +95,14 @@ const envSchema = z.object({
 
   PAYMENT_PROVIDER: z.enum(['mock', 'telebirr', 'chapa']).default('mock'),
   SMS_PROVIDER: z.enum(['mock', 'ethio-telecom-sms']).default('mock'),
+  // Email delivery. 'resend' uses the Resend HTTP API (free tier: 3,000
+  // emails/month, 100/day — resend.com). 'mock' logs bodies in development and
+  // records provider refs on notifications without delivering anything.
+  EMAIL_PROVIDER: z.enum(['mock', 'resend']).default('mock'),
+  RESEND_API_KEY: z.string().optional(),
+  // Resend requires a From address; the shared onboarding sender only delivers
+  // to the account owner's own inbox until a real domain is verified.
+  EMAIL_FROM: z.string().default('Property Management <onboarding@resend.dev>'),
   CHAPA_SECRET_KEY: z.string().optional(),
   CHAPA_WEBHOOK_SECRET: z.string().optional(),
   // Live API base URL override; the official value is https://api.chapa.co/v1.
@@ -180,6 +188,10 @@ export function configWarnings(config: AppConfig = getConfig()): string[] {
       );
     if (config.SMS_PROVIDER === 'mock')
       warnings.push('SMS_PROVIDER=mock in production: no SMS will actually be sent.');
+    if (config.EMAIL_PROVIDER === 'mock')
+      warnings.push('EMAIL_PROVIDER=mock in production: no email will actually be sent.');
+    if (config.EMAIL_PROVIDER === 'resend' && !config.RESEND_API_KEY)
+      warnings.push('EMAIL_PROVIDER=resend without RESEND_API_KEY: email sends will fail until a key is set.');
     if (config.STORAGE_DRIVER === 'local')
       warnings.push('STORAGE_DRIVER=local in production: uploads are not durable or shared.');
   }

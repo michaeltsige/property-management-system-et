@@ -4,8 +4,9 @@
  * `notifications.send` had a queue and a `queued` status but no handler — rows
  * piled up forever. This handler drains them: it renders the template through
  * `@pms/i18n` (organization overrides included), sends SMS through the SMS
- * provider, and stores in-app notifications as sent immediately (the row IS the
- * inbox). Email has no provider yet, so it fails honestly instead of pretending.
+ * provider, email through the email provider (mock by default, Resend when
+ * configured), and stores in-app notifications as sent immediately (the row IS
+ * the inbox).
  *
  * The overdue sweep keeps its inline send path (it counts results for its run
  * report); this job covers everything else that enqueues and any retries.
@@ -17,6 +18,7 @@ import type { LanguageCode } from '@pms/calendar';
 
 import { logger } from '../lib/logger.js';
 import { getSmsProvider } from '../providers/sms/index.js';
+import { getEmailProvider } from '../providers/email/index.js';
 
 export interface SendNotificationPayload {
   organizationId?: string;
@@ -36,6 +38,7 @@ export async function runSendNotification(
 ): Promise<SendNotificationResult> {
   const result: SendNotificationResult = { processed: 0, sent: 0, failed: 0 };
   const sms = getSmsProvider();
+  const email = getEmailProvider();
 
   const batch = await prisma.notification.findMany({
     where: {
@@ -91,12 +94,41 @@ export async function runSendNotification(
         continue;
       }
 
-      // email: no provider is wired yet — fail honestly rather than fake a send.
+      if (notification.channel === 'email') {
+        if (!notification.recipientEmail) {
+          await prisma.notification.update({
+            where: { id: notification.id },
+            data: { status: 'failed', error: 'No recipient email on the notification' },
+          });
+          result.failed += 1;
+          continue;
+        }
+        const send = await email.send({
+          to: notification.recipientEmail,
+          templateKey: notification.templateKey as Parameters<typeof email.send>[0]['templateKey'],
+          values,
+          language: notification.language as LanguageCode,
+        });
+        await prisma.notification.update({
+          where: { id: notification.id },
+          data: {
+            status: send.status === 'sent' ? 'sent' : 'failed',
+            providerRef: send.providerRef,
+            sentAt: new Date(),
+            error: send.detail ?? (send.status === 'sent' ? null : 'Provider rejected the message'),
+          },
+        });
+        if (send.status === 'sent') result.sent += 1;
+        else result.failed += 1;
+        continue;
+      }
+
+      // Unknown channel: fail honestly rather than pretend a send happened.
       await prisma.notification.update({
         where: { id: notification.id },
         data: {
           status: 'failed',
-          error: 'Email delivery is not configured yet; no email provider is connected',
+          error: `Unknown notification channel: ${notification.channel}`,
         },
       });
       result.failed += 1;
