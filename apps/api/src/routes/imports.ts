@@ -67,27 +67,35 @@ for (const kind of ['units', 'tenants'] as const) {
                 errors: [{ row: 0, field: 'csv', message: (error as Error).message }],
               };
             }
-            if (records[0]?.join(',') !== CSV_HEADERS[kind].join(','))
+            // Units files may come in two shapes: the current template (id first)
+            // or the legacy create-only one. The active column list decides how
+            // each row maps to fields.
+            const headerCsv = records[0]?.join(',') ?? '';
+            let columns: readonly string[] = CSV_HEADERS[kind];
+            if (kind === 'units' && headerCsv === CSV_HEADERS.units.slice(1).join(',')) {
+              columns = CSV_HEADERS.units.slice(1);
+            } else if (headerCsv !== columns.join(',')) {
               return {
                 valid: false,
                 count: 0,
                 imported: 0,
-                errors: [{ row: 1, field: 'header', message: `Expected: ${CSV_HEADERS[kind].join(',')}` }],
+                errors: [{ row: 1, field: 'header', message: `Expected: ${columns.join(',')}` }],
               };
+            }
             const errors: ImportError[] = [];
+            if (records.length < 2)
+              errors.push({ row: 0, field: 'csv', message: 'At least one data row is required' });
             const seen = new Set<string>();
             const units: { row: number; data: z.infer<typeof csvUnitSchema> }[] = [];
             const tenants: { row: number; data: z.infer<typeof csvTenantSchema> }[] = [];
-            if (records.length < 2)
-              errors.push({ row: 0, field: 'csv', message: 'At least one data row is required' });
             for (const [i, cells] of records.slice(1).entries()) {
               const row = i + 2;
-              if (cells.length !== CSV_HEADERS[kind].length) {
+              if (cells.length !== columns.length) {
                 errors.push({ row, field: 'csv', message: 'Wrong column count' });
                 continue;
               }
               const raw = Object.fromEntries(
-                CSV_HEADERS[kind].map((key, j) => [key, cells[j]?.trim() || undefined]),
+                columns.map((key, j) => [key, cells[j]?.trim() || undefined]),
               );
               const parsed = (kind === 'units' ? csvUnitSchema : csvTenantSchema).safeParse(raw);
               if (!parsed.success) {
@@ -97,16 +105,50 @@ for (const kind of ['units', 'tenants'] as const) {
               }
               if (kind === 'units') {
                 const data = csvUnitSchema.parse(raw);
-                if (
-                  seen.has(data.label) ||
-                  (await tx.unit.findFirst({
-                    where: { organizationId, propertyId: property!.id, label: data.label },
+                if (data.id) {
+                  // Update path: the row targets an existing unit. It must exist
+                  // in this organization, and its new label must stay unique
+                  // within that unit's own property (the unique index is
+                  // property-wide, including soft-deleted rows).
+                  const target = await tx.unit.findFirst({
+                    where: { id: data.id, organizationId, deletedAt: null },
+                    select: { id: true, propertyId: true, label: true },
+                  });
+                  if (!target) {
+                    errors.push({ row, field: 'id', message: 'Unit not found in this organization' });
+                    continue;
+                  }
+                  if (seen.has(`label:${data.label}`)) {
+                    errors.push({ row, field: 'label', message: 'Duplicate unit label' });
+                    continue;
+                  }
+                  const clash = await tx.unit.findFirst({
+                    where: {
+                      organizationId,
+                      propertyId: target.propertyId,
+                      label: data.label,
+                      id: { not: data.id },
+                    },
                     select: { id: true },
-                  }))
-                )
-                  errors.push({ row, field: 'label', message: 'Duplicate unit label' });
-                seen.add(data.label);
-                units.push({ row, data });
+                  });
+                  if (clash) {
+                    errors.push({ row, field: 'label', message: 'Duplicate unit label' });
+                    continue;
+                  }
+                  seen.add(`label:${data.label}`);
+                  units.push({ row, data });
+                } else {
+                  if (
+                    seen.has(`label:${data.label}`) ||
+                    (await tx.unit.findFirst({
+                      where: { organizationId, propertyId: property!.id, label: data.label },
+                      select: { id: true },
+                    }))
+                  )
+                    errors.push({ row, field: 'label', message: 'Duplicate unit label' });
+                  seen.add(`label:${data.label}`);
+                  units.push({ row, data });
+                }
               } else {
                 const data = csvTenantSchema.parse(raw);
                 const key = JSON.stringify([data.fullName.toLowerCase(), data.phone ?? '', data.email ?? '']);
@@ -134,7 +176,31 @@ for (const kind of ['units', 'tenants'] as const) {
             const count = records.length - 1;
             if (errors.length || input.dryRun) return { valid: !errors.length, count, imported: 0, errors };
             for (const { data } of units) {
-              const { marketRentMinor, ...rest } = data;
+              const { marketRentMinor, id, ...rest } = data;
+              if (id) {
+                // Update: only the fields present in the file change; a blank
+                // cell keeps the unit's current value.
+                const unit = await tx.unit.update({
+                  where: { id },
+                  data: {
+                    ...rest,
+                    ...(marketRentMinor === undefined
+                      ? {}
+                      : { marketRentMinor: BigInt(marketRentMinor) }),
+                  },
+                });
+                await recordAudit(tx, {
+                  organizationId,
+                  actorUserId: req.auth?.userId,
+                  action: 'update',
+                  entityType: 'Unit',
+                  entityId: unit.id,
+                  before: { label: unit.label },
+                  after: { label: rest.label, source: 'csv' },
+                  requestId: req.requestId,
+                });
+                continue;
+              }
               const unit = await tx.unit.create({
                 data: {
                   ...rest,

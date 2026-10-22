@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ApiError } from './api';
+import { ApiError, fieldErrorsOf } from './api';
 
 export interface AsyncState<T> {
   data: T | null;
@@ -96,20 +96,24 @@ export function useAction() {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  /** Validation failures mapped onto field paths: { phone: 'Expected an Ethiopian…' }. */
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
   const run = useCallback(async (task: () => Promise<void>) => {
     setPending(true);
     setError(null);
     setMessage(null);
+    setFieldErrors({});
     try {
       await task();
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : String(cause));
+      setFieldErrors(fieldErrorsOf(cause));
       throw cause;
     } finally {
       setPending(false);
     }
   }, []);
 
-  return { pending, error, message, setMessage, run };
+  return { pending, error, message, setMessage, fieldErrors, run };
 }

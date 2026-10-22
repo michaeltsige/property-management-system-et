@@ -1,6 +1,6 @@
 'use client';
 
-import { Add } from '@/components/icons';
+import { Add, Building3 } from '@/components/icons';
 import { useState } from 'react';
 
 import { ETHIOPIAN_REGIONS, PROPERTY_TYPES, roleHasPermission, type Role } from '@pms/shared';
@@ -20,6 +20,7 @@ import {
   Card,
   CardContent,
   EmptyState,
+  FieldError,
   Input,
   Label,
   Select,
@@ -33,6 +34,7 @@ const EMPTY_FORM = {
   ownerId: '',
   name: '',
   type: 'apartment_block' as (typeof PROPERTY_TYPES)[number],
+  totalFloors: '',
   regionCode: 'AA',
   cityOrZone: '',
   subCity: '',
@@ -62,7 +64,7 @@ export default function PropertiesPage() {
   const [open, setOpen] = useState(false);
   useAutoOpenModal(() => setOpen(true));
   const [form, setForm] = useState(EMPTY_FORM);
-  const { pending, error, run } = useAction();
+  const { pending, error, fieldErrors, run } = useAction();
 
   function update<K extends keyof typeof EMPTY_FORM>(key: K, value: (typeof EMPTY_FORM)[K]) {
     setForm((current) => ({ ...current, [key]: value }));
@@ -75,6 +77,7 @@ export default function PropertiesPage() {
         ownerId: managed ? form.ownerId : undefined,
         name: form.name,
         type: form.type,
+        totalFloors: form.totalFloors === '' ? undefined : Number(form.totalFloors),
         address: {
           regionCode: form.regionCode,
           cityOrZone: form.cityOrZone || undefined,
@@ -176,7 +179,8 @@ export default function PropertiesPage() {
                     <Td className="font-medium text-strong">{property.name}</Td>
                     {managed && <Td>{property.owner?.name ?? '—'}</Td>}
                     <Td>
-                      <Button variant="secondary" onClick={() => setDetailsId(property.id)}>
+                      <Button variant="outline" onClick={() => setDetailsId(property.id)}>
+                        <Building3 className="h-4 w-4" />
                         {t('portfolio.blocks')} ({property.buildings?.length ?? 0})
                       </Button>
                     </Td>
@@ -186,7 +190,7 @@ export default function PropertiesPage() {
                     <Td>{property.houseNumber ?? property.landmark ?? '—'}</Td>
                     <Td>
                       <Badge tone={property.status === 'active' ? 'brand' : 'neutral'}>
-                        {property.status}
+                        {t(`property.status.${property.status}` as never)}
                       </Badge>
                     </Td>
                   </tr>
@@ -205,8 +209,15 @@ export default function PropertiesPage() {
         title={`${selectedProperty?.name ?? ''} · ${t('portfolio.blocks')}`}
       >
         {selectedProperty && (
-          <>
-            {!selectedProperty.buildings?.length && <p>{t('portfolio.no_blocks')}</p>}
+          <div className="space-y-3">
+            {!selectedProperty.buildings?.length && (
+              <div className="rounded-md border border-dashed border-line bg-wash px-4 py-6 text-center">
+                <p className="text-sm text-body">{t('portfolio.no_blocks')}</p>
+                {canWrite && (
+                  <p className="mt-1 text-xs text-muted">{t('portfolio.add_block_below_hint')}</p>
+                )}
+              </div>
+            )}
             {selectedProperty.buildings?.map((block) =>
               canWrite ? (
                 <BlockEditor
@@ -220,7 +231,7 @@ export default function PropertiesPage() {
               ),
             )}
             {canWrite && <BlockEditor propertyId={selectedProperty.id} onSaved={properties.reload} />}
-          </>
+          </div>
         )}
       </Modal>
       <Modal
@@ -247,10 +258,13 @@ export default function PropertiesPage() {
         <form id="property-form" className="grid gap-3 sm:grid-cols-2" onSubmit={submit}>
           {managed && (
             <div className="space-y-1 sm:col-span-2">
-              <Label htmlFor="ownerId">{t('portfolio.owner')}</Label>
+              <Label htmlFor="ownerId" required>
+                {t('portfolio.owner')}
+              </Label>
               <Select
                 id="ownerId"
                 required
+                invalid={Boolean(fieldErrors.ownerId)}
                 value={form.ownerId}
                 onChange={(e) => update('ownerId', e.target.value)}
               >
@@ -261,16 +275,21 @@ export default function PropertiesPage() {
                   </option>
                 ))}
               </Select>
+              <FieldError>{fieldErrors.ownerId}</FieldError>
             </div>
           )}
           <div className="space-y-1 sm:col-span-2">
-            <Label htmlFor="name">{t('property.name')}</Label>
+            <Label htmlFor="name" required>
+              {t('property.name')}
+            </Label>
             <Input
               id="name"
               required
+              invalid={Boolean(fieldErrors.name)}
               value={form.name}
               onChange={(event) => update('name', event.target.value)}
             />
+            <FieldError>{fieldErrors.name}</FieldError>
           </div>
 
           <div className="space-y-1">
@@ -286,6 +305,20 @@ export default function PropertiesPage() {
                 </option>
               ))}
             </Select>
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="totalFloors">{t('property.total_floors')}</Label>
+            <Input
+              id="totalFloors"
+              type="number"
+              min={0}
+              max={200}
+              invalid={Boolean(fieldErrors.totalFloors)}
+              value={form.totalFloors}
+              onChange={(event) => update('totalFloors', event.target.value)}
+            />
+            <FieldError>{fieldErrors.totalFloors}</FieldError>
           </div>
 
           <div className="space-y-1">

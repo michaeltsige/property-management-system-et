@@ -5,8 +5,11 @@ import { useState } from 'react';
 import { roleHasPermission, type Role } from '@pms/shared';
 
 import { api } from '@/lib/api';
+import type { Member } from '@/lib/types';
 import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
+import { cn } from '@/lib/utils';
+import { statusTone } from '@/lib/format';
 
 import { PageHeader } from '@/components/app-shell';
 import {
@@ -26,6 +29,12 @@ import {
   Th,
 } from '@/components/ui';
 
+/** The link an invitee opens to set their password; the token IS the credential. */
+function inviteLink(token: string): string {
+  if (typeof window === 'undefined') return `/accept-invite?token=${token}`;
+  return `${window.location.origin}/accept-invite?token=${token}`;
+}
+
 /**
  * The organization's people: invite staff, activate or disable accounts.
  * Roles are fixed at creation — there are exactly three (owner/admin, property
@@ -37,21 +46,57 @@ export default function TeamPage() {
   const members = useAsync(() => api.members(), []);
   const [invite, setInvite] = useState({ email: '', fullName: '' });
   const { pending, error, message, setMessage, run } = useAction();
+  // The one-time invite link to hand over, with its expiry.
+  const [inviteOutcome, setInviteOutcome] = useState<{
+    email: string;
+    token: string;
+    expiresAt: string;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
   const canManage = roleHasPermission(session?.role as Role, 'users.manage');
+  const canInvite = roleHasPermission(session?.role as Role, 'users.invite');
 
   async function sendInvite(event: React.FormEvent) {
     event.preventDefault();
     await run(async () => {
-      await api.sendNotification({
-        templateKey: 'notification.invite_user',
-        channel: 'in_app',
-        recipientEmail: invite.email,
-        values: { email: invite.email, role: 'manager', name: invite.fullName },
+      const result = await api.inviteMember({
+        email: invite.email,
+        fullName: invite.fullName || undefined,
       });
-      setMessage(t('user.invited', { email: invite.email }));
+      setInviteOutcome({
+        email: result.invite.email,
+        token: result.invite.token,
+        expiresAt: result.invite.expiresAt,
+      });
+      setCopied(false);
+      setMessage(null);
       setInvite({ email: '', fullName: '' });
       members.reload();
     }).catch(() => undefined);
+  }
+
+  async function resendInvite(member: Member) {
+    await run(async () => {
+      const result = await api.resendInvite(member.id);
+      setInviteOutcome({
+        email: result.invite.email,
+        token: result.invite.token,
+        expiresAt: result.invite.expiresAt,
+      });
+      setCopied(false);
+      setMessage(null);
+      members.reload();
+    }).catch(() => undefined);
+  }
+
+  async function copyLink(token: string) {
+    try {
+      await navigator.clipboard.writeText(inviteLink(token));
+      setCopied(true);
+    } catch {
+      // Clipboard can be blocked (http, permissions); the input stays selectable.
+      setCopied(false);
+    }
   }
 
   async function toggleStatus(membershipId: string, next: 'active' | 'disabled') {
@@ -68,7 +113,39 @@ export default function TeamPage() {
       {message ? <Alert tone="success">{message}</Alert> : null}
       {error ? <Alert tone="danger">{error}</Alert> : null}
 
-      {roleHasPermission(session?.role as Role, 'users.invite') ? (
+      {/* No email provider is connected, so the invite is handed over here:
+          a one-time link the invitee opens to choose their password. */}
+      {inviteOutcome ? (
+        <Alert tone="success" title={t('user.invited', { email: inviteOutcome.email })}>
+          <div className="mt-1 space-y-2">
+            <p className="text-xs">{t('user.invite_token_hint', {
+              email: inviteOutcome.email,
+              date: new Date(inviteOutcome.expiresAt).toLocaleDateString(),
+            })}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                readOnly
+                value={inviteLink(inviteOutcome.token)}
+                onFocus={(event) => event.currentTarget.select()}
+                className="h-8 flex-1 font-mono text-xs"
+                aria-label={t('user.invite_link')}
+              />
+              <Button variant="outline" size="sm" onClick={() => void copyLink(inviteOutcome.token)}>
+                {copied ? t('user.invite_copied') : t('user.copy_link')}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setInviteOutcome(null)}
+              >
+                {t('common.close')}
+              </Button>
+            </div>
+          </div>
+        </Alert>
+      ) : null}
+
+      {canInvite ? (
         <Card>
           <CardHeader>
             <CardTitle>{t('user.invite')}</CardTitle>
@@ -76,7 +153,9 @@ export default function TeamPage() {
           <CardContent>
             <form className="grid gap-3 sm:grid-cols-2" onSubmit={sendInvite}>
               <div className="space-y-1">
-                <Label htmlFor="invite-email">{t('auth.email')}</Label>
+                <Label htmlFor="invite-email" required>
+                  {t('auth.email')}
+                </Label>
                 <Input
                   id="invite-email"
                   type="email"
@@ -86,7 +165,7 @@ export default function TeamPage() {
                 />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="invite-name">{t('tenant.full_name')}</Label>
+                <Label htmlFor="invite-name">{`${t('tenant.full_name')} (${t('common.optional')})`}</Label>
                 <Input
                   id="invite-name"
                   value={invite.fullName}
@@ -139,19 +218,37 @@ export default function TeamPage() {
                       </Badge>
                     </Td>
                     <Td>
-                      <Badge tone={member.status === 'active' ? 'brand' : 'neutral'}>{member.status}</Badge>
+                      <Badge className={cn(statusTone[member.status])}>
+                        {t(`member.status.${member.status}` as never)}
+                      </Badge>
                     </Td>
                     <Td>
                       {canManage ? (
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() =>
-                            void toggleStatus(member.id, member.status === 'active' ? 'disabled' : 'active')
-                          }
-                        >
-                          {member.status === 'active' ? t('common.disabled') : t('common.enabled')}
-                        </Button>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          {member.status === 'invited' ? (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              disabled={pending}
+                              onClick={() => void resendInvite(member)}
+                            >
+                              {t('user.resend_invite')}
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() =>
+                                void toggleStatus(
+                                  member.id,
+                                  member.status === 'active' ? 'disabled' : 'active',
+                                )
+                              }
+                            >
+                              {member.status === 'active' ? t('common.disabled') : t('common.enabled')}
+                            </Button>
+                          )}
+                        </div>
                       ) : null}
                     </Td>
                   </tr>

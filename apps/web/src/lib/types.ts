@@ -98,6 +98,10 @@ export interface LeaseSummary {
   currency: string;
   dueDayOfMonth: number;
   balanceMinor: string;
+  /** Deposit configuration — drives the balance explanation for advance rent. */
+  depositType: string;
+  depositMonths: number | null;
+  depositAmountMinor: string | null;
   unit: { id: string; label: string; property: { id: string; name: string } };
   tenant: { id: string; fullName: string; phone: string | null };
 }
@@ -130,6 +134,12 @@ export interface Charge {
   currency: string;
   status: 'open' | 'partial' | 'paid' | 'waived' | 'written_off';
   waiverReason?: string | null;
+  /** Included by GET /charges so the table can show who owes for what. */
+  tenant?: { id: string; fullName: string } | null;
+  lease?: {
+    id: string;
+    unit: { label: string; property: { id: string; name: string } };
+  } | null;
 }
 
 export interface Payment {

@@ -1,11 +1,27 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { roleHasPermission, unitLabels, type Role } from '@pms/shared';
+import { roleHasPermission, unitLabelsWithFloors, type Role } from '@pms/shared';
 import { api } from '@/lib/api';
 import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { Alert, Button, Card, CardContent, Input, Label, Skeleton } from '@/components/ui';
+
+/** "1, 2, 3" → floor numbers; null when the text does not parse. */
+function parseFloors(raw: string): number[] | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const parts = trimmed.split(',');
+  if (parts.length > 60) return null;
+  const floors: number[] = [];
+  for (const part of parts) {
+    if (!/^-?\d+$/.test(part.trim())) return null;
+    const value = Number(part.trim());
+    if (!Number.isSafeInteger(value) || value < -5 || value > 200) return null;
+    floors.push(value);
+  }
+  return floors;
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -17,14 +33,23 @@ export default function OnboardingPage() {
   const [ownerName, setOwner] = useState('');
   const [pattern, setPattern] = useState('A-{n}');
   const [count, setCount] = useState(0);
+  const [floorsText, setFloorsText] = useState('');
   const { pending, error, run } = useAction();
-  let labels: string[] = [];
+  const floors = parseFloors(floorsText);
+  const floorsInvalid = floorsText.trim() !== '' && floors === null;
+  let generated: { label: string; floor: number | null }[] = [];
   try {
-    if (count > 0) labels = unitLabels({ pattern, start: 1, count, padding: 3 });
+    if (count > 0 && floors) generated = unitLabelsWithFloors({ pattern, start: 1, count, padding: 3, floors });
+    else if (count > 0) generated = unitLabelsWithFloors({ pattern, start: 1, count, padding: 3 });
   } catch {
     /* form validation */
   }
-  const invalidUnits = count < 0 || count > 200 || !Number.isInteger(count) || (count > 0 && !labels.length);
+  const invalidUnits =
+    count < 0 ||
+    count > 200 ||
+    !Number.isInteger(count) ||
+    floorsInvalid ||
+    (count > 0 && !generated.length);
   const finish = (skip: boolean) =>
     void run(async () => {
       await api.finishOnboarding(
@@ -32,9 +57,16 @@ export default function OnboardingPage() {
           ? { action: 'skip' }
           : {
               action: 'create',
-              property: { name, type: 'apartment_block' },
+              property: {
+                name,
+                type: 'apartment_block',
+                ...(floors && floors.length ? { totalFloors: Math.max(...floors) } : {}),
+              },
               ownerName: owners.data?.portfolioMode === 'managed' ? ownerName : undefined,
-              units: count > 0 ? { pattern, start: 1, count, padding: 3 } : undefined,
+              units:
+                count > 0
+                  ? { pattern, start: 1, count, padding: 3, ...(floors ? { floors } : {}) }
+                  : undefined,
             },
       );
       router.replace('/dashboard');
@@ -84,7 +116,9 @@ export default function OnboardingPage() {
                 />
               </>
             )}
-            <Label htmlFor="first-count">{t('bulk.count')}</Label>
+            {/* With floors entered, count is per floor (same semantics as the
+                Units bulk form); the preview shows the real outcome. */}
+            <Label htmlFor="first-count">{floors ? t('bulk.count_per_floor') : t('bulk.count')}</Label>
             <Input
               id="first-count"
               type="number"
@@ -103,8 +137,19 @@ export default function OnboardingPage() {
                   maxLength={50}
                   onChange={(e) => setPattern(e.target.value)}
                 />
+                <Label htmlFor="first-floors">{t('bulk.floors')}</Label>
+                <Input
+                  id="first-floors"
+                  inputMode="numeric"
+                  placeholder="1, 2, 3"
+                  value={floorsText}
+                  onChange={(e) => setFloorsText(e.target.value)}
+                  aria-invalid={floorsInvalid || undefined}
+                />
+                <p className="text-[11px] text-muted">{t('bulk.floors_hint')}</p>
+                {floorsInvalid && <Alert tone="danger">{t('bulk.floors_invalid')}</Alert>}
                 <p className="text-sm">
-                  {t('bulk.preview')}: {labels.slice(0, 5).join(', ')}
+                  {t('bulk.preview')}: {generated.slice(0, 5).map((u) => u.label).join(', ')}
                 </p>
               </>
             )}

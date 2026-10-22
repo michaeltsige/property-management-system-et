@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { finishOnboardingSchema, unitLabels } from '@pms/shared';
+import { finishOnboardingSchema, unitLabelsWithFloors } from '@pms/shared';
 import { organizationIdOf, requireAuth } from '../middleware/context.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
@@ -61,11 +61,20 @@ onboardingRouter.post(
               after: { name: property.name, ownerId, source: 'onboarding' },
             });
             if (input.units) {
+              // Floor-wise naming assigns each generated unit its floor; a
+              // colliding pattern is a client error, not a 500.
+              let generated;
+              try {
+                generated = unitLabelsWithFloors(input.units);
+              } catch (error) {
+                throw businessRule(error instanceof Error ? error.message : 'Invalid naming pattern');
+              }
               const units = await tx.unit.createManyAndReturn({
-                data: unitLabels(input.units).map((label) => ({
+                data: generated.map((unit) => ({
                   organizationId,
                   propertyId: property.id,
-                  label,
+                  label: unit.label,
+                  floor: unit.floor,
                   status: 'vacant',
                   currency: org.currency,
                 })),

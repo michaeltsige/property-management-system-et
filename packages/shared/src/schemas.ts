@@ -168,7 +168,9 @@ export const portfolioModeSchema = z.enum(['self_owned', 'managed']);
 export const signupBillingSchema = z
   .object({
     billingCalendar: calendarKindSchema.default('gregorian'),
-    dueDay: z.number().int().min(1).max(28).default(5),
+    // Same ceiling as leases (RENT_DUE_DAY_MAX = 30): charge generation clamps
+    // to the real month length (incl. Ethiopian 13th month), so 29–30 are safe.
+    dueDay: z.number().int().min(1).max(RENT_DUE_DAY_MAX).default(5),
     graceDays: z.number().int().min(0).max(60).default(0),
     lateFeeRule: z.enum(['none', 'percent', 'fixed']).default('none'),
     lateFeeBps: z.number().int().min(0).max(10000).default(0),

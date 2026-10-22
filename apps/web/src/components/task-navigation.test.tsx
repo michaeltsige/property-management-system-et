@@ -41,6 +41,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
       createUnit: vi.fn(),
       bulkUnits: vi.fn(),
       importCsv: vi.fn(),
+      exportCsvUrl: vi.fn(() => '/api/v1/exports/units.csv'),
     },
   };
 });

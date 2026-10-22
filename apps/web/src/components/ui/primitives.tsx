@@ -27,20 +27,48 @@ import {
 
 import { cn } from '@/lib/utils';
 
-export function Label({ className, ...props }: React.ComponentProps<typeof LabelPrimitive.Root>) {
-  return <LabelPrimitive.Root className={cn('text-xs font-medium text-soft', className)} {...props} />;
+export function Label({
+  className,
+  required,
+  children,
+  ...props
+}: React.ComponentProps<typeof LabelPrimitive.Root> & { required?: boolean }) {
+  return (
+    <LabelPrimitive.Root className={cn('text-xs font-medium text-soft', className)} {...props}>
+      {children}
+      {/* The visible required marker: the HTML attribute alone is invisible. */}
+      {required ? (
+        <span aria-hidden="true" className="ml-0.5 text-red-600 dark:text-red-400">
+          *
+        </span>
+      ) : null}
+    </LabelPrimitive.Root>
+  );
+}
+
+/** Field-level validation message, shown under the input it describes. */
+export function FieldError({ children }: { children: ReactNode }) {
+  if (!children) return null;
+  return (
+    <p role="alert" className="mt-1 text-xs text-red-600 dark:text-red-400">
+      {children}
+    </p>
+  );
 }
 
 export function Input({
   className,
+  invalid,
   ref,
   ...props
-}: InputHTMLAttributes<HTMLInputElement> & { ref?: Ref<HTMLInputElement> }) {
+}: InputHTMLAttributes<HTMLInputElement> & { ref?: Ref<HTMLInputElement>; invalid?: boolean }) {
   return (
     <input
       ref={ref}
+      aria-invalid={invalid || props['aria-invalid'] || undefined}
       className={cn(
         'flex h-9 w-full rounded-md border border-line bg-surface px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-60',
+        invalid && 'border-red-400 focus-visible:border-red-500 focus-visible:ring-red-500',
         className,
       )}
       {...props}
@@ -123,6 +151,8 @@ export type SelectProps = Omit<
   defaultValue?: string | number;
   /** Native-shaped handler: `{ target: { value, name } }`. */
   onChange?: (event: { target: { value: string; name: string } }) => void;
+  /** Red "something is wrong" state on the trigger. */
+  invalid?: boolean;
 };
 
 export function Select({
@@ -135,6 +165,7 @@ export function Select({
   value,
   defaultValue,
   onChange,
+  invalid,
   'aria-label': ariaLabel,
   'aria-labelledby': ariaLabelledBy,
 }: SelectProps) {
@@ -171,8 +202,10 @@ export function Select({
         aria-label={ariaLabel}
         aria-labelledby={ariaLabelledBy}
         aria-required={required || undefined}
+        aria-invalid={invalid || undefined}
         className={cn(
           'flex h-9 w-full items-center justify-between gap-1 rounded-md border border-line bg-surface px-3 py-1 text-sm shadow-sm transition-colors focus-visible:border-brand-500 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand-500 disabled:cursor-not-allowed disabled:opacity-60 data-[state=open]:border-brand-500 data-[state=open]:ring-1 data-[state=open]:ring-brand-500 [&>span]:min-w-0 [&>span]:truncate',
+          invalid && 'border-red-400 focus-visible:border-red-500 focus-visible:ring-red-500',
           className,
         )}
       >
@@ -274,17 +307,18 @@ export function CardContent({ className, ...props }: HTMLAttributes<HTMLDivEleme
 
 const badgeVariants = cva(
   // Compact rectangle, not a pill: statuses read as data in a dense table,
-  // not as decorative chips (java110/Element convention).
-  'inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4',
+  // not as decorative chips (java110/Element convention). The inset ring is
+  // the subtle border that keeps every tone legible on both canvas shades.
+  'inline-flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11px] font-medium leading-4 ring-1 ring-inset',
   {
     variants: {
       tone: {
-        neutral: 'bg-wash-strong text-body',
-        brand: 'bg-brand-100 text-brand-800',
-        warning: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300',
-        danger: 'bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300',
-        info: 'bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300',
-        gold: 'bg-gold-400/20 text-gold-600 dark:text-gold-400',
+        neutral: 'bg-wash-strong text-body ring-black/10 dark:ring-white/15',
+        brand: 'bg-brand-100 text-brand-800 ring-brand-600/25',
+        warning: 'bg-amber-100 text-amber-800 ring-amber-600/25 dark:bg-amber-950/60 dark:text-amber-300 dark:ring-amber-400/30',
+        danger: 'bg-red-100 text-red-800 ring-red-600/25 dark:bg-red-950/60 dark:text-red-300 dark:ring-red-400/30',
+        info: 'bg-sky-100 text-sky-800 ring-sky-600/25 dark:bg-sky-950/60 dark:text-sky-300 dark:ring-sky-400/30',
+        gold: 'bg-gold-400/20 text-gold-600 ring-gold-600/30 dark:text-gold-400',
       },
     },
     defaultVariants: { tone: 'neutral' },

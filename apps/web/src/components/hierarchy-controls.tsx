@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { Add } from '@/components/icons';
 import { api } from '@/lib/api';
 import { useAction } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
@@ -108,7 +109,7 @@ export function BlockEditor({
   const id = `block-${block?.id ?? propertyId}`;
   return (
     <form
-      className="space-y-2 py-2"
+      className={block ? 'space-y-2 py-2' : 'space-y-2 rounded-md border border-line bg-wash p-3'}
       onSubmit={(e) => {
         e.preventDefault();
         void run(async () => {
@@ -119,12 +120,30 @@ export function BlockEditor({
         }).catch(() => undefined);
       }}
     >
-      <Label htmlFor={id}>{t('portfolio.block_name')}</Label>
+      <Label htmlFor={id} required={!block}>
+        {block ? t('portfolio.block_name') : t('portfolio.add_block')}
+      </Label>
       <div className="flex gap-2">
-        <Input id={id} value={name} required maxLength={80} onChange={(e) => setName(e.target.value)} />
-        <Button type="submit" disabled={pending}>
-          {block ? t('common.save') : t('portfolio.add_block')}
-        </Button>
+        <Input
+          id={id}
+          value={name}
+          required
+          maxLength={80}
+          placeholder={block ? undefined : t('portfolio.block_name')}
+          onChange={(e) => setName(e.target.value)}
+        />
+        {block ? (
+          <Button type="submit" disabled={pending}>
+            {t('common.save')}
+          </Button>
+        ) : (
+          // The add control is the primary action of the block dialog: a filled
+          // button with the + icon, not a bare text button next to the input.
+          <Button type="submit" disabled={pending}>
+            <Add className="h-4 w-4" />
+            {t('portfolio.add_block')}
+          </Button>
+        )}
         {block ? (
           <Button
             type="button"

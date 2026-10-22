@@ -5,6 +5,7 @@ import { api } from '@/lib/api';
 import { usePreferences } from '@/lib/preferences';
 import { useAction } from '@/lib/hooks';
 import type { Property } from '@/lib/types';
+import { Export as ExportIcon } from './icons';
 import { Modal } from './modal';
 import { Alert, Button, Input, Label, Select, Table, Th, Td } from './ui';
 
@@ -66,51 +67,65 @@ export function CsvImportForm({
   return (
     <div className="space-y-3">
       <p className="text-sm text-soft">{t('csv.hint')}</p>
-      <Button
-        variant="secondary"
-        onClick={() => download(`${kind}-template.csv`, CSV_HEADERS[kind].join(',') + '\r\n')}
-      >
-        {t('csv.template')}
-      </Button>
+      <div>
+        {/* Outline + icon: the template download must read as a clickable
+            action, not as a disabled-looking grey strip. */}
+        <Button
+          variant="outline"
+          onClick={() => download(`${kind}-template.csv`, CSV_HEADERS[kind].join(',') + '\r\n')}
+        >
+          <ExportIcon className="h-4 w-4" />
+          {t('csv.template')}
+        </Button>
+        {kind === 'units' && (
+          <p className="mt-1 text-[11px] text-muted">{t('csv.units_id_hint')}</p>
+        )}
+      </div>
       {kind === 'units' && (
         <>
-          <Label htmlFor="csv-property">{t('nav.properties')}</Label>
-          <Select
-            disabled={pending}
-            id="csv-property"
-            value={propertyId}
-            onChange={(e) => {
-              setProperty(e.target.value);
-              setBuilding('');
-              setReport(null);
-            }}
-          >
-            <option value="">{t('common.select')}</option>
-            {properties.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </Select>
-          <Label htmlFor="csv-block">{t('portfolio.block')}</Label>
-          <Select
-            disabled={pending}
-            id="csv-block"
-            value={buildingId}
-            onChange={(e) => {
-              setBuilding(e.target.value);
-              setReport(null);
-            }}
-          >
-            <option value="">{t('portfolio.no_block')}</option>
-            {properties
-              .find((p) => p.id === propertyId)
-              ?.buildings?.map((b) => (
-                <option key={b.id} value={b.id}>
-                  {b.name}
+          <div className="space-y-1">
+            <Label htmlFor="csv-property" required>
+              {t('nav.properties')}
+            </Label>
+            <Select
+              disabled={pending}
+              id="csv-property"
+              value={propertyId}
+              onChange={(e) => {
+                setProperty(e.target.value);
+                setBuilding('');
+                setReport(null);
+              }}
+            >
+              <option value="">{t('common.select')}</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
                 </option>
               ))}
-          </Select>
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="csv-block">{t('portfolio.block')}</Label>
+            <Select
+              disabled={pending}
+              id="csv-block"
+              value={buildingId}
+              onChange={(e) => {
+                setBuilding(e.target.value);
+                setReport(null);
+              }}
+            >
+              <option value="">{t('portfolio.no_block')}</option>
+              {properties
+                .find((p) => p.id === propertyId)
+                ?.buildings?.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+            </Select>
+          </div>
         </>
       )}
       <Label htmlFor="csv-file">{t('csv.file')}</Label>

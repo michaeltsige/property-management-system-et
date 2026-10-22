@@ -85,10 +85,6 @@ export default function PortalProfilePage() {
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-muted">{t('portal.signed_in_as')}</dt>
-                <dd className="mt-0.5 font-medium text-strong">{session.user.email}</dd>
-              </div>
-              <div>
                 <dt className="text-xs text-muted">{t('property.name')}</dt>
                 <dd className="mt-0.5 font-medium text-strong">{session.organization.name}</dd>
               </div>

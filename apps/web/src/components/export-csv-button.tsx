@@ -15,7 +15,7 @@ export function ExportCsvButton({
   kind,
   query = '',
 }: {
-  kind: 'tenants' | 'leases' | 'charges' | 'payments' | 'arrears';
+  kind: 'tenants' | 'leases' | 'charges' | 'payments' | 'arrears' | 'units';
   query?: string;
 }) {
   const { t, session } = usePreferences();

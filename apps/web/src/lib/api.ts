@@ -97,6 +97,23 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Map a validation ApiError onto field paths, e.g. `{ phone: 'Expected an
+ * Ethiopian mobile number…' }`. Forms feed this into `FieldError` + the
+ * `invalid` prop so users see exactly which field needs attention instead of
+ * a generic "Request validation failed".
+ */
+export function fieldErrorsOf(error: unknown): Record<string, string> {
+  if (!(error instanceof ApiError)) return {};
+  const fields = (error.details as { fields?: { path: string; message: string }[] } | undefined)?.fields;
+  if (!Array.isArray(fields)) return {};
+  const map: Record<string, string> = {};
+  for (const field of fields) {
+    if (field?.path && field.message && !map[field.path]) map[field.path] = field.message;
+  }
+  return map;
+}
+
 export function loadSession(): StoredSession | null {
   if (typeof window === 'undefined') return null;
   try {
@@ -337,7 +354,7 @@ export const api = {
   /** Same-origin download URL — the session cookie authorizes it. */
   portalDocumentUrl: (id: string) => `/api/v1/portal/documents/${id}/download`,
   /** Server-side CSV export; open in a new tab so the browser downloads it. */
-  exportCsvUrl: (kind: 'tenants' | 'leases' | 'charges' | 'payments' | 'arrears') =>
+  exportCsvUrl: (kind: 'tenants' | 'leases' | 'charges' | 'payments' | 'arrears' | 'units') =>
     `/api/v1/exports/${kind}.csv`,
   auditLogs: (query = '') => apiFetch<{ items: AuditLogEntry[]; total: number }>(`/audit-logs${query}`),
 
@@ -454,6 +471,27 @@ export const api = {
   resetPaymentGateway: () =>
     apiFetch<{ gateway: PaymentGatewayStatus }>('/organizations/payment-gateway', { method: 'DELETE' }),
   members: () => apiFetch<{ members: Member[] }>('/organizations/members'),
+  /**
+   * Invite a staff member. No email provider is connected, so the one-time
+   * invite token comes back in the response — the UI shows it as a link to
+   * hand to the invitee (they pick their password on /accept-invite).
+   */
+  inviteMember: (body: { email: string; role?: 'owner_admin' | 'manager'; fullName?: string }) =>
+    apiFetch<{ membership: Member; invite: { token: string; expiresAt: string; email: string } }>(
+      '/organizations/members',
+      { method: 'POST', body },
+    ),
+  resendInvite: (membershipId: string) =>
+    apiFetch<{ membership: Member; invite: { token: string; expiresAt: string; email: string } }>(
+      `/organizations/members/${membershipId}/resend-invite`,
+      { method: 'POST' },
+    ),
+  /** Redeem an invite token; unauthenticated by design (the token is the credential). */
+  acceptInvite: (body: { token: string; password: string }) =>
+    apiFetch<{ email: string; organization: { id: string; name: string; slug: string } }>(
+      '/auth/accept-invite',
+      { method: 'POST', body },
+    ),
   updateMembership: (membershipId: string, body: { role?: string; status?: 'active' | 'disabled' }) =>
     apiFetch<{ membership: Member }>(`/organizations/members/${membershipId}`, { method: 'PATCH', body }),
   updateOrganizationProfile: (body: { name: string }) =>

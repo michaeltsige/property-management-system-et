@@ -9,6 +9,7 @@ export {
   CardHeader,
   CardTitle,
   EmptyState,
+  FieldError,
   Input,
   Label,
   Select,

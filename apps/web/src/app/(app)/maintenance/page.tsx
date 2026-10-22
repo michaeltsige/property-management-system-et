@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { WORK_ORDER_STATUSES, roleHasPermission, type Role } from '@pms/shared';
 
@@ -52,6 +52,15 @@ export default function MaintenancePage() {
   const vendors = useAsync(() => api.vendors(), []);
   const [assignFor, setAssignFor] = useState<string | null>(null);
   const [maintainerName, setMaintainerName] = useState('');
+  const [openSuggestions, setOpenSuggestions] = useState(false);
+  const suggestionItems = useMemo(() => {
+    const query = maintainerName.trim().toLowerCase();
+    const list = vendors.data?.vendors ?? [];
+    const filtered = query
+      ? list.filter((vendor) => vendor.name.toLowerCase().includes(query))
+      : list;
+    return filtered.slice(0, 8);
+  }, [vendors.data, maintainerName]);
   const { pending, error, run } = useAction();
 
   // Detail drawer state: which request is open, plus a version bump so adding
@@ -317,20 +326,51 @@ export default function MaintenancePage() {
       >
         <div className="space-y-2">
           <Label htmlFor="maintainerName">{t('maintenance.maintainer')}</Label>
-          {/* Free text, suggestions only: a person, a company, whoever shows up. */}
-          <Input
-            id="maintainerName"
-            list="maintainer-options"
-            value={maintainerName}
-            onChange={(event) => setMaintainerName(event.target.value)}
-            placeholder={t('maintenance.maintainer_hint')}
-            autoComplete="off"
-          />
-          <datalist id="maintainer-options">
-            {(vendors.data?.vendors ?? []).map((vendor) => (
-              <option key={vendor.id} value={vendor.name} />
-            ))}
-          </datalist>
+          {/* Free text, suggestions only: a person, a company, whoever shows up.
+              A custom listbox instead of a native <datalist> — the browser-drawn
+              suggestion popup cannot be styled and anchors inconsistently. */}
+          <div className="relative">
+            <Input
+              id="maintainerName"
+              role="combobox"
+              aria-expanded={openSuggestions}
+              aria-controls="maintainer-suggestions"
+              aria-autocomplete="list"
+              value={maintainerName}
+              onChange={(event) => {
+                setMaintainerName(event.target.value);
+                setOpenSuggestions(true);
+              }}
+              onFocus={() => setOpenSuggestions(true)}
+              onBlur={() => setTimeout(() => setOpenSuggestions(false), 120)}
+              placeholder={t('maintenance.maintainer_hint')}
+              autoComplete="off"
+            />
+            {openSuggestions && suggestionItems.length > 0 && (
+              <ul
+                id="maintainer-suggestions"
+                role="listbox"
+                className="absolute z-30 mt-1 max-h-48 w-full overflow-y-auto rounded-md bg-surface py-1 shadow-float"
+              >
+                {suggestionItems.map((vendor) => (
+                  <li key={vendor.id} role="option" aria-selected={maintainerName === vendor.name}>
+                    <button
+                      type="button"
+                      className="block w-full cursor-pointer px-3 py-1.5 text-left text-sm hover:bg-wash-strong"
+                      onMouseDown={(event) => {
+                        // Pick on mousedown so the input's blur does not eat the click.
+                        event.preventDefault();
+                        setMaintainerName(vendor.name);
+                        setOpenSuggestions(false);
+                      }}
+                    >
+                      {vendor.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <p className="text-xs text-muted">{t('maintenance.maintainer_hint')}</p>
           {error ? <Alert tone="danger">{error}</Alert> : null}
         </div>

@@ -14,9 +14,17 @@
  * Bump VERSION whenever the caching rules change; the activate step deletes
  * every cache from other versions.
  */
-const VERSION = 'pms-shell-v2';
+const VERSION = 'pms-shell-v3';
 const OFFLINE_URL = '/offline';
-const PRECACHE = [OFFLINE_URL, '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png'];
+const PRECACHE = [
+  OFFLINE_URL,
+  '/manifest.webmanifest',
+  '/icons/icon-192.png',
+  '/icons/icon-512.png',
+  // The offline page renders the brand mark directly; precache it so the logo
+  // is there exactly when nothing else is.
+  '/brand/rentalo-mark-ink.svg',
+];
 
 self.addEventListener('install', (event) => {
   event.waitUntil(

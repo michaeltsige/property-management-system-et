@@ -9,6 +9,7 @@
 
 import { Refresh } from '@/components/icons';
 
+import { Logo } from '@/components/logo';
 import { usePreferences } from '@/lib/preferences';
 
 import { Button } from '@/components/ui';
@@ -18,9 +19,8 @@ export default function OfflinePage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-canvas px-6 text-center">
-      <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-brand-600 text-lg font-bold text-white">
-        ቤ
-      </div>
+      {/* The real brand mark (ink on the light canvas), not a stand-in glyph. */}
+      <Logo size={56} className="mx-auto" />
       <div>
         <h1 className="text-xl font-semibold tracking-tight text-strong">{t('offline.title')}</h1>
         <p className="mt-1 max-w-sm text-sm text-soft">{t('offline.body')}</p>

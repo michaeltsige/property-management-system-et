@@ -130,6 +130,17 @@ moneyRouter.get(
           orderBy: [{ dueDate: 'desc' }],
           skip: (page - 1) * pageSize,
           take: pageSize,
+          // Who owes for what: the charges table shows tenant + unit + property
+          // next to every charge instead of bare UUIDs.
+          include: {
+            tenant: { select: { id: true, fullName: true } },
+            lease: {
+              select: {
+                id: true,
+                unit: { select: { label: true, property: { select: { id: true, name: true } } } },
+              },
+            },
+          },
         }),
         prisma.charge.count({ where }),
       ]);

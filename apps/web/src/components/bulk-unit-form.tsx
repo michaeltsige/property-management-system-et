@@ -1,12 +1,28 @@
 'use client';
 import { useState } from 'react';
-import { unitLabels } from '@pms/shared';
+import { unitLabelsWithFloors } from '@pms/shared';
 import { api } from '@/lib/api';
 import type { Property } from '@/lib/types';
 import { useAction } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { MoneyInput } from './form-controls';
 import { Alert, Button, Input, Label, Select } from './ui';
+
+/** "1, 2, 3" / "G, 1" is not accepted — floors are integers (basements negative). */
+function parseFloors(raw: string): number[] | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  const parts = trimmed.split(',');
+  if (parts.length > 60) return null;
+  const floors: number[] = [];
+  for (const part of parts) {
+    if (!/^-?\d+$/.test(part.trim())) return null;
+    const value = Number(part.trim());
+    if (!Number.isSafeInteger(value) || value < -5 || value > 200) return null;
+    floors.push(value);
+  }
+  return floors;
+}
 
 export function BulkUnitForm({
   properties,
@@ -22,12 +38,16 @@ export function BulkUnitForm({
   const [start, setStart] = useState(1);
   const [count, setCount] = useState(10);
   const [padding, setPadding] = useState(3);
+  const [floorsText, setFloorsText] = useState('');
   const [typeLabel, setTypeLabel] = useState('');
   const [marketRent, setMarketRent] = useState<number | null>(null);
   const { pending, error, run } = useAction();
-  let labels: string[] = [];
+  const floors = parseFloors(floorsText);
+  const floorsInvalid = floorsText.trim() !== '' && floors === null;
+  let generated: { label: string; floor: number | null }[] = [];
   try {
-    labels = unitLabels({ pattern, start, count, padding });
+    if (floors !== null) generated = unitLabelsWithFloors({ pattern, start, count, padding, floors });
+    else generated = unitLabelsWithFloors({ pattern, start, count, padding }).map((u) => ({ ...u }));
   } catch {
     /* Invalid preview disables submit. */
   }
@@ -36,13 +56,19 @@ export function BulkUnitForm({
       className="space-y-3"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!labels.length) return;
+        if (!generated.length) return;
         void run(async () => {
           const currency = (session?.organization?.currency as string | undefined) ?? 'ETB';
           const result = await api.bulkUnits({
             propertyId,
             buildingId: buildingId || null,
-            naming: { pattern, start, count, padding },
+            naming: {
+              pattern,
+              start,
+              count,
+              padding,
+              ...(floors ? { floors } : {}),
+            },
             typeLabel: typeLabel.trim() || undefined,
             marketRent: marketRent === null ? undefined : { amountMinor: marketRent, currency },
           });
@@ -101,7 +127,7 @@ export function BulkUnitForm({
           />
         </div>
         <div>
-          <Label htmlFor="bulk-count">{t('bulk.count')}</Label>
+          <Label htmlFor="bulk-count">{floors ? t('bulk.count_per_floor') : t('bulk.count')}</Label>
           <Input
             id="bulk-count"
             type="number"
@@ -126,6 +152,18 @@ export function BulkUnitForm({
         </div>
       </div>
       <div>
+        <Label htmlFor="bulk-floors">{t('bulk.floors')}</Label>
+        <Input
+          id="bulk-floors"
+          inputMode="numeric"
+          placeholder="1, 2, 3"
+          value={floorsText}
+          onChange={(e) => setFloorsText(e.target.value)}
+          aria-invalid={floorsInvalid || undefined}
+        />
+        <p className="mt-1 text-[11px] text-muted">{t('bulk.floors_hint')}</p>
+      </div>
+      <div>
         <Label htmlFor="bulk-type">{t('bulk.type_label')}</Label>
         <Input
           id="bulk-type"
@@ -138,12 +176,13 @@ export function BulkUnitForm({
       <MoneyInput label={t('bulk.market_rent_optional')} value={marketRent} onChange={setMarketRent} />
       <p className="break-words text-sm" aria-live="polite">
         {t('bulk.preview')}:{' '}
-        {labels.length
-          ? `${labels.slice(0, 5).join(', ')}${labels.length > 5 ? ` … ${labels.at(-1)}` : ''}`
+        {generated.length
+          ? `${generated.slice(0, 5).map((u) => u.label).join(', ')}${generated.length > 5 ? ` … ${generated.at(-1)!.label}` : ''}`
           : t('bulk.invalid')}
       </p>
+      {floorsInvalid && <Alert tone="danger">{t('bulk.floors_invalid')}</Alert>}
       {error && <Alert tone="danger">{error}</Alert>}
-      <Button type="submit" disabled={pending || !propertyId || !labels.length}>
+      <Button type="submit" disabled={pending || !propertyId || !generated.length || floorsInvalid}>
         {pending ? t('app.loading') : t('bulk.create')}
       </Button>
     </form>

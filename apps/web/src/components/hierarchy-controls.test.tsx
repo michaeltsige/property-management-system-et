@@ -31,6 +31,7 @@ vi.mock('@/lib/api', async (importOriginal) => {
     api: {
       bulkUnits: vi.fn(),
       importCsv: vi.fn(),
+      exportCsvUrl: vi.fn(() => '/api/v1/exports/units.csv'),
       owners: vi.fn(),
       properties: vi.fn(),
       units: vi.fn(),
@@ -107,7 +108,7 @@ describe('hierarchy controls', () => {
   it('creates and renames blocks using the property-scoped API', async () => {
     const user = userEvent.setup();
     const view = render(<BlockEditor propertyId="p1" onSaved={vi.fn()} />);
-    await user.type(screen.getByLabelText('Block name'), 'South');
+    await user.type(screen.getByLabelText(/Add block/), 'South');
     await user.click(screen.getByRole('button', { name: 'Add block' }));
     await waitFor(() => expect(api.createBuilding).toHaveBeenCalledWith({ propertyId: 'p1', name: 'South' }));
     view.unmount();
@@ -130,10 +131,10 @@ describe('hierarchy controls', () => {
     await screen.findByRole('heading', { name: 'Landlords' });
     await user.click(screen.getByRole('button', { name: 'Create' }));
     const modal = within(screen.getByRole('dialog'));
-    expect(modal.getByLabelText('Landlord')).toBeRequired();
-    await user.click(modal.getByLabelText('Landlord'));
+    expect(modal.getByLabelText(/Landlord/)).toBeRequired();
+    await user.click(modal.getByLabelText(/Landlord/));
     await user.click(await screen.findByRole('option', { name: 'Demo landlord' }));
-    await user.type(modal.getByLabelText(EN_CATALOG['property.name']), 'New property');
+    await user.type(modal.getByLabelText(new RegExp(EN_CATALOG['property.name'])), 'New property');
     await user.click(modal.getByRole('button', { name: 'Save' }));
     await waitFor(() =>
       expect(api.createProperty).toHaveBeenCalledWith(expect.objectContaining({ ownerId: 'o1' })),

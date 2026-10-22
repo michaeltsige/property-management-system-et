@@ -222,6 +222,27 @@ export async function generateCharges(
     charges: [],
   };
 
+  // Snapshot stranded credit BEFORE any new charge posts: once a charge lands,
+  // the ledger sum may flip positive and the credit becomes invisible to
+  // creditByCurrency — the new charge would then sit open while the ledger
+  // says the tenant owes far less (charge/ledger desync).
+  const creditBeforeByLease = new Map<string, bigint>();
+  const creditCurrencyByLease = new Map<string, string>();
+  if (leases.length) {
+    const sums = await prisma.ledgerEntry.groupBy({
+      by: ['leaseId', 'currency'],
+      where: { organizationId: options.organizationId, leaseId: { in: leases.map((l) => l.id) } },
+      _sum: { amountMinor: true },
+    });
+    for (const row of sums) {
+      const balance = row._sum.amountMinor ?? 0n;
+      if (balance < 0n && row.leaseId && row.currency && !creditBeforeByLease.has(row.leaseId)) {
+        creditBeforeByLease.set(row.leaseId, -balance);
+        creditCurrencyByLease.set(row.leaseId, row.currency);
+      }
+    }
+  }
+
   for (const lease of leases) {
     const calendar = calendarOf(lease as LeaseForCharging);
     const leaseStart = utcDateToCivil(lease.startDate, calendar);
@@ -349,8 +370,12 @@ export async function generateCharges(
 
   // New charges are settled immediately from stranded credit: a tenant with an
   // overpayment must not sit in arrears on rent their credit already covers.
+  // The credit snapshotted before the charges is passed explicitly — see the
+  // comment at creditBeforeByLease.
   const touchedLeases = [...new Set(result.charges.map((charge) => charge.leaseId))];
   for (const leaseId of touchedLeases) {
+    const lease = leases.find((candidate) => candidate.id === leaseId);
+    const creditBefore = creditBeforeByLease.get(leaseId) ?? 0n;
     try {
       await prisma.$transaction(async (tx) => {
         await applyLeaseCreditInTx(tx, {
@@ -358,6 +383,8 @@ export async function generateCharges(
           leaseId,
           actorUserId: options.actorUserId ?? null,
           now: options.now ?? new Date(),
+          creditMinor: creditBefore > 0n ? creditBefore : undefined,
+          currency: creditCurrencyByLease.get(leaseId) ?? lease?.currency,
         });
       });
     } catch {

@@ -1,11 +1,12 @@
 'use client';
 
 import { PlayCircle } from '@/components/icons';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
 import { useCalendarPeriod } from '@/lib/use-calendar-period';
 
 import { api } from '@/lib/api';
+import type { Charge } from '@/lib/types';
 import { formatAmount, formatDate, formatPeriodKey, statusTone } from '@/lib/format';
 import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
@@ -23,6 +24,7 @@ import {
   Card,
   CardContent,
   EmptyState,
+  Input,
   Label,
   Select,
   Skeleton,
@@ -44,23 +46,21 @@ export default function ChargesPage() {
   );
   const [waiveTarget, setWaiveTarget] = useState<{ id: string; description: string } | null>(null);
   const [reason, setReason] = useState('');
+  const [search, setSearch] = useState('');
   const { pending, error, message, setMessage, run } = useAction();
 
   const query = `?periodKey=${periodKey}&calendar=${calendar}${status ? `&status=${status}` : ''}&pageSize=100`;
   const charges = useAsync(() => api.charges(query), [query]);
-  // The sidebar property scope: a charge lands in a property through its lease
-  // (lease → unit → property), so map it once and filter the table.
+  // Every charge now arrives with its tenant and unit → property attached, so
+  // the sidebar property scope and the search box filter locally, no extra
+  // leases round-trip.
   const [propertyContext] = usePropertyContext();
-  const leases = useAsync(() => (propertyContext ? api.leases() : Promise.resolve(null)), [propertyContext]);
-  const leaseProperty = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const lease of leases.data?.leases ?? []) map.set(lease.id, lease.unit.property.id);
-    return map;
-  }, [leases.data]);
+  const haystack = (charge: Charge) =>
+    `${charge.tenant?.fullName ?? ''} ${charge.lease?.unit.label ?? ''} ${charge.lease?.unit.property.name ?? ''}`.toLowerCase();
   const rows = (charges.data?.items ?? []).filter(
     (charge) =>
-      propertyContext === null ||
-      (charge.leaseId !== null && leaseProperty.get(charge.leaseId) === propertyContext),
+      (propertyContext === null || charge.lease?.unit.property.id === propertyContext) &&
+      (search.trim() === '' || haystack(charge).includes(search.toLowerCase())),
   );
 
   async function generate() {
@@ -116,6 +116,12 @@ export default function ChargesPage() {
               <option value="paid">{t('charge.status.paid')}</option>
               <option value="waived">{t('charge.status.waived')}</option>
             </Select>
+            <Input
+              placeholder={t('charges.search')}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              className="h-9 w-44"
+            />
             <Button onClick={() => void generate()} disabled={pending}>
               <PlayCircle className="h-4 w-4" />
               {pending ? t('app.loading') : t('money.rent_due')}
@@ -152,7 +158,9 @@ export default function ChargesPage() {
               <thead>
                 <tr>
                   <Th>{t('reports.period')}</Th>
-                  <Th>{t('charge.status.open')}</Th>
+                  <Th>{t('charges.tenant')}</Th>
+                  <Th>{t('charges.unit')}</Th>
+                  <Th>{t('units.type')}</Th>
                   <Th>{t('money.amount')}</Th>
                   <Th>{t('money.paid')}</Th>
                   <Th>{t('money.outstanding')}</Th>
@@ -170,7 +178,22 @@ export default function ChargesPage() {
                         {formatPeriodKey(charge.periodKey, charge.periodCalendar, language)}
                         <span className="block text-[11px] text-muted">{charge.description}</span>
                       </Td>
-                      <Td>{charge.type}</Td>
+                      <Td className="font-medium text-strong">
+                        {charge.tenant?.fullName ?? '—'}
+                      </Td>
+                      <Td>
+                        {charge.lease ? (
+                          <>
+                            {charge.lease.unit.label}
+                            <span className="block text-[11px] text-muted">
+                              {charge.lease.unit.property.name}
+                            </span>
+                          </>
+                        ) : (
+                          '—'
+                        )}
+                      </Td>
+                      <Td>{t(`charge.type.${charge.type}` as never)}</Td>
                       <Td className="tabular">
                         {formatAmount(charge.amountMinor, charge.currency, language)}
                       </Td>

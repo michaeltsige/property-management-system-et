@@ -13,14 +13,14 @@ import { z } from 'zod';
 import { organizationIdOf, requireAuth } from '../middleware/context.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
-import { uuidSchema } from '@pms/shared';
+import { CSV_HEADERS, uuidSchema } from '@pms/shared';
 import { getPrisma } from '../lib/prisma.js';
 import { recordAudit } from '../services/audit.js';
 
 export const exportsRouter = Router();
 exportsRouter.use(requireAuth);
 
-const EXPORT_KINDS = ['tenants', 'leases', 'charges', 'payments', 'arrears'] as const;
+const EXPORT_KINDS = ['tenants', 'leases', 'charges', 'payments', 'arrears', 'units'] as const;
 type ExportKind = (typeof EXPORT_KINDS)[number];
 
 const exportQuerySchema = z.object({
@@ -140,6 +140,27 @@ exportsRouter.get(
           lease.billingFrequency,
           (balanceByLease.get(lease.id) ?? 0n).toString(),
         ]);
+      } else if (kind === 'units') {
+        // Round-trip file: exactly the import headers, `id` first. Edit the
+        // labels in Excel/Sheets, re-import with the same property selected —
+        // rows keep their id, so renames and rent edits apply in place.
+        header = [...CSV_HEADERS.units];
+        const units = await prisma.unit.findMany({
+          where: {
+            organizationId,
+            deletedAt: null,
+            ...(propertyId ? { propertyId } : {}),
+          },
+          orderBy: [{ propertyId: 'asc' }, { label: 'asc' }],
+        });
+        rows = units.map((unit) => [
+          unit.id,
+          unit.label,
+          unit.floor,
+          unit.bedrooms,
+          unit.bathrooms,
+          unit.marketRentMinor === null ? null : unit.marketRentMinor.toString(),
+        ]);
       } else if (kind === 'charges') {
         header = [
           'id',
@@ -151,6 +172,9 @@ exportsRouter.get(
           'paidMinor',
           'status',
           'currency',
+          'tenant',
+          'unit',
+          'property',
           'tenantId',
           'leaseId',
         ];
@@ -159,6 +183,12 @@ exportsRouter.get(
             organizationId,
             ...(status ? { status } : {}),
             ...(propertyId ? { lease: { is: { unit: { is: { propertyId } } } } } : {}),
+          },
+          include: {
+            tenant: { select: { fullName: true } },
+            lease: {
+              select: { unit: { select: { label: true, property: { select: { name: true } } } } },
+            },
           },
           orderBy: [{ dueDate: 'desc' }],
           take: 5000,
@@ -173,6 +203,9 @@ exportsRouter.get(
           charge.paidMinor.toString(),
           charge.status,
           charge.currency,
+          charge.tenant?.fullName ?? null,
+          charge.lease?.unit.label ?? null,
+          charge.lease?.unit.property.name ?? null,
           charge.tenantId,
           charge.leaseId,
         ]);

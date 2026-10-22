@@ -26,6 +26,7 @@ import {
   Card,
   CardContent,
   EmptyState,
+  FieldError,
   Input,
   Label,
   Select,
@@ -46,7 +47,7 @@ export default function LeasesPage() {
   const [open, setOpen] = useState(false);
   const [terminateId, setTerminateId] = useState<string | null>(null);
   const [terminateReason, setTerminateReason] = useState('');
-  const { pending, error, run } = useAction();
+  const { pending, error, fieldErrors, run } = useAction();
 
   useAutoOpenModal(() => setOpen(true));
 
@@ -244,6 +245,16 @@ export default function LeasesPage() {
                       }
                     >
                       {formatAmount(lease.balanceMinor, lease.currency, language)}
+                      {lease.depositType === 'months_of_rent' && lease.depositAmountMinor ? (
+                        <span
+                          className="block text-[11px] font-normal text-muted tabular"
+                          title={t('lease.deposit_advance_hint')}
+                        >
+                          {t('lease.advance_from_deposit', {
+                            amount: formatAmount(lease.depositAmountMinor, lease.currency, language),
+                          })}
+                        </span>
+                      ) : null}
                     </Td>
                     <Td>
                       <Badge className={cn(statusTone[lease.status])}>
@@ -283,10 +294,13 @@ export default function LeasesPage() {
       >
         <form id="lease-form" className="grid gap-3 sm:grid-cols-2" onSubmit={submit}>
           <div className="space-y-1">
-            <Label htmlFor="unitId">{t('nav.units')}</Label>
+            <Label htmlFor="unitId" required>
+              {t('nav.units')}
+            </Label>
             <Select
               id="unitId"
               required
+              invalid={Boolean(fieldErrors.unitId)}
               value={form.unitId}
               onChange={(event) => setForm((current) => ({ ...current, unitId: event.target.value }))}
             >
@@ -298,13 +312,17 @@ export default function LeasesPage() {
                 </option>
               ))}
             </Select>
+            <FieldError>{fieldErrors.unitId}</FieldError>
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="tenantId">{t('nav.tenants')}</Label>
+            <Label htmlFor="tenantId" required>
+              {t('nav.tenants')}
+            </Label>
             <Select
               id="tenantId"
               required
+              invalid={Boolean(fieldErrors.tenantId)}
               value={form.tenantId}
               onChange={(event) => setForm((current) => ({ ...current, tenantId: event.target.value }))}
             >
@@ -315,10 +333,12 @@ export default function LeasesPage() {
                 </option>
               ))}
             </Select>
+            <FieldError>{fieldErrors.tenantId}</FieldError>
           </div>
 
           <div className="sm:col-span-2">
             <MoneyInput label={t('lease.rent_amount')} value={rent} onChange={setRent} required />
+            <FieldError>{fieldErrors.rentAmount}</FieldError>
           </div>
 
           <div className="space-y-1">
@@ -357,11 +377,13 @@ export default function LeasesPage() {
               type="number"
               min={1}
               max={30}
+              invalid={Boolean(fieldErrors.dueDayOfMonth)}
               value={form.dueDayOfMonth}
               onChange={(event) =>
                 setForm((current) => ({ ...current, dueDayOfMonth: Number(event.target.value) }))
               }
             />
+            <FieldError>{fieldErrors.dueDayOfMonth}</FieldError>
           </div>
 
           <div className="space-y-1">
@@ -421,9 +443,11 @@ export default function LeasesPage() {
                 type="number"
                 min={1}
                 max={24}
+                invalid={Boolean(fieldErrors.depositMonths)}
                 value={depositMonths}
                 onChange={(event) => setDepositMonths(Number(event.target.value))}
               />
+              <FieldError>{fieldErrors.depositMonths}</FieldError>
             </div>
           ) : null}
 

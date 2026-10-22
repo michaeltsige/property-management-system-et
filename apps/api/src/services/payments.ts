@@ -96,10 +96,26 @@ async function creditByCurrency(
  */
 export async function applyLeaseCreditInTx(
   tx: Prisma.TransactionClient,
-  params: { organizationId: string; leaseId: string; actorUserId?: string | null; now?: Date },
+  params: {
+    organizationId: string;
+    leaseId: string;
+    actorUserId?: string | null;
+    now?: Date;
+    /**
+     * Precomputed stranded credit for this lease. Callers that have just posted
+     * new charges must pass the credit snapshotted BEFORE those charges: the
+     * live ledger sum may already have flipped positive, hiding the credit.
+     */
+    creditMinor?: bigint;
+    /** Currency of `creditMinor` (a lease bills in exactly one). */
+    currency?: string;
+  },
 ): Promise<bigint> {
   const now = params.now ?? new Date();
   const credits = await creditByCurrency(tx, params.organizationId, [params.leaseId]);
+  if (params.creditMinor !== undefined && params.creditMinor > 0n && params.currency) {
+    credits.set(params.currency, params.creditMinor);
+  }
   let totalApplied = 0n;
 
   for (const [currency, credit] of credits) {

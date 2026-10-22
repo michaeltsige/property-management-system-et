@@ -1,7 +1,10 @@
 import { createTenantSchema, createUnitSchema, languageSchema, uuidSchema } from './schemas.js';
 import { z } from 'zod';
 export const CSV_HEADERS = {
-  units: ['label', 'floor', 'bedrooms', 'bathrooms', 'marketRentMinor'],
+  // `id` is the round-trip column: rows that carry it update that unit (rename,
+  // floor, rent…), rows without it create new ones. Legacy 5-column files
+  // (no id) are still accepted and create only.
+  units: ['id', 'label', 'floor', 'bedrooms', 'bathrooms', 'marketRentMinor'],
   tenants: ['fullName', 'phone', 'email', 'language', 'emergencyContactName', 'emergencyContactPhone'],
 } as const;
 export type ImportKind = keyof typeof CSV_HEADERS;
@@ -78,6 +81,8 @@ const floor = z
 export const csvUnitSchema = createUnitSchema
   .pick({ label: true })
   .extend({
+    /** Present in exported files: the unit to update instead of create. */
+    id: uuidSchema.optional(),
     floor: floor.optional(),
     bedrooms: integer.pipe(z.number().max(50)).optional(),
     bathrooms: integer.pipe(z.number().max(50)).optional(),

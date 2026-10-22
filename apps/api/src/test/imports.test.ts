@@ -65,7 +65,10 @@ describe('portfolio CSV imports', () => {
       .send({ name: 'Demo', type: 'apartment_block' })
       .expect(201);
     const propertyId = p.body.property.id;
-    const unitCsv = CSV_HEADERS.units.join(',') + '\nA-01,1,2,1,1500000\n';
+    // The header now leads with the round-trip `id` column; an empty id cell
+    // means create (the update-by-id path is exercised implicitly by the
+    // conflict checks below).
+    const unitCsv = CSV_HEADERS.units.join(',') + '\n,A-01,1,2,1,1500000\n';
     const r = await request(app)
       .post('/api/v1/imports/units')
       .set(h)
@@ -76,7 +79,7 @@ describe('portfolio CSV imports', () => {
     const conflict = await request(app)
       .post('/api/v1/imports/units')
       .set(h)
-      .send({ csv: unitCsv + 'A-02,1,2,1,1500000\n', propertyId, dryRun: false })
+      .send({ csv: unitCsv + ',A-02,1,2,1,1500000\n', propertyId, dryRun: false })
       .expect(200);
     expect(conflict.body.errors[0]).toMatchObject({ row: 2, field: 'label' });
     expect(await getPrisma().unit.count()).toBe(1);
@@ -86,6 +89,52 @@ describe('portfolio CSV imports', () => {
       .set(authHeader(other))
       .send({ csv: unitCsv, propertyId })
       .expect(404);
+  });
+  it('renames an existing unit when the row carries its id (CSV round-trip)', async () => {
+    const f = await createOrganizationFixture();
+    const h = authHeader(f);
+    const p = await request(app)
+      .post('/api/v1/properties')
+      .set(h)
+      .send({ name: 'Demo', type: 'apartment_block' })
+      .expect(201);
+    const propertyId = p.body.property.id;
+    const created = await request(app)
+      .post('/api/v1/units')
+      .set(h)
+      .send({ propertyId, label: 'A-01', floor: 1 })
+      .expect(201);
+    const unitId = created.body.unit.id;
+    // Row with the id: updates that unit (rename + floor); a second row
+    // without an id still creates.
+    const roundTrip =
+      CSV_HEADERS.units.join(',') +
+      `\n${unitId},Ground floor,0,,,\n` +
+      ',A-02,2,,,\n';
+    const r = await request(app)
+      .post('/api/v1/imports/units')
+      .set(h)
+      .send({ csv: roundTrip, propertyId, dryRun: false })
+      .expect(200);
+    expect(r.body.imported).toBe(2);
+    const renamed = await getPrisma().unit.findUniqueOrThrow({ where: { id: unitId } });
+    expect(renamed.label).toBe('Ground floor');
+    expect(renamed.floor).toBe(0);
+    expect(await getPrisma().unit.count()).toBe(2);
+    // A row whose id does not belong to this organization is an error row,
+    // and nothing is written (all-or-nothing).
+    const foreignId = '00000000-0000-4000-8000-000000000000';
+    const bad = await request(app)
+      .post('/api/v1/imports/units')
+      .set(h)
+      .send({
+        csv: CSV_HEADERS.units.join(',') + `\n${foreignId},Nope,,,,\n`,
+        propertyId,
+        dryRun: false,
+      })
+      .expect(200);
+    expect(bad.body.errors[0]).toMatchObject({ field: 'id' });
+    expect(await getPrisma().unit.count()).toBe(2);
   });
   it('enforces RBAC, bounds and organization isolation of import replays', async () => {
     const a = await createOrganizationFixture();

@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { bulkUnitSchema, unitLabels } from '@pms/shared';
+import { bulkUnitSchema, unitLabelsWithFloors } from '@pms/shared';
 import { organizationIdOf, requireAuth } from '../middleware/context.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
@@ -18,7 +18,15 @@ bulkUnitsRouter.post(
     try {
       const organizationId = organizationIdOf(req);
       const input = bulkUnitSchema.parse(req.body);
-      const labels = unitLabels(input.naming);
+      // Floor-wise patterns assign each generated unit its floor; a colliding
+      // pattern (duplicate labels) is a client error, not a 500.
+      let generated;
+      try {
+        generated = unitLabelsWithFloors(input.naming);
+      } catch (error) {
+        throw conflict(error instanceof Error ? error.message : 'Invalid naming pattern');
+      }
+      const labels = generated.map((u) => u.label);
       const units = await getPrisma().$transaction(
         async (tx) => {
           const property = await tx.property.findFirst({
@@ -37,14 +45,14 @@ bulkUnitsRouter.post(
               labels: existing.map((u) => u.label),
             });
           const created = await tx.unit.createManyAndReturn({
-            data: labels.map((label) => ({
+            data: generated.map((unit, index) => ({
               organizationId,
               propertyId: property.id,
               buildingId: input.buildingId ?? null,
-              label,
+              label: labels[index]!,
               typeLabel: input.typeLabel ?? null,
               status: 'vacant',
-              floor: input.floor,
+              floor: unit.floor ?? input.floor ?? null,
               bedrooms: input.bedrooms,
               bathrooms: input.bathrooms,
               areaSqm: input.areaSqm,

@@ -21,6 +21,7 @@ import {
   Card,
   CardContent,
   EmptyState,
+  FieldError,
   Input,
   Label,
   Select,
@@ -71,7 +72,7 @@ export default function TenantsPage() {
   // Portal enrollment in the same flow: the tenant signs in with this phone
   // number and an SMS code, so it only makes sense when a phone was entered.
   const [portalNow, setPortalNow] = useState(true);
-  const { pending, error, run } = useAction();
+  const { pending, error, fieldErrors, run } = useAction();
   const canManagePortal = roleHasPermission(session?.role as Role, 'tenants.write');
   const [portalPendingId, setPortalPendingId] = useState<string | null>(null);
 
@@ -252,14 +253,19 @@ export default function TenantsPage() {
         }
       >
         <form id="tenant-form" className="grid gap-3 sm:grid-cols-2" onSubmit={submit}>
+          <p className="text-xs text-muted sm:col-span-2">{t('form.required_note')}</p>
           <div className="space-y-1 sm:col-span-2">
-            <Label htmlFor="fullName">{t('tenant.full_name')}</Label>
+            <Label htmlFor="fullName" required>
+              {t('tenant.full_name')}
+            </Label>
             <Input
               id="fullName"
               required
+              invalid={Boolean(fieldErrors.fullName)}
               value={form.fullName}
               onChange={(event) => setForm((current) => ({ ...current, fullName: event.target.value }))}
             />
+            <FieldError>{fieldErrors.fullName}</FieldError>
           </div>
 
           <div className="space-y-1">
@@ -267,9 +273,11 @@ export default function TenantsPage() {
             <Input
               id="phone"
               placeholder="0911234567"
+              invalid={Boolean(fieldErrors.phone)}
               value={form.phone}
               onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))}
             />
+            <FieldError>{fieldErrors.phone}</FieldError>
           </div>
 
           <div className="space-y-1">
@@ -277,9 +285,11 @@ export default function TenantsPage() {
             <Input
               id="email"
               type="email"
+              invalid={Boolean(fieldErrors.email)}
               value={form.email}
               onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))}
             />
+            <FieldError>{fieldErrors.email}</FieldError>
           </div>
 
           <div className="space-y-1">
@@ -291,6 +301,11 @@ export default function TenantsPage() {
             />
           </div>
 
+          {/* The emergency pair sits under its own heading so the second phone
+              is never mistaken for a second work/personal number. */}
+          <div className="sm:col-span-2">
+            <p className="text-xs font-semibold text-soft">{t('tenant.emergency_contact')}</p>
+          </div>
           <div className="space-y-1">
             <Label htmlFor="emergencyContactName">{t('tenant.emergency_contact')}</Label>
             <Input
@@ -303,14 +318,17 @@ export default function TenantsPage() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="emergencyContactPhone">{t('tenant.phone')}</Label>
+            <Label htmlFor="emergencyContactPhone">{t('tenant.emergency_phone')}</Label>
             <Input
               id="emergencyContactPhone"
+              placeholder="0911234567"
+              invalid={Boolean(fieldErrors.emergencyContactPhone)}
               value={form.emergencyContactPhone}
               onChange={(event) =>
                 setForm((current) => ({ ...current, emergencyContactPhone: event.target.value }))
               }
             />
+            <FieldError>{fieldErrors.emergencyContactPhone}</FieldError>
           </div>
 
           <div className="space-y-1">

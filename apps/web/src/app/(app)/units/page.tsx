@@ -15,9 +15,11 @@ import { cn } from '@/lib/utils';
 import { usePropertyContext } from '@/lib/property-context';
 import { CsvImport } from '@/components/csv-import';
 import { BulkUnitForm } from '@/components/bulk-unit-form';
+import { ExportCsvButton } from '@/components/export-csv-button';
 import { PageHeader } from '@/components/app-shell';
 import { MoneyInput } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
+import type { Unit } from '@/lib/types';
 import {
   Alert,
   Badge,
@@ -25,6 +27,7 @@ import {
   Card,
   CardContent,
   EmptyState,
+  FieldError,
   Input,
   Label,
   Select,
@@ -88,6 +91,26 @@ export default function UnitsPage() {
   }
 
   const [propertyContext] = usePropertyContext();
+
+  // Rename / floor edit for a single unit; bulk edits go through the CSV
+  // round-trip (Export CSV → edit → Import CSV, the id column updates rows).
+  const [editUnit, setEditUnit] = useState<Unit | null>(null);
+  const [editForm, setEditForm] = useState({ label: '', floor: '' });
+  const { pending: editPending, error: editError, fieldErrors: editFieldErrors, run: runEdit } = useAction();
+
+  async function submitEdit(event: React.FormEvent) {
+    event.preventDefault();
+    if (!editUnit) return;
+    await runEdit(async () => {
+      await api.updateUnit(editUnit.id, {
+        label: editForm.label,
+        floor: editForm.floor === '' ? undefined : Number(editForm.floor),
+      });
+      setEditUnit(null);
+      units.reload();
+    }).catch(() => undefined);
+  }
+
   const propertyName = useMemo(() => {
     const map = new Map((properties.data?.properties ?? []).map((property) => [property.id, property.name]));
     return (id: string) => map.get(id) ?? '—';
@@ -162,6 +185,10 @@ export default function UnitsPage() {
                 onImported={units.reload}
               />
             )}
+            <ExportCsvButton
+              kind="units"
+              query={propertyContext ? `propertyId=${propertyContext}` : ''}
+            />
             {canWrite && (
               <Button
                 variant="secondary"
@@ -251,6 +278,7 @@ export default function UnitsPage() {
                       <Th>{t('unit.area_sqm')}</Th>
                       <Th>{t('unit.market_rent')}</Th>
                       <Th>{t('unit.status')}</Th>
+                      <Th>{t('common.actions')}</Th>
                     </tr>
                   </thead>
                   <tbody>
@@ -277,6 +305,23 @@ export default function UnitsPage() {
                             {t(`unit.status.${unit.status}` as never)}
                           </Badge>
                         </Td>
+                        <Td>
+                          {canWrite && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setEditUnit(unit);
+                                setEditForm({
+                                  label: unit.label,
+                                  floor: unit.floor === null || unit.floor === undefined ? '' : String(unit.floor),
+                                });
+                              }}
+                            >
+                              {t('common.edit')}
+                            </Button>
+                          )}
+                        </Td>
                       </tr>
                     ))}
                   </tbody>
@@ -286,6 +331,57 @@ export default function UnitsPage() {
           ))}
         </div>
       )}
+
+      <Modal
+        open={editUnit !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditUnit(null);
+        }}
+        title={t('units.edit')}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setEditUnit(null)}>
+              {t('common.cancel')}
+            </Button>
+            <Button form="unit-edit-form" type="submit" disabled={editPending || !canWrite}>
+              {editPending ? t('app.loading') : t('common.save')}
+            </Button>
+          </>
+        }
+      >
+        <form id="unit-edit-form" className="grid gap-3 sm:grid-cols-2" onSubmit={submitEdit}>
+          <div className="space-y-1 sm:col-span-2">
+            <Label htmlFor="edit-label" required>
+              {t('unit.label')}
+            </Label>
+            <Input
+              id="edit-label"
+              required
+              maxLength={60}
+              invalid={Boolean(editFieldErrors.label)}
+              value={editForm.label}
+              onChange={(event) => setEditForm((current) => ({ ...current, label: event.target.value }))}
+            />
+            <FieldError>{editFieldErrors.label}</FieldError>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="edit-floor">{t('unit.floor')}</Label>
+            <Input
+              id="edit-floor"
+              type="number"
+              invalid={Boolean(editFieldErrors.floor)}
+              value={editForm.floor}
+              onChange={(event) => setEditForm((current) => ({ ...current, floor: event.target.value }))}
+            />
+            <FieldError>{editFieldErrors.floor}</FieldError>
+          </div>
+          {editError ? (
+            <div className="sm:col-span-2">
+              <Alert tone="danger">{editError}</Alert>
+            </div>
+          ) : null}
+        </form>
+      </Modal>
 
       <Modal
         open={open}
