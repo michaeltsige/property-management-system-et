@@ -121,30 +121,37 @@ tenancy, so even a forged request could only ever return that tenant's own recor
 - Co-tenants are attached to leases, not standalone accounts.
 
 ### Leases
-- Lease terms: rent, currency, billing frequency (monthly/quarterly), due day of the
-  billing month, grace days, late-fee percent/fixed, deposit (months-of-rent or fixed
-  amount), escalation percent and interval, signed-at date, notes.
+- Lease terms: rent, currency, billing frequency (monthly/quarterly), grace days,
+  late-fee percent/fixed, deposit (months-of-rent or fixed amount), escalation
+  percent and interval, signed-at date, notes. The due date is not configured — it
+  is the start date's day of month (the tenant's own billing cycle).
 - **Billing calendar is an organization-level owner decision** (Settings → Billing
   calendar). Every new lease inherits it; periods and due dates are then generated in
   that calendar. The lease form shows the inherited calendar read-only.
 - Lifecycle: `draft → pending → active → expired/terminated` with overlap protection
   (a unit cannot have two active/pending leases).
-- **Pro-rated first period** when the lease starts mid-period; deposits are held on
-  the ledger, not in a text field.
+- **Anniversary-cycle billing** when the lease starts mid-month: cycles run from the
+  start date (Oct 22 → Nov 21), full rent each cycle — no prorated stub month, so a
+  months-of-rent deposit covers its cycles exactly and strands no credit. Fixed
+  deposits are held on the ledger, not in a text field.
 - Termination records the reason and refunds deposits as ledger entries — money
   moving back to a tenant belongs in the books.
 - Lease detail page: balance, statement lines, charges for the last periods, and the
   unit/tenant context.
 
 ### Charges (rent billing)
-- Period-based rent charges generated per billing period (12×30 days + Pagume for the
-  Ethiopian calendar), idempotently: regenerating a period never duplicates a charge
-  (unique constraint + worker-side checks).
+- Anniversary rent cycles generated per lease (whole months on the lease's own due
+  date; 12 cycles per Ethiopian year with Pagume never billed), idempotently:
+  regenerating a period never duplicates a charge (unique constraint + worker-side
+  checks).
 - Generation can be targeted at specific leases and periods from the Charges screen.
 - Waivers (with reason and approval permission) write off charges instead of
   deleting them.
 - An overdue sweep job marks overdue charges and (with reminders enabled) queues
   reminder notifications.
+- **Email delivery via Resend** (`EMAIL_PROVIDER=resend` + `RESEND_API_KEY`; free
+  tier 3,000 emails/month, 100/day) or the mock that logs bodies in development;
+  SMS stays on the mock until an Ethio Telecom sender account exists.
 
 ### Payments
 - Record payments by method (cash, bank transfer, telebirr, Chapa, …) with reference

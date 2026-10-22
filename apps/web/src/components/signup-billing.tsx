@@ -1,6 +1,5 @@
 'use client';
 import type { z } from 'zod';
-import { RENT_DUE_DAY_MAX } from '@pms/shared';
 import type { signupBillingSchema } from '@pms/shared';
 import { usePreferences, CALENDARS } from '@/lib/preferences';
 import { MoneyInput } from './form-controls';
@@ -33,16 +32,6 @@ export function SignupBillingForm({
           </option>
         ))}
       </Select>
-      <Label htmlFor="due-day">{t('onboarding.due_day')}</Label>
-      <Input
-        id="due-day"
-        type="number"
-        required
-        min={1}
-        max={RENT_DUE_DAY_MAX}
-        value={value.dueDay}
-        onChange={(e) => update({ dueDay: e.target.valueAsNumber })}
-      />
       <Label htmlFor="grace-days">{t('onboarding.grace_days')}</Label>
       <Input
         id="grace-days"

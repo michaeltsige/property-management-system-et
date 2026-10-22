@@ -60,7 +60,6 @@ export default function LeasesPage() {
     tenantId: string;
     billingFrequency: BillingFrequency;
     status: LeaseStatus;
-    dueDayOfMonth: number;
     startDate: CivilDate;
     endDate: CivilDate | null;
   }>({
@@ -68,7 +67,6 @@ export default function LeasesPage() {
     tenantId: '',
     billingFrequency: 'monthly',
     status: 'active',
-    dueDayOfMonth: 5,
     startDate: todayIn(calendar),
     endDate: null,
   });
@@ -88,7 +86,6 @@ export default function LeasesPage() {
     setForm((current) => ({
       ...current,
       startDate: todayIn(billingCalendar),
-      dueDayOfMonth: typeof orgSettings.rentDueDay === 'number' ? orgSettings.rentDueDay : 5,
     }));
   }, [orgSettings, billingCalendar]);
 
@@ -101,7 +98,6 @@ export default function LeasesPage() {
         tenantId: form.tenantId,
         billingFrequency: form.billingFrequency,
         status: form.status,
-        dueDayOfMonth: form.dueDayOfMonth,
         gracePeriodDays:
           typeof orgSettings?.gracePeriodDays === 'number' ? orgSettings.gracePeriodDays : 0,
         lateFeePercent:
@@ -245,16 +241,6 @@ export default function LeasesPage() {
                       }
                     >
                       {formatAmount(lease.balanceMinor, lease.currency, language)}
-                      {lease.depositType === 'months_of_rent' && lease.depositAmountMinor ? (
-                        <span
-                          className="block text-[11px] font-normal text-muted tabular"
-                          title={t('lease.deposit_advance_hint')}
-                        >
-                          {t('lease.advance_from_deposit', {
-                            amount: formatAmount(lease.depositAmountMinor, lease.currency, language),
-                          })}
-                        </span>
-                      ) : null}
                     </Td>
                     <Td>
                       <Badge className={cn(statusTone[lease.status])}>
@@ -368,22 +354,6 @@ export default function LeasesPage() {
                 </option>
               ))}
             </Select>
-          </div>
-
-          <div className="space-y-1">
-            <Label htmlFor="dueDayOfMonth">{t('lease.due_day')}</Label>
-            <Input
-              id="dueDayOfMonth"
-              type="number"
-              min={1}
-              max={30}
-              invalid={Boolean(fieldErrors.dueDayOfMonth)}
-              value={form.dueDayOfMonth}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, dueDayOfMonth: Number(event.target.value) }))
-              }
-            />
-            <FieldError>{fieldErrors.dueDayOfMonth}</FieldError>
           </div>
 
           <div className="space-y-1">

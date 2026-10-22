@@ -163,8 +163,12 @@ entry should call.
 Generation is idempotent at the database level: the insert either succeeds or hits
 the unique constraint, which is caught and counted as `skippedExisting`. Two
 workers racing, or a manager double-clicking, still produce one charge per lease and
-period. A lease that starts mid-period is charged pro-rata (half-up, single
-rounding) for that period only.
+cycle. Rent is billed in **anniversary cycles on the lease's own due date**: cycles
+run start-date to start-date (Oct 22 → Nov 21), not calendar months, so there is no
+entry proration and a months-of-rent deposit covers exactly that many cycles at a
+zero balance. Only a cycle truncated by the lease's `endDate` is prorated (half-up,
+single rounding). Ethiopian leases bill 12 cycles per year — Pagume never hosts a
+cycle and is never charged; its days ride free on the Nehasse cycle.
 
 ## Payments
 

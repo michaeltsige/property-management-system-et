@@ -142,4 +142,50 @@ describe('deposit as advance rent', () => {
     expect(charges).toHaveLength(1);
     expect(charges[0]!.status).toBe('paid');
   });
+
+  it('covers exactly the deposit cycles from a mid-month start — zero leftover credit', async () => {
+    const prisma = getPrisma();
+    const portfolio = await createPortfolio(prisma, {
+      organizationId: fixture.organizationId,
+      billingCalendar: 'gregorian',
+      rentAmountMinor: 1_000_000,
+      // The scenario that used to strand credit: start on the 22nd, two months
+      // of deposit. Anniversary cycles bill Oct 22 → Nov 21 and Nov 22 → Dec 21,
+      // so the deposit is consumed exactly.
+      startDate: utcDate(2026, 10, 22),
+      leaseStatus: 'draft',
+    });
+    const response = await request(app)
+      .patch(`/api/v1/leases/${portfolio.leaseId}`)
+      .set(authHeader(fixture))
+      .send({
+        depositType: 'months_of_rent',
+        depositMonths: 2,
+        depositAmount: { amountMinor: 2_000_000, currency: 'ETB' },
+        status: 'active',
+      });
+    expect(response.status).toBe(200);
+
+    const charges = await prisma.charge.findMany({
+      where: { leaseId: portfolio.leaseId, type: 'rent' },
+      orderBy: { dueDate: 'asc' },
+    });
+    expect(charges).toHaveLength(2);
+    expect(charges.map((charge) => charge.status)).toEqual(['paid', 'paid']);
+    expect(charges.map((charge) => charge.amountMinor)).toEqual([1_000_000n, 1_000_000n]);
+    // Whole cycles on the lease's own due date — no prorated stub month.
+    expect(charges.map((charge) => charge.dueDate.toISOString().slice(0, 10))).toEqual([
+      '2026-10-22',
+      '2026-11-22',
+    ]);
+    expect(charges[0]!.periodEnd.toISOString().slice(0, 10)).toBe('2026-11-21');
+    expect(charges[1]!.periodEnd.toISOString().slice(0, 10)).toBe('2026-12-21');
+
+    // Nothing stranded: deposit in, two rents out, zero balance.
+    const balance = await prisma.ledgerEntry.aggregate({
+      where: { leaseId: portfolio.leaseId },
+      _sum: { amountMinor: true },
+    });
+    expect(balance._sum.amountMinor).toBe(0n);
+  });
 });

@@ -408,8 +408,12 @@ export const createLeaseSchema = z.object({
   depositType: z.enum(DEPOSIT_TYPES).default('months_of_rent'),
   depositMonths: z.number().min(0).max(24).optional(),
   depositAmount: moneySchema.optional(),
-  /** Day within the billing month on which rent is due (clamped to real month length). */
-  dueDayOfMonth: z.number().int().min(1).max(RENT_DUE_DAY_MAX),
+  /**
+   * Accepted for API compatibility but no longer settable: the due date follows
+   * the lease's own billing cycle (it is the start date's day of month), so the
+   * server derives this value and ignores any client-provided one.
+   */
+  dueDayOfMonth: z.number().int().min(1).max(RENT_DUE_DAY_MAX).optional(),
   gracePeriodDays: z.number().int().min(0).max(90).optional(),
   lateFeePercent: z.number().min(0).max(100).optional(),
   /** Rent escalation, e.g. 10% every 12 months. */

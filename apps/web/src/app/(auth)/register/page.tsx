@@ -267,8 +267,7 @@ export default function RegisterPage() {
                     {t('lease.billing_calendar')}: {billing.billingCalendar}
                   </p>
                   <p>
-                    {t('onboarding.due_day')}: {billing.dueDay} · {t('onboarding.grace_days')}:{' '}
-                    {billing.graceDays}
+                    {t('onboarding.grace_days')}: {billing.graceDays}
                   </p>
                   <p>
                     {t('onboarding.fee_rule')}: {t(`onboarding.${billing.lateFeeRule}`)}

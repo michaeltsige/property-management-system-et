@@ -18,6 +18,7 @@ import {
   createTenantSchema,
   createUnitSchema,
   paginationSchema,
+  RENT_DUE_DAY_MAX,
   terminateLeaseSchema,
   updateLeaseSchema,
   updatePropertySchema,
@@ -898,7 +899,10 @@ portfolioRouter.post(
             rentAmountMinor: BigInt(req.body.rentAmount.amountMinor),
             currency: req.body.rentAmount.currency,
             billingFrequency: req.body.billingFrequency,
-            dueDayOfMonth: req.body.dueDayOfMonth,
+            // The due date follows the lease's own billing cycle — it is the
+            // start date's day of month, not a separately configured day.
+            // Stored for display; charge generation reads the cycle directly.
+            dueDayOfMonth: Math.min(utcDateToCivil(startDate, billingCalendar).day, RENT_DUE_DAY_MAX),
             gracePeriodDays: req.body.gracePeriodDays ?? 0,
             lateFeePercent: req.body.lateFeePercent ?? null,
             depositType: req.body.depositType,
@@ -1253,11 +1257,23 @@ portfolioRouter.patch(
           where: { id: existing.id },
           data: {
             ...(req.body.rentAmount ? { rentAmountMinor: BigInt(req.body.rentAmount.amountMinor) } : {}),
-            ...(req.body.dueDayOfMonth !== undefined ? { dueDayOfMonth: req.body.dueDayOfMonth } : {}),
+            ...(req.body.startDate
+              ? {
+                  startDate: civilToUtcDate(req.body.startDate),
+                  // Moving the start moves the tenant's due date with it: the
+                  // due day is the cycle anchor (the start date's day of month).
+                  dueDayOfMonth: Math.min(
+                    utcDateToCivil(
+                      civilToUtcDate(req.body.startDate),
+                      existing.billingCalendar as CalendarKind,
+                    ).day,
+                    RENT_DUE_DAY_MAX,
+                  ),
+                }
+              : {}),
             ...(req.body.status !== undefined ? { status: req.body.status } : {}),
             ...(req.body.notes !== undefined ? { notes: req.body.notes } : {}),
             ...(req.body.endDate ? { endDate: civilToUtcDate(req.body.endDate) } : {}),
-            ...(req.body.startDate ? { startDate: civilToUtcDate(req.body.startDate) } : {}),
             ...(req.body.billingFrequency !== undefined
               ? { billingFrequency: req.body.billingFrequency }
               : {}),

@@ -1,33 +1,50 @@
 /**
  * Charge generation — the piece that must never double-charge a tenant.
  *
+ * Billing model: anniversary cycles on the lease's own due date
+ * -----------------------------------------------------------
+ * Rent is billed in whole-month cycles that start on the lease's start date and
+ * repeat on that same day-of-month — the tenant's **due date** — not on calendar
+ * months. A lease starting October 22 is billed Oct 22 → Nov 21, then
+ * Nov 22 → Dec 21, each for one full month's rent. There is no entry proration:
+ * a months-of-rent deposit therefore covers exactly that many cycles and ends at
+ * a zero balance, instead of stranding leftover credit on the lease. Only the
+ * final cycle of a lease (truncated by `endDate`) is prorated.
+ *
+ * Pagume is never billed
+ * ----------------------
+ * Ethiopian-calendar leases bill 12 cycles per year; Pagume (the 13th month,
+ * 5–6 days) never hosts a cycle start and never generates a charge. Collecting a
+ * full month's rent for 5–6 days is not a thing landlords do here, so those days
+ * ride free at the tail of the Nehasse cycle (which spans Nehasse 1 → Pagume 5/6
+ * for one month's rent). No charge row is ever stored with a Pagume period key.
+ *
  * Idempotency
  * -----------
- * `Charge` has `@@unique([leaseId, periodKey, type])`. Generation inserts and
- * catches the unique violation, so running the job twice (or a manager pressing
- * the button twice, or two workers racing) creates exactly one charge per lease,
- * period and charge type. Tests assert this by running generation twice.
+ * `Charge` has `@@unique([leaseId, periodKey, type])`. A cycle's periodKey is the
+ * calendar month its start falls in; cycle starts are strictly increasing
+ * calendar months, so the key is unique per cycle. Generation inserts and catches
+ * the unique violation, so running the job twice (or a manager pressing the
+ * button twice, or two workers racing) creates exactly one charge per lease and
+ * cycle. Tests assert this by running generation twice.
  *
  * Calendar
  * --------
- * Periods and due dates are computed in the **lease's** `billingCalendar` via
- * `@pms/calendar`. For Ethiopian leases this means 12 months of 30 days plus
- * Pagume (5 or 6 days); a due day of 30 in Pagume becomes Pagume 5 or 6 rather
- * than an impossible date.
+ * Cycle boundaries and due dates are computed in the **lease's** `billingCalendar`
+ * via `@pms/calendar`. Gregorian anchors on day 29–31 clamp to the short month's
+ * real length (Jan 31 → Feb 28 → Mar 31) without losing the anchor day.
  */
 
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { Prisma as PrismaNamespace } from '@prisma/client';
 
 import {
+  addDays,
   civilToUtcDate,
-  clampDayOfMonth,
   compareCivil,
-  periodEnd,
-  periodForDate,
+  daysInMonth,
+  differenceInDays,
   periodInOtherCalendar,
-  periodStart,
-  shiftPeriod,
   utcDateToCivil,
   type BillingPeriod,
   type CalendarKind,
@@ -78,10 +95,74 @@ function calendarOf(lease: LeaseForCharging): CalendarKind {
   return lease.billingCalendar === 'gregorian' ? 'gregorian' : 'ethiopian';
 }
 
-/** Months between two periods, in the lease's calendar (13-month years for Ethiopian). */
-function monthsBetweenPeriods(from: BillingPeriod, to: BillingPeriod): number {
-  const monthsPerYear = from.calendar === 'ethiopian' ? 13 : 12;
-  return (to.year - from.year) * monthsPerYear + (to.month - from.month);
+// ---------------------------------------------------------------------------
+// Anniversary cycles — the billing engine
+// ---------------------------------------------------------------------------
+
+/** Both calendars bill 12 cycles per year; Pagume (ET month 13) is never billed. */
+const BILLING_MONTHS_PER_YEAR = 12;
+
+function monthsPerChargeOf(lease: Pick<LeaseForCharging, 'billingFrequency'>): number {
+  return lease.billingFrequency === 'custom'
+    ? 1
+    : (MONTHS_PER_CHARGE[lease.billingFrequency as Exclude<BillingFrequency, 'custom'>] ?? 1);
+}
+
+/**
+ * The anchor every billing cycle repeats on: the lease's start date, except that
+ * a start inside Pagume (ET month 13) anchors on the same day of the following
+ * Meskerem — the Pagume days the tenant already occupies ride free rather than
+ * forming a short first cycle that would cost a full month's rent.
+ */
+function billingAnchor(lease: Pick<LeaseForCharging, 'billingCalendar' | 'startDate'>): CivilDate {
+  const calendar = calendarOf(lease as LeaseForCharging);
+  const start = utcDateToCivil(lease.startDate, calendar);
+  if (calendar === 'ethiopian' && start.month === 13) {
+    return { calendar, year: start.year + 1, month: 1, day: Math.min(start.day, 30) };
+  }
+  return start;
+}
+
+/**
+ * Start date of billing cycle `cycleIndex` (0-based) in the lease's calendar.
+ * The cycle repeats on the anchor's day-of-month every `monthsPerCharge` months;
+ * Gregorian anchors on days 29–31 clamp to each short month's real length while
+ * keeping the anchor (Jan 31 → Feb 28 → Mar 31). Ethiopian months 1–12 all have
+ * 30 days and Pagume is skipped, so the anchor day always exists there.
+ */
+export function cycleStartFor(
+  lease: Pick<LeaseForCharging, 'billingCalendar' | 'billingFrequency' | 'startDate'>,
+  cycleIndex: number,
+): CivilDate {
+  const calendar = calendarOf(lease as LeaseForCharging);
+  const anchor = billingAnchor(lease as LeaseForCharging);
+  const monthIndex = (anchor.month - 1) + cycleIndex * monthsPerChargeOf(lease as LeaseForCharging);
+  const year = anchor.year + Math.floor(monthIndex / BILLING_MONTHS_PER_YEAR);
+  const month = (monthIndex % BILLING_MONTHS_PER_YEAR) + 1;
+  const day =
+    calendar === 'ethiopian'
+      ? anchor.day
+      : Math.min(anchor.day, daysInMonth({ calendar: 'gregorian', year, month }));
+  return { calendar, year, month, day };
+}
+
+/** [start, end] of billing cycle `cycleIndex`: ends the day before the next cycle starts. */
+export function cycleWindowFor(
+  lease: Pick<LeaseForCharging, 'billingCalendar' | 'billingFrequency' | 'startDate'>,
+  cycleIndex: number,
+): { start: CivilDate; end: CivilDate } {
+  const start = cycleStartFor(lease, cycleIndex);
+  return { start, end: addDays(cycleStartFor(lease, cycleIndex + 1), -1) };
+}
+
+/** Month offset from the billing anchor to a period; null for Pagume (never billed). */
+function billingMonthOffset(
+  lease: Pick<LeaseForCharging, 'billingCalendar' | 'startDate'>,
+  period: Pick<BillingPeriod, 'year' | 'month'>,
+): number | null {
+  const anchor = billingAnchor(lease as LeaseForCharging);
+  if (calendarOf(lease as LeaseForCharging) === 'ethiopian' && period.month === 13) return null;
+  return (period.year - anchor.year) * BILLING_MONTHS_PER_YEAR + (period.month - anchor.month);
 }
 
 /** True when the lease's billing frequency charges for this period. */
@@ -89,38 +170,28 @@ export function isChargingPeriod(
   lease: Pick<LeaseForCharging, 'billingCalendar' | 'billingFrequency' | 'startDate'>,
   period: BillingPeriod,
 ): boolean {
+  const offset = billingMonthOffset(lease as LeaseForCharging, period);
+  if (offset === null || offset < 0) return false;
   if (lease.billingFrequency === 'custom') return true;
-  const interval =
-    MONTHS_PER_CHARGE[(lease.billingFrequency as Exclude<BillingFrequency, 'custom'>) ?? 'monthly'] ?? 1;
-  if (interval === 1) return true;
-  const calendar = calendarOf(lease as LeaseForCharging);
-  const startPeriod = periodForDate(utcDateToCivil(lease.startDate, calendar));
-  const offset = monthsBetweenPeriods(startPeriod, period);
-  return offset >= 0 && offset % interval === 0;
+  return offset % monthsPerChargeOf(lease as LeaseForCharging) === 0;
 }
 
 /**
- * Rent for a period after the lease's agreed escalations.
- *
- * The escalation fields (`escalationPercent`, `escalationEveryMonths`) existed on
- * the lease but were never applied — rent stayed flat forever. Escalation steps
- * are counted in the lease's own billing calendar from the start date and the
- * increase compounds once per step, rounded per step so minor units never drift.
+ * Rent after the lease's agreed escalations, `monthsIn` billing months after the
+ * anchor. Steps compound once per `escalationEveryMonths`, rounded per step so
+ * minor units never drift. (Escalation counts billing months, not calendar
+ * months — Pagume never advances the counter.)
  */
 export function escalatedRent(
   lease: Pick<
     LeaseForCharging,
-    'billingCalendar' | 'startDate' | 'rentAmountMinor' | 'escalationPercent' | 'escalationEveryMonths'
+    'rentAmountMinor' | 'escalationPercent' | 'escalationEveryMonths'
   >,
-  period: BillingPeriod,
+  monthsIn: number,
 ): bigint {
   const percent = lease.escalationPercent ?? null;
   const every = lease.escalationEveryMonths ?? null;
   if (!percent || percent <= 0 || !every || every <= 0) return lease.rentAmountMinor;
-
-  const calendar = calendarOf(lease as LeaseForCharging);
-  const startPeriod = periodForDate(utcDateToCivil(lease.startDate, calendar));
-  const monthsIn = monthsBetweenPeriods(startPeriod, period);
   const steps = Math.floor(monthsIn / every);
   if (monthsIn <= 0 || steps <= 0) return lease.rentAmountMinor;
 
@@ -133,13 +204,15 @@ export function escalatedRent(
 }
 
 /**
- * Amount to charge for a period.
+ * Amount to charge for billing cycle `cycleIndex`.
  *
- * A lease that starts part-way through a period — or ends part-way through one —
- * is charged pro-rata for the days it actually covers; whole months covered end
- * to end are charged in full. Rounded once with `half-up`.
+ * Cycles are whole months counted from the lease's start date, so there is no
+ * entry proration: cycle 0 starts on the anchor (the start date itself) and
+ * charges full rent. Only a cycle truncated by the lease's `endDate` — the last
+ * one — is charged pro-rata for the days it actually covers. Rounded once with
+ * `half-up`.
  */
-export function amountForPeriod(
+export function amountForCycle(
   lease: Pick<
     LeaseForCharging,
     | 'billingCalendar'
@@ -151,36 +224,23 @@ export function amountForPeriod(
     | 'escalationPercent'
     | 'escalationEveryMonths'
   >,
-  period: BillingPeriod,
+  cycleIndex: number,
 ): bigint {
   const calendar = calendarOf(lease as LeaseForCharging);
-  const months =
-    lease.billingFrequency === 'custom'
-      ? 1
-      : (MONTHS_PER_CHARGE[lease.billingFrequency as Exclude<BillingFrequency, 'custom'>] ?? 1);
-  const full = escalatedRent(lease, period) * BigInt(months);
+  const months = monthsPerChargeOf(lease as LeaseForCharging);
+  const full = escalatedRent(lease, cycleIndex * months) * BigInt(months);
 
-  const dayMs = 86_400_000;
-  const periodFirst: CivilDate = periodStart(period);
-  // A quarterly/annual charge spans several months; prorate against the whole
-  // span, not just the first month of it.
-  const periodLast: CivilDate = periodEnd(shiftPeriod(period, months - 1));
-  const totalDays =
-    Math.round((civilToUtcDate(periodLast).getTime() - civilToUtcDate(periodFirst).getTime()) / dayMs) + 1;
-
-  // The billable window is the part of the period inside [startDate, endDate].
-  const startCivil = utcDateToCivil(lease.startDate, calendar);
-  const fromCivil = compareCivil(startCivil, periodFirst) > 0 ? startCivil : periodFirst;
-  let toCivil = periodLast;
+  const { start, end } = cycleWindowFor(lease as LeaseForCharging, cycleIndex);
+  let toCivil = end;
   if (lease.endDate) {
     const endCivil = utcDateToCivil(lease.endDate, calendar);
     if (compareCivil(endCivil, toCivil) < 0) toCivil = endCivil;
   }
-  if (compareCivil(fromCivil, toCivil) > 0) return 0n; // lease does not cover this period
-  if (compareCivil(fromCivil, periodFirst) <= 0 && compareCivil(toCivil, periodLast) >= 0) return full;
+  if (compareCivil(start, toCivil) > 0) return 0n; // lease does not cover this cycle
+  if (compareCivil(toCivil, end) >= 0) return full;
 
-  const coveredDays =
-    Math.round((civilToUtcDate(toCivil).getTime() - civilToUtcDate(fromCivil).getTime()) / dayMs) + 1;
+  const coveredDays = differenceInDays(start, toCivil) + 1;
+  const totalDays = differenceInDays(start, end) + 1;
   const prorated = prorateMoney(money(Number(full), lease.currency), coveredDays / totalDays);
   return BigInt(prorated.amountMinor);
 }
@@ -260,29 +320,36 @@ export async function generateCharges(
         period = periodInOtherCalendar(requested);
       }
 
-      const months =
-        lease.billingFrequency === 'custom'
-          ? 1
-          : (MONTHS_PER_CHARGE[lease.billingFrequency as Exclude<BillingFrequency, 'custom'>] ?? 1);
-      const periodFirst = periodStart(period);
-      const periodLast = periodEnd(shiftPeriod(period, months - 1));
+      // Which billing cycle (0-based) starts in this period? Pagume hosts none:
+      // its 5–6 days ride free at the tail of the Nehasse cycle.
+      const offset = billingMonthOffset(lease as LeaseForCharging, period);
+      if (offset === null) continue;
+      if (offset < 0) {
+        result.skippedOutOfRange += 1;
+        continue;
+      }
+      const months = monthsPerChargeOf(lease as LeaseForCharging);
+      if (lease.billingFrequency !== 'custom' && offset % months !== 0) continue;
+      const cycleIndex = lease.billingFrequency === 'custom' ? offset : offset / months;
+
+      const cycle = cycleWindowFor(lease as LeaseForCharging, cycleIndex);
 
       // Out of the lease's term?
-      if (leaseEnd && compareCivil(periodFirst, leaseEnd) > 0) {
+      if (leaseEnd && compareCivil(cycle.start, leaseEnd) > 0) {
         result.skippedOutOfRange += 1;
         continue;
       }
-      if (options.skipNotYetStarted !== false && compareCivil(leaseStart, periodLast) > 0) {
+      if (options.skipNotYetStarted !== false && compareCivil(leaseStart, cycle.end) > 0) {
         result.skippedOutOfRange += 1;
         continue;
       }
 
-      if (!isChargingPeriod(lease as LeaseForCharging, period)) continue;
-
-      const amountMinor = amountForPeriod(lease as LeaseForCharging, period);
+      const amountMinor = amountForCycle(lease as LeaseForCharging, cycleIndex);
       if (amountMinor === 0n) continue;
 
-      const dueCivil = clampDayOfMonth(period, lease.dueDayOfMonth);
+      // The due date is the cycle start itself — the tenant's own due date, the
+      // same day every cycle, not a separate configured day of the calendar month.
+      const dueCivil = cycle.start;
 
       try {
         await prisma.$transaction(async (tx) => {
@@ -296,8 +363,8 @@ export async function generateCharges(
               description: `Rent for ${periodLabelFor(period)}`,
               periodKey: period.key,
               periodCalendar: period.calendar,
-              periodStart: toUtcDate(periodFirst),
-              periodEnd: toUtcDate(periodLast),
+              periodStart: toUtcDate(cycle.start),
+              periodEnd: toUtcDate(cycle.end),
               dueDate: toUtcDate(dueCivil),
               amountMinor,
               currency: lease.currency,
@@ -313,7 +380,7 @@ export async function generateCharges(
             kind: 'charge',
             amountMinor,
             currency: lease.currency,
-            occurredAt: toUtcDate(periodFirst),
+            occurredAt: toUtcDate(cycle.start),
             memo: `Rent ${period.key} (${period.calendar})`,
             createdById: options.actorUserId ?? null,
           });
@@ -322,15 +389,17 @@ export async function generateCharges(
           // rise, in the lease's own calendar. Read by dashboards via the
           // (organizationId, billingCalendar, nextEscalationDate) index.
           if ((lease.escalationPercent ?? 0) > 0 && (lease.escalationEveryMonths ?? 0) > 0) {
-            const startPeriod = periodForDate(utcDateToCivil(lease.startDate, calendar));
-            const monthsIn = monthsBetweenPeriods(startPeriod, period);
+            const monthsIn = cycleIndex * months;
             const every = lease.escalationEveryMonths ?? 0;
             if (monthsIn >= 0 && every > 0) {
               const nextStep = (Math.floor(monthsIn / every) + 1) * every;
-              const nextPeriodStart = periodStart(shiftPeriod(startPeriod, nextStep));
+              // First cycle whose months-in reaches the step boundary.
+              const nextCycleIndex = Math.ceil(nextStep / months);
               await tx.lease.update({
                 where: { id: lease.id },
-                data: { nextEscalationDate: toUtcDate(nextPeriodStart) },
+                data: {
+                  nextEscalationDate: toUtcDate(cycleStartFor(lease as LeaseForCharging, nextCycleIndex)),
+                },
               });
             }
           }
@@ -524,11 +593,12 @@ export interface DepositAdvanceParams {
  * 1-2 months, so those months are charged **and immediately settled** here.
  *
  * Mechanics, inside the caller's transaction:
- * - the first `depositMonths` charging periods generate their rent charges
- *   (same shape the monthly job produces — proration included),
+ * - the first `depositMonths` billing cycles generate their rent charges
+ *   (same shape the monthly job produces — whole cycles on the lease's own
+ *   due date, no proration),
  * - one payment referenced `deposit-advance` records the deposit money and is
- *   allocated oldest-first; any leftover from a prorated start rolls forward
- *   through the ordinary credit path,
+ *   allocated oldest-first; a full deposit settles every cycle exactly and ends
+ *   at a zero balance,
  * - no `deposit` charge is posted: nothing is held for later in this mode.
  *
  * Idempotent on the `deposit-advance` payment, so lease activation can be
@@ -547,23 +617,22 @@ export async function applyDepositAsAdvanceRentInTx(tx: PrismaLike, params: Depo
   if (!lease) throw notFound('Lease not found in this organization');
 
   const calendar: CalendarKind = lease.billingCalendar === 'gregorian' ? 'gregorian' : 'ethiopian';
-  const startPeriod = periodForDate(utcDateToCivil(lease.startDate, calendar));
-  const months =
-    lease.billingFrequency === 'custom'
-      ? 1
-      : (MONTHS_PER_CHARGE[lease.billingFrequency as Exclude<BillingFrequency, 'custom'>] ?? 1);
 
   let created = 0;
   for (let step = 0; step < params.depositMonths; step += 1) {
-    const period = shiftPeriod(startPeriod, step * months);
-    if (!isChargingPeriod(lease, period)) continue;
-
-    const amountMinor = amountForPeriod(lease, period);
+    // Anniversary cycles: the deposit covers exactly this many whole cycles from
+    // the start date, so a full deposit ends at a zero balance — no prorated
+    // stub month, no stranded credit.
+    const cycle = cycleWindowFor(lease, step);
+    const amountMinor = amountForCycle(lease, step);
     if (amountMinor === 0n) continue;
 
-    const periodFirst = periodStart(period);
-    const periodLast = periodEnd(shiftPeriod(period, months - 1));
-    const dueCivil = clampDayOfMonth(period, lease.dueDayOfMonth);
+    const period: BillingPeriod = {
+      calendar,
+      year: cycle.start.year,
+      month: cycle.start.month,
+      key: `${cycle.start.year}-${String(cycle.start.month).padStart(2, '0')}`,
+    };
 
     try {
       const charge = await tx.charge.create({
@@ -576,9 +645,9 @@ export async function applyDepositAsAdvanceRentInTx(tx: PrismaLike, params: Depo
           description: `Rent for ${periodLabelFor(period)}`,
           periodKey: period.key,
           periodCalendar: period.calendar,
-          periodStart: civilToUtcDate(periodFirst),
-          periodEnd: civilToUtcDate(periodLast),
-          dueDate: civilToUtcDate(dueCivil),
+          periodStart: civilToUtcDate(cycle.start),
+          periodEnd: civilToUtcDate(cycle.end),
+          dueDate: civilToUtcDate(cycle.start),
           amountMinor,
           currency: lease.currency,
           status: 'open',
@@ -593,7 +662,7 @@ export async function applyDepositAsAdvanceRentInTx(tx: PrismaLike, params: Depo
         kind: 'charge',
         amountMinor,
         currency: lease.currency,
-        occurredAt: civilToUtcDate(periodFirst),
+        occurredAt: civilToUtcDate(cycle.start),
         memo: `Rent ${period.key} (${period.calendar})`,
         createdById: params.actorUserId ?? null,
       });
@@ -609,9 +678,9 @@ export async function applyDepositAsAdvanceRentInTx(tx: PrismaLike, params: Depo
 
   if (created === 0) return null;
 
-  // The deposit money itself: one payment, allocated oldest-first. A prorated
-  // first month means the payment runs out mid-way through a later period —
-  // that shows as a partial charge, exactly like a real partial payment.
+  // The deposit money itself: one payment, allocated oldest-first. With whole
+  // cycles the deposit covers its months exactly; only a deposit sized below
+  // the months of rent leaves a partial charge, exactly like a real payment.
   await recordPaymentInTx({
     organizationId: params.organizationId,
     actorUserId: params.actorUserId ?? null,
