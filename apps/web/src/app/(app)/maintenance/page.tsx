@@ -12,6 +12,7 @@ import { usePropertyContext } from '@/lib/property-context';
 import { cn } from '@/lib/utils';
 
 import { PageHeader } from '@/components/app-shell';
+import { Add } from '@/components/icons';
 import { MoneyInput } from '@/components/form-controls';
 import { Modal } from '@/components/modal';
 import {
@@ -211,7 +212,9 @@ export default function MaintenancePage() {
                 </option>
               ))}
             </Select>
-            <Button onClick={() => setCreateOpen(true)}>{t('maintenance.new_request')}</Button>
+            <Button leadingIcon={<Add className="h-4 w-4" />} onClick={() => setCreateOpen(true)}>
+              {t('maintenance.new_request')}
+            </Button>
           </>
         }
       />

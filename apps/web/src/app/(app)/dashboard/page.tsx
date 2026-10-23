@@ -126,7 +126,9 @@ export default function DashboardPage() {
 
       <section aria-labelledby="quick-actions" className="mb-4">
         <h2 id="quick-actions" className="sr-only">{t('dashboard.quick_actions')}</h2>
-        <div className="flex flex-wrap gap-2">
+        {/* On phones the four quick actions stack as a 2x2 grid; on sm+ they
+            collapse back into the original flex-wrap row of small buttons. */}
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
           {QUICK_ACTIONS.map((action) => {
             const Icon = action.icon;
             return (
@@ -135,6 +137,7 @@ export default function DashboardPage() {
                 variant={action.primary ? 'default' : 'ghost'}
                 size="sm"
                 asChild
+                className="justify-center sm:w-auto"
               >
                 <Link href={action.href}>
                   <Icon className="h-4 w-4" aria-hidden="true" />

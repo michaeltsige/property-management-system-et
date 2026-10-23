@@ -94,10 +94,6 @@ export default function ChargesPage() {
         description={formatPeriodKey(periodKey, calendar, language)}
         actions={
           <>
-            <ExportCsvButton
-              kind="charges"
-              query={`periodKey=${periodKey}&calendar=${calendar}${status ? `&status=${status}` : ''}`}
-            />
             <PeriodPicker
               periodKey={periodKey}
               onChange={setPeriodKey}
@@ -107,7 +103,7 @@ export default function ChargesPage() {
             <Select
               value={status}
               onChange={(event) => setStatus(event.target.value)}
-              className="h-9 w-36"
+              className="h-9 w-full sm:w-36"
               aria-label={t('unit.status')}
             >
               <option value="">{t('common.filters')}</option>
@@ -120,12 +116,15 @@ export default function ChargesPage() {
               placeholder={t('charges.search')}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="h-9 w-44"
+              className="h-9 w-full sm:w-44"
             />
-            <Button onClick={() => void generate()} disabled={pending}>
-              <PlayCircle className="h-4 w-4" />
+            <Button leadingIcon={<PlayCircle className="h-4 w-4" />} onClick={() => void generate()} disabled={pending}>
               {pending ? t('app.loading') : t('money.rent_due')}
             </Button>
+            <ExportCsvButton
+              kind="charges"
+              query={`periodKey=${periodKey}&calendar=${calendar}${status ? `&status=${status}` : ''}`}
+            />
           </>
         }
       />

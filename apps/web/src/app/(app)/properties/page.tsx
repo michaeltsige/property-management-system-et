@@ -413,7 +413,7 @@ export default function PropertiesPage() {
         onOpenChange={setOpen}
         title={t('common.create')}
         description={t('property.name')}
-        width="max-w-2xl"
+        width="sm:max-w-2xl"
         footer={
           <>
             <Button variant="secondary" onClick={() => setOpen(false)}>
@@ -565,7 +565,7 @@ export default function PropertiesPage() {
         onOpenChange={setEditOpen}
         title={t('property.edit')}
         description={editing?.name}
-        width="max-w-2xl"
+        width="sm:max-w-2xl"
         footer={
           <>
             <Button variant="secondary" onClick={() => setEditOpen(false)}>
@@ -720,7 +720,7 @@ export default function PropertiesPage() {
         onOpenChange={setBulkOpen}
         title={t('property.bulk_create')}
         description={t('property.bulk_hint')}
-        width="max-w-2xl"
+        width="sm:max-w-2xl"
         footer={
           <>
             <Button variant="secondary" onClick={() => setBulkOpen(false)}>

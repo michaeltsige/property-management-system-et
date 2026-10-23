@@ -8,6 +8,7 @@ import { useState } from 'react';
 
 import { api } from '@/lib/api';
 import { CALENDARS, LANGUAGES, usePreferences } from '@/lib/preferences';
+import { cn } from '@/lib/utils';
 import type { CalendarKind, LanguageCode } from '@pms/calendar';
 
 import { Alert, Button, Card, CardContent, Input, Label, Select } from '@/components/ui';
@@ -95,21 +96,29 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-canvas px-4 py-8">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-canvas px-4 py-8">
       <div className="w-full max-w-md">
-        <div className="mb-6 text-center">
-          <h1 className="text-xl font-semibold tracking-tight text-strong">{t('auth.register_organization')}</h1>
-          <p className="text-xs text-muted">{t('app.tagline')}</p>
+        <div className="mb-5 text-center sm:mb-6">
+          <h1 className="text-lg font-semibold tracking-tight text-strong sm:text-xl">{t('auth.register_organization')}</h1>
+          <p className="mt-1 text-xs text-muted">{t('app.tagline')}</p>
         </div>
 
         <Card>
           <CardContent>
-            <ol className="mb-5 flex justify-between text-xs" aria-label={t('onboarding.progress')}>
+            {/* Steps indicator: horizontally scrollable on mobile so the labels
+                (1. Profile, 2. Billing, 3. Review) never wrap to two lines. */}
+            <ol
+              className="mb-5 flex w-max min-w-full justify-between gap-4 overflow-x-auto text-xs sm:w-full [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              aria-label={t('onboarding.progress')}
+            >
               {['profile', 'billing', 'review'].map((name, i) => (
                 <li
                   key={name}
                   aria-current={step === i ? 'step' : undefined}
-                  className={step === i ? 'font-semibold text-brand-700 dark:text-brand-300' : ''}
+                  className={cn(
+                    'whitespace-nowrap',
+                    step === i && 'font-semibold text-brand-700 dark:text-brand-300',
+                  )}
                 >
                   {i + 1}. {t(`onboarding.${name}` as never)}
                 </li>

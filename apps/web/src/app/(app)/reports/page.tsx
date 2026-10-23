@@ -88,6 +88,7 @@ export default function ReportsPage() {
             />
             <Button
               variant="secondary"
+              leadingIcon={<Import className="h-4 w-4" />}
               onClick={() => {
                 if (tab === 'rent_roll' && rentRoll.data) {
                   exportCsv(
@@ -118,29 +119,32 @@ export default function ReportsPage() {
                 }
               }}
             >
-              <Import className="h-4 w-4" />
               {t('reports.export_csv')}
             </Button>
           </>
         }
       />
 
-      <div className="mb-3 flex flex-wrap gap-1 border-b border-line">
-        {TABS.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            onClick={() => setTab(item.id)}
-            className={cn(
-              '-mb-px border-b-2 px-3 py-2 text-sm',
-              tab === item.id
-                ? 'border-brand-600 font-medium text-brand-800'
-                : 'border-transparent text-muted hover:text-strong',
-            )}
-          >
-            {t(item.labelKey as never)}
-          </button>
-        ))}
+      {/* Tabs: horizontally scrollable on mobile instead of wrapping. Wrapping
+          leaves orphan tabs that look like a new section; one row, one thumb. */}
+      <div className="mb-3 -mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:px-0">
+        <div className="flex w-max gap-1 border-b border-line sm:w-full">
+          {TABS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setTab(item.id)}
+              className={cn(
+                '-mb-px whitespace-nowrap border-b-2 px-3 py-2 text-sm',
+                tab === item.id
+                  ? 'border-brand-600 font-medium text-brand-800'
+                  : 'border-transparent text-muted hover:text-strong',
+              )}
+            >
+              {t(item.labelKey as never)}
+            </button>
+          ))}
+        </div>
       </div>
 
       {tab === 'rent_roll' ? (

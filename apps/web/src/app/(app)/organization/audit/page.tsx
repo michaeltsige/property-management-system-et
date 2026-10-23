@@ -42,7 +42,7 @@ export default function AuditPage() {
     <>
       <PageHeader titleKey="nav.audit" description={t('audit.subtitle')} />
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
         <Select
           aria-label={t('audit.action')}
           value={action}
@@ -53,7 +53,7 @@ export default function AuditPage() {
             if (search) params.set('entityType', search);
             setQuery(params.size > 0 ? `?${params.toString()}` : '');
           }}
-          className="max-w-44"
+          className="w-full sm:max-w-44"
         >
           <option value="">{t('common.select')}</option>
           {ACTIONS.map((option) => (
@@ -75,7 +75,7 @@ export default function AuditPage() {
               setQuery(params.size > 0 ? `?${params.toString()}` : '');
             }
           }}
-          className="max-w-56"
+          className="w-full sm:max-w-56"
         />
       </div>
 

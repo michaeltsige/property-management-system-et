@@ -51,24 +51,24 @@ export default function AcceptInvitePage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4">
+    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-y-auto px-4 py-6">
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-cover bg-center"
+        className="fixed inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/images/login-hero.jpg')" }}
       />
-      <div aria-hidden="true" className="absolute inset-0 bg-ink-950/60" />
+      <div aria-hidden="true" className="fixed inset-0 bg-ink-950/60" />
       <div className="relative w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <Logo size={88} onDark className="mx-auto mb-3" />
-          <h1 className="text-xl font-semibold tracking-tight text-white">{t('invite.title')}</h1>
+        <div className="mb-5 text-center">
+          <Logo size={72} onDark className="mx-auto mb-2" />
+          <h1 className="text-lg font-semibold tracking-tight text-white sm:text-xl">{t('invite.title')}</h1>
           <p className="mt-1 text-xs text-white/70">{t('invite.subtitle')}</p>
         </div>
 
         <Card className="shadow-float">
           <CardContent className="py-2">
             {done ? (
-              <div className="space-y-4 py-2">
+              <div className="space-y-3 py-2 sm:space-y-4">
                 <Alert tone="success" title={t('invite.done')}>
                   {done.organizationName ? (
                     <p className="text-xs">
@@ -81,7 +81,7 @@ export default function AcceptInvitePage() {
                 </Link>
               </div>
             ) : (
-              <form className="space-y-4" onSubmit={onSubmit}>
+              <form className="space-y-3 sm:space-y-4" onSubmit={onSubmit}>
                 <div className="space-y-1">
                   <Label htmlFor="token" required>
                     {t('user.invite_link')}

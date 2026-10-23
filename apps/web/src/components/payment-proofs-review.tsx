@@ -107,7 +107,7 @@ export function PaymentProofsReview({ onChanged }: { onChanged?: () => void }) {
       <CardContent className="p-0">
         <div className="border-b border-line px-4 pt-3">
           <p className="pb-3 text-sm font-medium text-strong">{t('payment.proof_review_title')}</p>
-          <div role="tablist" aria-label={t('payment.proof_review_title')} className="flex gap-1">
+          <div role="tablist" aria-label={t('payment.proof_review_title')} className="-mx-4 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {PAYMENT_PROOF_STATUSES.map((status) => (
               <button
                 key={status}
@@ -116,7 +116,7 @@ export function PaymentProofsReview({ onChanged }: { onChanged?: () => void }) {
                 aria-selected={tab === status}
                 onClick={() => setTab(status)}
                 className={cn(
-                  'rounded-t-md border-b-2 px-3 py-2 text-sm transition-colors',
+                  'whitespace-nowrap rounded-t-md border-b-2 px-3 py-2 text-sm transition-colors',
                   tab === status
                     ? 'border-brand-600 font-medium text-brand-800'
                     : 'border-transparent text-muted hover:text-body',

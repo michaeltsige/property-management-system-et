@@ -130,7 +130,7 @@ export function PeriodPicker({
       <Select
         value={periodKey}
         onChange={(event) => onChange(event.target.value)}
-        className="h-8 w-44 text-xs"
+        className="h-8 w-full text-xs sm:w-44"
         aria-label={t('reports.period')}
       >
         {options.map((option) => (

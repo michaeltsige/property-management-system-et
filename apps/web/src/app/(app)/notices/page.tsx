@@ -12,6 +12,7 @@ import { useMemo, useRef, useState } from 'react';
 import { NOTICE_AUDIENCES, roleHasPermission, type Role } from '@pms/shared';
 
 import { PageHeader } from '@/components/app-shell';
+import { Add } from '@/components/icons';
 import { Modal } from '@/components/modal';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
@@ -127,7 +128,9 @@ export default function NoticesPage() {
         description={t('notices.subtitle')}
         actions={
           canWrite ? (
-            <Button onClick={() => setComposeOpen(true)}>{t('notices.compose')}</Button>
+            <Button leadingIcon={<Add className="h-4 w-4" />} onClick={() => setComposeOpen(true)}>
+              {t('notices.compose')}
+            </Button>
           ) : undefined
         }
       />

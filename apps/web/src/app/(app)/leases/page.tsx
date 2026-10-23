@@ -271,7 +271,7 @@ export default function LeasesPage() {
         open={open}
         onOpenChange={setOpen}
         title={t('common.create')}
-        width="max-w-2xl"
+        width="sm:max-w-2xl"
         footer={
           <>
             <Button variant="secondary" onClick={() => setOpen(false)}>

@@ -122,12 +122,12 @@ export default function TeamPage() {
               email: inviteOutcome.email,
               date: new Date(inviteOutcome.expiresAt).toLocaleDateString(),
             })}</p>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Input
                 readOnly
                 value={inviteLink(inviteOutcome.token)}
                 onFocus={(event) => event.currentTarget.select()}
-                className="h-8 flex-1 font-mono text-xs"
+                className="h-8 w-full font-mono text-xs sm:flex-1"
                 aria-label={t('user.invite_link')}
               />
               <Button variant="outline" size="sm" onClick={() => void copyLink(inviteOutcome.token)}>
@@ -224,7 +224,7 @@ export default function TeamPage() {
                     </Td>
                     <Td>
                       {canManage ? (
-                        <div className="flex flex-wrap justify-end gap-2">
+                        <div className="flex justify-end gap-2">
                           {member.status === 'invited' ? (
                             <Button
                               variant="secondary"
