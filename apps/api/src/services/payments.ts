@@ -22,6 +22,7 @@ import { resolveOrgPaymentProvider } from '../providers/payments/index.js';
 import { ProviderNotConfiguredError, type ProviderName } from '../providers/payments/types.js';
 import { postLedgerEntry } from './ledger.js';
 import { recordAudit } from './audit.js';
+import { advancePrepaidRentInTx } from './charges.js';
 
 const MAX_SERIALIZATION_RETRIES = 3;
 
@@ -54,7 +55,12 @@ export interface RecordedPayment {
   amountMinor: bigint;
   currency: string;
   allocatedMinor: bigint;
-  /** Amount received beyond the open charges; sits as a credit on the lease. */
+  /**
+   * Amount received beyond what was allocated. On the auto-allocation path this
+   * registers future rent cycles, so a non-zero value here is rare (explicit
+   * allocations with a surplus, or a lease not yet active) — legacy stranded
+   * credit is still applied automatically before new charges.
+   */
   unallocatedMinor: bigint;
   allocations: { chargeId: string; amountMinor: bigint }[];
 }
@@ -362,6 +368,31 @@ export function recordPaymentInTx(input: RecordPaymentInput) {
       }
     }
 
+    // Overpayment registers the next unpaid cycle(s) instead of stranding a
+    // "credit" the landlord has to interpret. Only for the auto-allocation
+    // path on an active lease: an explicitly allocated payment puts its surplus
+    // exactly where the clerk directed, and a non-active lease has no future
+    // cycles to register.
+    let advanced: { chargeId: string; allocatedMinor: bigint; status: 'open' | 'partial' | 'paid' }[] = [];
+    if (
+      remaining > 0n &&
+      lease &&
+      !input.allocations?.length &&
+      lease.status === 'active' &&
+      lease.currency === input.amount.currency
+    ) {
+      advanced = await advancePrepaidRentInTx(tx, {
+        organizationId: input.organizationId,
+        lease,
+        availableMinor: remaining,
+        actorUserId: input.actorUserId,
+      });
+      for (const cycle of advanced) {
+        planned.push({ chargeId: cycle.chargeId, amountMinor: cycle.allocatedMinor });
+        remaining -= cycle.allocatedMinor;
+      }
+    }
+
     const allocated = planned.reduce((sum, item) => sum + item.amountMinor, 0n);
     const receiptNumber = await nextReceiptNumber(tx, input.organizationId, input.paidAt);
 
@@ -386,9 +417,19 @@ export function recordPaymentInTx(input: RecordPaymentInput) {
     });
 
     for (const item of planned) {
+      const advancedCycle = advanced.find((cycle) => cycle.chargeId === item.chargeId);
       await tx.paymentAllocation.create({
         data: { paymentId: payment.id, chargeId: item.chargeId, amountMinor: item.amountMinor },
       });
+
+      if (advancedCycle) {
+        // A just-created prepaid cycle: its paid amount is known exactly.
+        await tx.charge.update({
+          where: { id: advancedCycle.chargeId },
+          data: { paidMinor: advancedCycle.allocatedMinor, status: advancedCycle.status },
+        });
+        continue;
+      }
 
       const charge = target.find((c) => c.id === item.chargeId);
       if (!charge) continue;

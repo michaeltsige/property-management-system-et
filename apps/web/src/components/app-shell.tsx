@@ -47,6 +47,7 @@ import {
   LanguageSquare,
   Logout,
   Menu as MenuIcon,
+  Notification,
   People,
   Profile2User,
   ReceiptItem,
@@ -104,6 +105,7 @@ const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
     items: [
       { href: '/maintenance', labelKey: 'nav.maintenance', icon: Setting3 },
       { href: '/documents', labelKey: 'nav.documents', icon: DocumentText },
+      { href: '/notices', labelKey: 'notices.title', icon: Notification },
     ],
   },
   {

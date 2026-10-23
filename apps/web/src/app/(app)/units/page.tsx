@@ -1,6 +1,6 @@
 'use client';
 
-import { Add } from '@/components/icons';
+import { Add, Edit2 } from '@/components/icons';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
@@ -53,6 +53,7 @@ export default function UnitsPage() {
     floor: '',
     bedrooms: '',
     bathrooms: '',
+    areaSqm: '',
     status: 'vacant' as (typeof UNIT_STATUSES)[number],
   });
   const [marketRent, setMarketRent] = useState<number | null>(null);
@@ -92,10 +93,17 @@ export default function UnitsPage() {
 
   const [propertyContext] = usePropertyContext();
 
-  // Rename / floor edit for a single unit; bulk edits go through the CSV
-  // round-trip (Export CSV → edit → Import CSV, the id column updates rows).
+  // Rename / floor / layout edit for a single unit; bulk edits go through the
+  // CSV round-trip (Export CSV → edit → Import CSV, the id column updates rows).
   const [editUnit, setEditUnit] = useState<Unit | null>(null);
-  const [editForm, setEditForm] = useState({ label: '', floor: '' });
+  const [editForm, setEditForm] = useState({
+    label: '',
+    floor: '',
+    bedrooms: '',
+    bathrooms: '',
+    areaSqm: '',
+    marketRent: null as number | null,
+  });
   const { pending: editPending, error: editError, fieldErrors: editFieldErrors, run: runEdit } = useAction();
 
   async function submitEdit(event: React.FormEvent) {
@@ -105,6 +113,14 @@ export default function UnitsPage() {
       await api.updateUnit(editUnit.id, {
         label: editForm.label,
         floor: editForm.floor === '' ? undefined : Number(editForm.floor),
+        bedrooms: editForm.bedrooms === '' ? undefined : Number(editForm.bedrooms),
+        bathrooms: editForm.bathrooms === '' ? undefined : Number(editForm.bathrooms),
+        areaSqm: editForm.areaSqm === '' ? undefined : Number(editForm.areaSqm),
+        // null clears the market rent; an amount re-prices the unit.
+        marketRent:
+          editForm.marketRent === null
+            ? null
+            : { amountMinor: editForm.marketRent, currency: editUnit.currency },
       });
       setEditUnit(null);
       units.reload();
@@ -154,6 +170,7 @@ export default function UnitsPage() {
         floor: form.floor === '' ? undefined : Number(form.floor),
         bedrooms: form.bedrooms === '' ? undefined : Number(form.bedrooms),
         bathrooms: form.bathrooms === '' ? undefined : Number(form.bathrooms),
+        areaSqm: form.areaSqm === '' ? undefined : Number(form.areaSqm),
         status: form.status,
         marketRent: marketRent === null ? undefined : { amountMinor: marketRent, currency },
       });
@@ -165,6 +182,7 @@ export default function UnitsPage() {
         floor: '',
         bedrooms: '',
         bathrooms: '',
+        areaSqm: '',
         status: 'vacant',
       });
       setMarketRent(null);
@@ -274,11 +292,12 @@ export default function UnitsPage() {
                       <Th>{t('unit.label')}</Th>
                       <Th>{t('units.type')}</Th>
                       <Th>{t('portfolio.block')}</Th>
-                      <Th>{t('unit.bedrooms')}</Th>
-                      <Th>{t('unit.area_sqm')}</Th>
-                      <Th>{t('unit.market_rent')}</Th>
-                      <Th>{t('unit.status')}</Th>
-                      <Th>{t('common.actions')}</Th>
+                      <Th className="whitespace-nowrap">{t('unit.bedrooms')}</Th>
+                      <Th className="whitespace-nowrap">{t('unit.bathrooms')}</Th>
+                      <Th className="whitespace-nowrap">{t('unit.area_sqm')}</Th>
+                      <Th className="whitespace-nowrap">{t('unit.market_rent')}</Th>
+                      <Th className="whitespace-nowrap">{t('unit.status')}</Th>
+                      <Th className="whitespace-nowrap">{t('common.actions')}</Th>
                     </tr>
                   </thead>
                   <tbody>
@@ -291,10 +310,9 @@ export default function UnitsPage() {
                         </Td>
                         <Td>{unit.typeLabel ?? '—'}</Td>
                         <Td>{unit.building?.name ?? t('portfolio.no_block')}</Td>
-                        <Td>
-                          {unit.bedrooms ?? '—'} / {unit.bathrooms ?? '—'}
-                        </Td>
-                        <Td>{unit.areaSqm ?? '—'}</Td>
+                        <Td className="tabular">{unit.bedrooms ?? '—'}</Td>
+                        <Td className="tabular">{unit.bathrooms ?? '—'}</Td>
+                        <Td className="tabular">{unit.areaSqm ?? '—'}</Td>
                         <Td className="tabular">
                           {unit.marketRentMinor
                             ? formatAmount(unit.marketRentMinor, unit.currency, language)
@@ -308,17 +326,38 @@ export default function UnitsPage() {
                         <Td>
                           {canWrite && (
                             <Button
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
+                              aria-label={t('units.edit')}
+                              title={t('units.edit')}
                               onClick={() => {
                                 setEditUnit(unit);
                                 setEditForm({
                                   label: unit.label,
-                                  floor: unit.floor === null || unit.floor === undefined ? '' : String(unit.floor),
+                                  floor:
+                                    unit.floor === null || unit.floor === undefined
+                                      ? ''
+                                      : String(unit.floor),
+                                  bedrooms:
+                                    unit.bedrooms === null || unit.bedrooms === undefined
+                                      ? ''
+                                      : String(unit.bedrooms),
+                                  bathrooms:
+                                    unit.bathrooms === null || unit.bathrooms === undefined
+                                      ? ''
+                                      : String(unit.bathrooms),
+                                  areaSqm:
+                                    unit.areaSqm === null || unit.areaSqm === undefined
+                                      ? ''
+                                      : String(unit.areaSqm),
+                                  marketRent: unit.marketRentMinor
+                                    ? Number(unit.marketRentMinor)
+                                    : null,
                                 });
                               }}
                             >
-                              {t('common.edit')}
+                              <Edit2 size={16} className="text-body" />
+                              {t('units.edit')}
                             </Button>
                           )}
                         </Td>
@@ -374,6 +413,54 @@ export default function UnitsPage() {
               onChange={(event) => setEditForm((current) => ({ ...current, floor: event.target.value }))}
             />
             <FieldError>{editFieldErrors.floor}</FieldError>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="edit-bedrooms">{t('unit.bedrooms')}</Label>
+            <Input
+              id="edit-bedrooms"
+              type="number"
+              min={0}
+              max={50}
+              value={editForm.bedrooms}
+              onChange={(event) =>
+                setEditForm((current) => ({ ...current, bedrooms: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="edit-bathrooms">{t('unit.bathrooms')}</Label>
+            <Input
+              id="edit-bathrooms"
+              type="number"
+              min={0}
+              max={50}
+              value={editForm.bathrooms}
+              onChange={(event) =>
+                setEditForm((current) => ({ ...current, bathrooms: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="edit-areaSqm">{t('unit.area_sqm')}</Label>
+            <Input
+              id="edit-areaSqm"
+              type="number"
+              min={0}
+              step="any"
+              value={editForm.areaSqm}
+              onChange={(event) =>
+                setEditForm((current) => ({ ...current, areaSqm: event.target.value }))
+              }
+            />
+          </div>
+          <div className="space-y-1 sm:col-span-2">
+            <MoneyInput
+              label={t('unit.market_rent')}
+              currency={editUnit?.currency ?? 'ETB'}
+              value={editForm.marketRent}
+              onChange={(value) => setEditForm((current) => ({ ...current, marketRent: value }))}
+            />
+            <p className="text-[11px] text-muted">{t('units.rent_hint')}</p>
           </div>
           {editError ? (
             <div className="sm:col-span-2">
@@ -463,13 +550,26 @@ export default function UnitsPage() {
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor="bedrooms">{t('unit.bedrooms')}</Label>
+            <Label htmlFor="bedrooms">{t('bulk.bedrooms')}</Label>
             <Input
               id="bedrooms"
               type="number"
               min={0}
+              max={50}
               value={form.bedrooms}
               onChange={(event) => setForm((current) => ({ ...current, bedrooms: event.target.value }))}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="bathrooms">{t('bulk.bathrooms')}</Label>
+            <Input
+              id="bathrooms"
+              type="number"
+              min={0}
+              max={50}
+              value={form.bathrooms}
+              onChange={(event) => setForm((current) => ({ ...current, bathrooms: event.target.value }))}
             />
           </div>
 
@@ -480,6 +580,18 @@ export default function UnitsPage() {
               type="number"
               value={form.floor}
               onChange={(event) => setForm((current) => ({ ...current, floor: event.target.value }))}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <Label htmlFor="areaSqm">{t('bulk.area')}</Label>
+            <Input
+              id="areaSqm"
+              type="number"
+              min={0}
+              step="any"
+              value={form.areaSqm}
+              onChange={(event) => setForm((current) => ({ ...current, areaSqm: event.target.value }))}
             />
           </div>
 

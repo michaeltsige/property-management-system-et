@@ -59,6 +59,8 @@ export const PERMISSIONS = [
   'documents.write',
   'notifications.read',
   'notifications.send',
+  // organization notices (announcements with an optional image, tenant-visible)
+  'notices.write',
   // tenant portal
   'portal.use',
   'portal.pay',
@@ -121,6 +123,7 @@ export const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
     'documents.write',
     'notifications.read',
     'notifications.send',
+    'notices.write',
     'audit.read',
   ],
   tenant: ['portal.use', 'portal.pay', 'portal.request_maintenance'],

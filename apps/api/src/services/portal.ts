@@ -3,21 +3,24 @@
  *
  * Security notes
  * --------------
- * - `POST /portal/request-code` never reveals whether a phone number belongs to
- *   an enrolled tenant: unknown numbers still get `ok: true` and nothing sent.
- * - Codes are six random digits, stored only as SHA-256 hashes, valid ten
- *   minutes, single-use, with a five-attempt budget and a resend cooldown.
+ * - The owner explicitly wants clear feedback over enumeration-avoidance: a
+ *   phone with no enrolled tenant gets a 404 ("not registered"), and a real
+ *   resend inside the cooldown gets a 429. Abuse is bounded by the per-phone
+ *   and per-IP rate limits instead of silence.
+ * - Codes are six random digits, stored as HMAC-SHA-256 hashes (keyed with a
+ *   server secret — a leaked database column alone cannot brute-force them),
+ *   valid ten minutes, single-use, with a five-attempt budget.
  * - Enrollment creates a User with an unusable random password; the only way in
  *   is a fresh code, so there is no password to phish or stuff.
  */
 
-import { createHash, randomInt, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 
 import { phoneEtSchema } from '@pms/shared';
 
 import type { PrismaClient } from '@prisma/client';
 
-import { badRequest, unauthenticated } from '../lib/errors.js';
+import { badRequest, rateLimited, unauthenticated } from '../lib/errors.js';
 import { hashPassword } from '../lib/crypto.js';
 import { logger } from '../lib/logger.js';
 import { getConfig } from '../config.js';
@@ -29,14 +32,59 @@ import type { LanguageCode } from '@pms/calendar';
 export const OTP_TTL_MINUTES = 10;
 export const OTP_MAX_ATTEMPTS = 5;
 export const OTP_RESEND_COOLDOWN_SECONDS = 60;
+/** Code requests allowed per phone number within the sliding window. */
+export const OTP_PHONE_REQUESTS = 5;
+export const OTP_PHONE_WINDOW_MINUTES = 15;
 
 export function normalizePhone(value: unknown): string | null {
   const parsed = phoneEtSchema.safeParse(value);
   return parsed.success ? parsed.data : null;
 }
 
+/**
+ * HMAC-SHA-256 keyed with a server-only secret (derived from the JWT access
+ * secret; both live in the same .env the operator backs up). An unsalted
+ * SHA-256 of a 6-digit code is brute-forceable in seconds from a leaked
+ * database; the keyed hash is not.
+ */
 function hashCode(code: string): string {
-  return createHash('sha256').update(code).digest('hex');
+  const key = createHash('sha256')
+    .update(`portal-otp:${getConfig().JWT_ACCESS_SECRET}`)
+    .digest();
+  return createHmac('sha256', key).update(code).digest('hex');
+}
+
+/** Constant-time hash comparison — code equality must not leak byte-by-byte. */
+function hashesMatch(a: string, b: string): boolean {
+  const bufferA = Buffer.from(a, 'hex');
+  const bufferB = Buffer.from(b, 'hex');
+  return bufferA.length === bufferB.length && timingSafeEqual(bufferA, bufferB);
+}
+
+/**
+ * Per-phone request limiter (in-memory, sliding window). The IP limiter in the
+ * route protects the endpoint; this one protects a single victim's phone from
+ * SMS bombing even when the requests come from many addresses.
+ */
+const phoneRequestLog = new Map<string, number[]>();
+
+export function assertPhoneRequestBudget(phone: string): void {
+  const now = Date.now();
+  const windowMs = OTP_PHONE_WINDOW_MINUTES * 60_000;
+  const recent = (phoneRequestLog.get(phone) ?? []).filter((ts) => now - ts < windowMs);
+  if (recent.length >= OTP_PHONE_REQUESTS) {
+    throw rateLimited(
+      `Too many code requests for this phone number; try again in ${OTP_PHONE_WINDOW_MINUTES} minutes`,
+    );
+  }
+  recent.push(now);
+  phoneRequestLog.set(phone, recent);
+  // Opportunistic cleanup so the map cannot grow without bound.
+  if (phoneRequestLog.size > 10_000) {
+    for (const [key, stamps] of phoneRequestLog) {
+      if (stamps.every((ts) => now - ts >= windowMs)) phoneRequestLog.delete(key);
+    }
+  }
 }
 
 export async function findEnrolledTenantByPhone(prisma: PrismaLike, phone: string) {
@@ -53,17 +101,28 @@ export async function findEnrolledTenantByPhone(prisma: PrismaLike, phone: strin
   });
 }
 
-/** Always returns `ok: true` for a well-formed phone; see module notes. */
+/**
+ * Result of a code request. `not_registered` and `cooldown` are surfaced to the
+ * user on purpose (owner decision): the SMS budget for abuse is the per-phone
+ * limiter, not silence.
+ */
+export type PortalCodeRequestResult =
+  | { ok: true }
+  | { ok: false; reason: 'not_registered' }
+  | { ok: false; reason: 'cooldown'; retryAfterSeconds: number };
+
 export async function requestPortalCode(
   prisma: PrismaLike,
   phone: string,
   meta: { requestId?: string },
-): Promise<{ ok: true }> {
+): Promise<PortalCodeRequestResult> {
+  assertPhoneRequestBudget(phone);
+
   const tenant = await findEnrolledTenantByPhone(prisma, phone);
   if (!tenant?.user) {
-    // Anti-enumeration: production stays silent. Development logs a hint, because
-    // a silent `ok: true` is indistinguishable from a broken SMS provider there —
-    // and the hint names the phones that WOULD have worked.
+    // Explicit "not registered" (owner decision) — but development still logs a
+    // hint naming the phones that WOULD have worked, because a missing seed is
+    // indistinguishable from a broken SMS provider there.
     if (getConfig().isDevelopment) {
       const enrolled = await prisma.tenant.findMany({
         where: { deletedAt: null, userId: { not: null }, user: { isActive: true } },
@@ -76,12 +135,12 @@ export async function requestPortalCode(
         .join(', ');
       logger.info(
         { phone },
-        'DEV demo: portal code requested for a phone with no enrolled, active tenant — nothing sent. ' +
+        'DEV demo: portal code requested for a phone with no enrolled, active tenant. ' +
           `Phones that are enrolled for portal access: ${enrolledPhones || '(none — run `pnpm db:seed`)'}. ` +
           'Seeded demo phones are also printed by `pnpm db:seed`.',
       );
     }
-    return { ok: true };
+    return { ok: false, reason: 'not_registered' };
   }
 
   const last = await prisma.tenantOtp.findFirst({
@@ -89,14 +148,16 @@ export async function requestPortalCode(
     orderBy: { createdAt: 'desc' },
   });
   if (last && Date.now() - last.createdAt.getTime() < OTP_RESEND_COOLDOWN_SECONDS * 1000) {
-    // Enforcing the cooldown publicly would reveal enrollment; stay silent.
+    const retryAfterSeconds = Math.ceil(
+      (last.createdAt.getTime() + OTP_RESEND_COOLDOWN_SECONDS * 1000 - Date.now()) / 1000,
+    );
     if (getConfig().isDevelopment) {
       logger.info(
         { phone },
         `DEV demo: portal code requested again within the ${OTP_RESEND_COOLDOWN_SECONDS}s resend cooldown — not resending. The earlier code (if one was sent) is still valid.`,
       );
     }
-    return { ok: true };
+    return { ok: false, reason: 'cooldown', retryAfterSeconds };
   }
 
   const code = randomInt(0, 1_000_000).toString().padStart(6, '0');
@@ -125,9 +186,8 @@ export async function requestPortalCode(
 
   // Dispatch now, like every other SMS path (manual send, overdue sweep): the
   // queued row alone used to sit forever because nothing drained the outbox,
-  // so the code never reached the tenant. A provider failure is recorded on the
-  // row and swallowed here — the response must stay `ok: true` either way, or
-  // the error would reveal that the number is enrolled.
+  // so the code never reached the tenant. A provider failure is recorded on
+  // the row and swallowed here — the user still gets `ok: true`.
   try {
     const result = await getSmsProvider().send({
       to: phone,
@@ -179,7 +239,7 @@ export async function verifyPortalCode(
   });
   if (!otp || otp.expiresAt.getTime() < Date.now()) throw unauthenticated('Code expired or not requested');
   if (otp.attempts >= OTP_MAX_ATTEMPTS) throw unauthenticated('Too many attempts; request a new code');
-  if (otp.codeHash !== hashCode(code)) {
+  if (!hashesMatch(otp.codeHash, hashCode(code))) {
     await prisma.tenantOtp.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
     throw unauthenticated('Email or code is incorrect');
   }

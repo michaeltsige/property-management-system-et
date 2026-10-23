@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { WORK_ORDER_STATUSES, roleHasPermission, type Role } from '@pms/shared';
+import { WORK_ORDER_PRIORITIES, WORK_ORDER_STATUSES, roleHasPermission, type Role } from '@pms/shared';
 
 import { api } from '@/lib/api';
 import { formatAmount, formatDate, statusTone } from '@/lib/format';
@@ -77,6 +77,20 @@ export default function MaintenancePage() {
   const [closingNote, setClosingNote] = useState('');
   const [closingCost, setClosingCost] = useState<number | null>(null);
   const [estimate, setEstimate] = useState<number | null>(null);
+  // Staff-side creation: a request plus its optional estimate, so the amount is
+  // on the record from day one and shows in the table immediately.
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    propertyId: '',
+    unitId: '',
+    title: '',
+    description: '',
+    priority: 'normal',
+  });
+  const [createEstimate, setCreateEstimate] = useState<number | null>(null);
+  const [createMaintainer, setCreateMaintainer] = useState('');
+  const properties = useAsync(() => api.properties(), []);
+  const units = useAsync(() => api.units(), []);
   // Follow the stored estimate so reopening (or saving) shows the real value
   // and clearing it sticks.
   useEffect(() => {
@@ -144,6 +158,36 @@ export default function MaintenancePage() {
     (order) => propertyContext === null || order.property?.id === propertyContext,
   );
   const order = detail.data?.workOrder ?? null;
+  const createUnits = (units.data?.units ?? []).filter(
+    (unit) => unit.propertyId === createForm.propertyId,
+  );
+
+  async function createOrder() {
+    if (!createForm.propertyId || createForm.title.trim().length < 3) return;
+    await run(async () => {
+      await api.createWorkOrder({
+        propertyId: createForm.propertyId,
+        ...(createForm.unitId ? { unitId: createForm.unitId } : {}),
+        title: createForm.title.trim(),
+        ...(createForm.description.trim() ? { description: createForm.description.trim() } : {}),
+        priority: createForm.priority,
+        ...(createEstimate !== null
+          ? {
+              estimatedCost: {
+                amountMinor: createEstimate,
+                currency: session?.organization.currency ?? 'ETB',
+              },
+            }
+          : {}),
+        ...(canDecide && createMaintainer.trim() ? { maintainerName: createMaintainer.trim() } : {}),
+      });
+      setCreateOpen(false);
+      setCreateForm({ propertyId: '', unitId: '', title: '', description: '', priority: 'normal' });
+      setCreateEstimate(null);
+      setCreateMaintainer('');
+      board.reload();
+    }).catch(() => undefined);
+  }
 
   return (
     <div>
@@ -167,6 +211,7 @@ export default function MaintenancePage() {
                 </option>
               ))}
             </Select>
+            <Button onClick={() => setCreateOpen(true)}>{t('maintenance.new_request')}</Button>
           </>
         }
       />
@@ -374,6 +419,119 @@ export default function MaintenancePage() {
           <p className="text-xs text-muted">{t('maintenance.maintainer_hint')}</p>
           {error ? <Alert tone="danger">{error}</Alert> : null}
         </div>
+      </Modal>
+
+      {/* New request: the amount field feeds the table's Amount column directly. */}
+      <Modal
+        open={createOpen}
+        onOpenChange={(value) => (value ? undefined : setCreateOpen(false))}
+        title={t('maintenance.new_request')}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setCreateOpen(false)}>
+              {t('common.cancel')}
+            </Button>
+            <Button
+              disabled={pending || !createForm.propertyId || createForm.title.trim().length < 3}
+              onClick={() => void createOrder()}
+            >
+              {pending ? t('app.loading') : t('common.save')}
+            </Button>
+          </>
+        }
+      >
+        <form className="space-y-3" onSubmit={(event) => { event.preventDefault(); void createOrder(); }} id="work-order-create-form">
+          <div className="space-y-1">
+            <Label htmlFor="wo-property">{t('nav.properties')}</Label>
+            <Select
+              id="wo-property"
+              value={createForm.propertyId}
+              onChange={(event) =>
+                setCreateForm((form) => ({ ...form, propertyId: event.target.value, unitId: '' }))
+              }
+              required
+            >
+              <option value="">—</option>
+              {(properties.data?.properties ?? []).map((property) => (
+                <option key={property.id} value={property.id}>
+                  {property.name}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="wo-unit">{t('unit.label')}</Label>
+            <Select
+              id="wo-unit"
+              value={createForm.unitId}
+              onChange={(event) => setCreateForm((form) => ({ ...form, unitId: event.target.value }))}
+            >
+              <option value="">—</option>
+              {createUnits.map((unit) => (
+                <option key={unit.id} value={unit.id}>
+                  {unit.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="wo-title">{t('maintenance.title')}</Label>
+            <Input
+              id="wo-title"
+              value={createForm.title}
+              onChange={(event) => setCreateForm((form) => ({ ...form, title: event.target.value }))}
+              minLength={3}
+              maxLength={160}
+              required
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="wo-description">{t('maintenance.description')}</Label>
+            <textarea
+              id="wo-description"
+              className="flex min-h-20 w-full rounded-md border border-edge bg-canvas px-3 py-2 text-sm text-body placeholder:text-faint focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500/40"
+              value={createForm.description}
+              onChange={(event) => setCreateForm((form) => ({ ...form, description: event.target.value }))}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="wo-priority">{t('maintenance.priority')}</Label>
+            <Select
+              id="wo-priority"
+              value={createForm.priority}
+              onChange={(event) => setCreateForm((form) => ({ ...form, priority: event.target.value }))}
+            >
+              {WORK_ORDER_PRIORITIES.map((option) => (
+                <option key={option} value={option}>
+                  {t(`work_order.priority.${option}` as never)}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div className="space-y-1">
+            <MoneyInput
+              value={createEstimate}
+              onChange={setCreateEstimate}
+              currency={session?.organization.currency ?? 'ETB'}
+              label={t('maintenance.estimate')}
+              id="wo-estimate"
+            />
+            <p className="text-xs text-muted">{t('maintenance.estimate_hint')}</p>
+          </div>
+          {canDecide ? (
+            <div className="space-y-1">
+              <Label htmlFor="wo-maintainer">{t('maintenance.maintainer')}</Label>
+              <Input
+                id="wo-maintainer"
+                value={createMaintainer}
+                onChange={(event) => setCreateMaintainer(event.target.value)}
+                maxLength={120}
+              />
+              <p className="text-xs text-muted">{t('maintenance.maintainer_hint')}</p>
+            </div>
+          ) : null}
+          {error ? <Alert tone="danger">{error}</Alert> : null}
+        </form>
       </Modal>
 
       {/* Request detail: origin, note thread, staff actions. */}

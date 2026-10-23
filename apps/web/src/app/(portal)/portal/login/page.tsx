@@ -3,17 +3,18 @@
 /**
  * Tenant portal sign-in: phone number -> one-time code.
  *
- * There is no password anywhere in this flow. The server answers identically
- * for known and unknown numbers, so the form can never hint whether a phone
- * number rents in a managed building.
+ * There is no password anywhere in this flow. An unregistered phone number
+ * gets a plain "not registered" message (server 404, code NOT_FOUND) — the
+ * owner prefers honest feedback over enumeration-avoidance.
  */
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
 import { Logo } from '@/components/logo';
+import OtpInput from '@/components/otp-input';
 import { DoorLanguagePicker } from '@/components/door-language';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { usePreferences } from '@/lib/preferences';
 
 import { Alert, Button, Card, CardContent, Input, Label } from '@/components/ui';
@@ -35,7 +36,11 @@ export default function PortalLoginPage() {
       await api.portalRequestCode({ phone });
       setStep('code');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      if (cause instanceof ApiError && cause.status === 404) {
+        setError(t('portal.phone_not_registered'));
+      } else {
+        setError(cause instanceof Error ? cause.message : String(cause));
+      }
     } finally {
       setPending(false);
     }
@@ -103,19 +108,17 @@ export default function PortalLoginPage() {
                 <Alert tone="info">{t('portal.code_sent')}</Alert>
                 <div className="space-y-1">
                   <Label htmlFor="portal-code">{t('portal.code')}</Label>
-                  {/* Six digits, centred and letter-spaced: the input should
-                      look like the code that just arrived by SMS. */}
-                  <Input
+                  {/* Six boxes, one per digit: the input should look like the
+                      code that just arrived by SMS. The sanitizer here strips
+                      non-digits and caps at six, whatever lands in the boxes. */}
+                  <OtpInput
                     id="portal-code"
-                    inputMode="numeric"
-                    autoComplete="one-time-code"
-                    pattern="[0-9]*"
-                    maxLength={6}
-                    required
-                    className="tabular text-center text-lg tracking-[0.4em]"
                     value={code}
-                    onChange={(event) => setCode(event.target.value.replace(/\D/g, ''))}
+                    onChange={(next) => setCode(next.replace(/\D/g, '').slice(0, 6))}
+                    autoFocus
+                    disabled={pending}
                   />
+                  <p className="text-xs text-muted">{t('portal.otp_hint')}</p>
                 </div>
                 {error ? <Alert tone="danger">{error}</Alert> : null}
                 <Button type="submit" className="w-full" disabled={pending || code.length !== 6}>

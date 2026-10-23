@@ -94,9 +94,3 @@ export function lastFour(value: string): string {
   return value.replace(/\s+/g, '').slice(-4);
 }
 
-/** Mask everything but the last four digits for display: `****6789`. */
-export function maskIdNumber(value: string): string {
-  const clean = value.replace(/\s+/g, '');
-  const tail = clean.slice(-4);
-  return `${'*'.repeat(Math.max(0, clean.length - 4))}${tail}`;
-}

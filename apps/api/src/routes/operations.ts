@@ -7,8 +7,9 @@
  * row.
  */
 
-import { Router } from 'express';
+import { Router, type NextFunction, type Request } from 'express';
 import { z } from 'zod';
+import type { TranslationKey } from '@pms/i18n';
 
 import {
   createVendorSchema,
@@ -26,14 +27,17 @@ import {
 
 import { getPrisma } from '../lib/prisma.js';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors.js';
+import { isMultipartRequest, parseMultipartUpload } from '../lib/multipart.js';
 import { num, pstr, str } from '../lib/query.js';
 import { organizationIdOf } from '../middleware/context.js';
 import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
 import { recordAudit } from '../services/audit.js';
 import { getSmsProvider } from '../providers/sms/index.js';
+import { getEmailProvider } from '../providers/email/index.js';
 import { getStorageDriver } from '../storage/index.js';
 import { renderTemplate } from '../services/notifications.js';
+import { getConfig } from '../config.js';
 
 export const operationsRouter = Router();
 
@@ -510,9 +514,42 @@ operationsRouter.post(
 // Documents
 // ---------------------------------------------------------------------------
 
+/**
+ * Multipart upload support: phones and native clients send real form-data (no
+ * base64 inflation). The parsed file is re-expressed as the same JSON body the
+ * route already understands, so validation and storage stay single-path.
+ */
+async function attachMultipartDocumentBody(req: Request, _res: unknown, next: NextFunction) {
+  try {
+    if (!isMultipartRequest(req)) return next();
+    const { fields, file } = await parseMultipartUpload(req, {
+      maxBytes: getConfig().MAX_UPLOAD_BYTES,
+    });
+    if (!file) throw badRequest('Attach the file in the "file" field');
+    if (file.data.byteLength === 0) throw badRequest('The uploaded file is empty');
+    req.body = {
+      category: fields.category ?? 'other',
+      ...(fields.propertyId ? { propertyId: fields.propertyId } : {}),
+      ...(fields.unitId ? { unitId: fields.unitId } : {}),
+      ...(fields.tenantId ? { tenantId: fields.tenantId } : {}),
+      ...(fields.leaseId ? { leaseId: fields.leaseId } : {}),
+      ...(fields.chargeId ? { chargeId: fields.chargeId } : {}),
+      ...(fields.title ? { title: fields.title } : {}),
+      ...(fields.notes ? { notes: fields.notes } : {}),
+      filename: file.filename || 'upload',
+      mimeType: file.mimeType || 'application/octet-stream',
+      dataBase64: file.data.toString('base64'),
+    };
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
 operationsRouter.post(
   '/documents',
   requirePermission('documents.write'),
+  attachMultipartDocumentBody,
   validate({ body: documentUploadSchema }),
   async (req, res, next) => {
     try {
@@ -666,6 +703,12 @@ operationsRouter.get(
         'Content-Disposition',
         `attachment; filename="${document.id}${extensionFor(document.mimeType)}"`,
       );
+      // A read that fails mid-flight must not hang the response; once piping
+      // started the status is out, so the socket is closed instead.
+      stream.on('error', (error) => {
+        if (res.headersSent) res.destroy(error);
+        else next(error);
+      });
       stream.pipe(res);
     } catch (error) {
       next(error);
@@ -824,12 +867,23 @@ operationsRouter.post(
       }
 
       try {
-        const result = await getSmsProvider().send({
-          to: phone ?? email ?? '',
-          templateKey: req.body.templateKey,
-          values: req.body.values,
-          language,
-        });
+        // Dispatch through the provider the channel names: SMS goes to the SMS
+        // provider, email to the email provider (Resend/mock). Passing an email
+        // address to the SMS adapter used to be a silent misdelivery.
+        const result =
+          channel === 'email'
+            ? await getEmailProvider().send({
+                to: email ?? '',
+                templateKey: req.body.templateKey as TranslationKey,
+                values: req.body.values,
+                language,
+              })
+            : await getSmsProvider().send({
+                to: phone ?? '',
+                templateKey: req.body.templateKey,
+                values: req.body.values,
+                language,
+              });
         const updated = await prisma.notification.update({
           where: { id: notification.id },
           data: {

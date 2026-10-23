@@ -8,11 +8,10 @@
  */
 
 import { createHash, randomUUID } from 'node:crypto';
-import { createReadStream, createWriteStream } from 'node:fs';
+import { createReadStream } from 'node:fs';
+import type { Readable } from 'node:stream';
 import { mkdir, readFile, stat, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { pipeline } from 'node:stream/promises';
-import type { Readable } from 'node:stream';
 
 import { ALLOWED_UPLOAD_MIME_TYPES, DEFAULT_MAX_UPLOAD_BYTES } from '@pms/shared';
 
@@ -43,6 +42,38 @@ export interface StorageDriver {
 }
 
 export const ALLOWED_MIME_TYPES = new Set<string>(ALLOWED_UPLOAD_MIME_TYPES);
+
+/**
+ * Identify a file from its leading bytes. The browser-declared MIME type is a
+ * *hint*: it can be wrong (phone browsers guess), can be absent, and on a
+ * malicious client it is a plain lie. The bytes do not lie.
+ *
+ * Returns null for anything that is not one of the supported formats — since
+ * the Office formats (Word/Excel) were removed from the allowlist, every
+ * legitimate upload here is a photo or a PDF and all four have signatures.
+ */
+export function sniffMimeType(buffer: Buffer): string | null {
+  if (buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) {
+    return 'image/jpeg';
+  }
+  if (
+    buffer.length >= 8 &&
+    buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+  ) {
+    return 'image/png';
+  }
+  if (
+    buffer.length >= 12 &&
+    buffer.subarray(0, 4).toString('latin1') === 'RIFF' &&
+    buffer.subarray(8, 12).toString('latin1') === 'WEBP'
+  ) {
+    return 'image/webp';
+  }
+  if (buffer.length >= 5 && buffer.subarray(0, 5).toString('latin1') === '%PDF-') {
+    return 'application/pdf';
+  }
+  return null;
+}
 
 export function assertUploadAllowed(
   mimeType: string,
@@ -89,6 +120,17 @@ export class LocalStorageDriver implements StorageDriver {
     const buffer = Buffer.isBuffer(params.data) ? params.data : await streamToBuffer(params.data, maxBytes);
     assertUploadAllowed(params.mimeType, buffer.byteLength, maxBytes);
 
+    // The declared type passed the allowlist; the bytes decide what is actually
+    // stored. An unidentifiable payload (a renamed .exe, a macro-carrying Office
+    // file, an empty body) is rejected outright.
+    const sniffed = sniffMimeType(buffer);
+    if (!sniffed) {
+      throw badRequest(
+        'Unsupported file content: uploads must be a PDF, JPEG, PNG or WebP file',
+      );
+    }
+    const mimeType = sniffed;
+
     const key = path.join(
       params.organizationId,
       new Date().toISOString().slice(0, 10),
@@ -102,7 +144,7 @@ export class LocalStorageDriver implements StorageDriver {
       driver: 'local',
       key,
       sizeBytes: buffer.byteLength,
-      mimeType: params.mimeType,
+      mimeType,
       checksumSha256: createHash('sha256').update(buffer).digest('hex'),
     };
   }
@@ -170,15 +212,3 @@ async function streamToBuffer(stream: Readable, maxBytes: number): Promise<Buffe
   return Buffer.concat(chunks);
 }
 
-/** Used by the document route to write a stream to disk with backpressure. */
-export async function saveStreamToFile(
-  destination: string,
-  source: Readable,
-): Promise<{ sizeBytes: number; checksumSha256: string }> {
-  await mkdir(path.dirname(destination), { recursive: true });
-  const hash = createHash('sha256');
-  source.on('data', (chunk) => hash.update(chunk));
-  await pipeline(source, createWriteStream(destination));
-  const stats = await stat(destination);
-  return { sizeBytes: stats.size, checksumSha256: hash.digest('hex') };
-}

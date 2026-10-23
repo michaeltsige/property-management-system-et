@@ -10,7 +10,6 @@ import type { NextFunction, Request, Response } from 'express';
 import { roleHasPermission, type Permission } from '@pms/shared';
 
 import { forbidden, unauthenticated } from '../lib/errors.js';
-import type { Role } from '@pms/shared';
 
 export function requirePermission(...permissions: Permission[]) {
   return (req: Request, _res: Response, next: NextFunction): void => {
@@ -34,21 +33,3 @@ export function requirePermission(...permissions: Permission[]) {
   };
 }
 
-export function requireRole(...roles: Role[]) {
-  return (req: Request, _res: Response, next: NextFunction): void => {
-    const principal = req.auth;
-    if (!principal) {
-      next(unauthenticated());
-      return;
-    }
-    if (principal.isPlatformAdmin) {
-      next();
-      return;
-    }
-    if (!roles.includes(principal.role)) {
-      next(forbidden(`Requires role: ${roles.join(' or ')}`));
-      return;
-    }
-    next();
-  };
-}

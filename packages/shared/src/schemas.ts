@@ -23,6 +23,7 @@ import {
   PAYMENT_GATEWAY_PROVIDERS,
   PAYMENT_METHODS,
   PAYMENT_PROOF_STATUSES,
+  NOTICE_AUDIENCES,
   PROPERTY_TYPES,
   RENT_DUE_DAY_MAX,
   TAX_RULE_CODES,
@@ -355,7 +356,12 @@ export const createUnitSchema = z.object({
   notes: z.string().max(2000).optional(),
 });
 
-export const updateUnitSchema = createUnitSchema.partial().omit({ propertyId: true });
+export const updateUnitSchema = createUnitSchema
+  .partial()
+  .omit({ propertyId: true })
+  // marketRent may arrive as null to CLEAR the rent (the UI's edit form allows
+  // removing it); plain `optional()` would reject the JSON null.
+  .extend({ marketRent: moneySchema.nullish() });
 
 /**
  * Update the market rent of every unit of one apartment type within a
@@ -403,7 +409,12 @@ export const createLeaseSchema = z.object({
   startDate: civilDateSchema,
   /** `null` = open-ended. */
   endDate: civilDateSchema.nullish(),
-  rentAmount: moneySchema,
+  /**
+   * Optional: the lease takes the unit's market rent unless an explicit amount
+   * is given (API/scripting convenience). The UI never sends this field — rent
+   * is managed on the unit, so there is exactly one place to set it.
+   */
+  rentAmount: moneySchema.optional(),
   billingFrequency: z.enum(BILLING_FREQUENCIES).default('monthly'),
   depositType: z.enum(DEPOSIT_TYPES).default('months_of_rent'),
   depositMonths: z.number().min(0).max(24).optional(),
@@ -424,7 +435,7 @@ export const createLeaseSchema = z.object({
   notes: z.string().max(4000).optional(),
 });
 
-export const updateLeaseSchema = createLeaseSchema.partial().omit({ unitId: true, tenantId: true });
+export const updateLeaseSchema = createLeaseSchema.partial().omit({ unitId: true, tenantId: true, rentAmount: true });
 
 export const terminateLeaseSchema = z.object({
   terminatedOn: civilDateSchema,
@@ -638,11 +649,10 @@ export const portalMaintenanceRequestSchema = z.object({
 });
 
 /**
- * Upload body.
- *
- * The API is JSON-only (no multipart), so a file arrives base64-encoded together
- * with its metadata. The size limit is enforced on the decoded bytes by the
- * storage layer, not by trusting `sizeBytes` from the client.
+ * Upload body (JSON transport). A multipart/form-data transport with the same
+ * fields is also accepted (preferred from mobile: no base64 inflation); the
+ * decoded bytes are verified by magic bytes either way, so the declared
+ * `mimeType` is a hint, never the decision.
  */
 export const documentUploadSchema = documentUploadMetaSchema.extend({
   filename: z.string().trim().min(1).max(200),
@@ -669,6 +679,60 @@ export const sendNotificationSchema = z.object({
   /** ICU arguments for the template, e.g. `{ amount: "Br 1,500.00" }`. */
   values: z.record(z.string(), z.union([z.string(), z.number()])).default({}),
 });
+
+// ---------------------------------------------------------------------------
+// Notices (organization announcements, tenant-visible)
+// ---------------------------------------------------------------------------
+
+export const noticeCreateSchema = z
+  .object({
+    title: z.string().trim().min(2).max(160).optional(),
+    body: z.string().trim().min(1).max(4000),
+    /** Omitted = every property. */
+    propertyId: uuidSchema.optional(),
+    audience: z.enum(NOTICE_AUDIENCES).default('tenants'),
+    /** A document previously uploaded via POST /documents (category other/image). */
+    imageDocumentId: uuidSchema.optional(),
+  })
+  .strict();
+
+export const noticeListQuerySchema = paginationSchema.partial().extend({
+  propertyId: uuidSchema.optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Bulk properties
+// ---------------------------------------------------------------------------
+
+/**
+ * Create several properties at once from a name pattern, e.g. "Villa {n}" with
+ * start 1 and count 4 → Villa 1 … Villa 4. Shared address fields apply to all.
+ */
+export const bulkPropertySchema = z
+  .object({
+    naming: z
+      .object({
+        pattern: z
+          .string()
+          .trim()
+          .min(3)
+          .max(120)
+          .refine(
+            (s) => (s.match(/\{n\}/g) ?? []).length === 1 && !/[^{]\}|\{[^}]/.test(s.replace(/\{n\}/g, '')),
+            'Use exactly one {n} placeholder',
+          ),
+        start: z.number().int().min(0).max(999999),
+        count: z.number().int().min(1).max(50),
+        padding: z.number().int().min(1).max(4).default(1),
+      })
+      .refine((v) => v.start + v.count - 1 <= 999999, 'Last number must not exceed 999999'),
+    type: z.enum(PROPERTY_TYPES),
+    ownerId: uuidSchema.optional(),
+    address: addressSchema.optional(),
+    notes: z.string().max(2000).optional(),
+    totalFloors: z.number().int().min(0).max(200).optional(),
+  })
+  .strict();
 
 export const reportQuerySchema = z.object({
   /** Period to report on, in the organization's default calendar. */

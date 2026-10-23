@@ -54,7 +54,10 @@ export default function DashboardPage() {
     }),
     [calendar],
   );
-  const occupancy = useAsync(() => api.occupancy(), []);
+  const occupancy = useAsync(
+    () => api.occupancy(`?periodKey=${periodKey}&calendar=${calendar}`),
+    [periodKey, calendar],
+  );
   const arrears = useAsync(() => api.arrears(), []);
 
   const currency = summary.data?.organization.currency ?? session?.organization.currency ?? 'ETB';
@@ -115,6 +118,7 @@ export default function DashboardPage() {
             periodKey={periodKey}
             onChange={setPeriodKey}
             calendar={calendar}
+            futureMonths={6}
             label={t('reports.period')}
           />
         }
@@ -343,6 +347,11 @@ export default function DashboardPage() {
                   occupied: row.occupiedUnits,
                   vacant: row.vacantUnits,
                 }))}
+                floors={(occupancy.data?.rows ?? [])
+                  .filter((row) => (row.floors?.length ?? 0) > 0)
+                  .map((row) => ({ name: row.name, floors: row.floors ?? [] }))}
+                floorsLabel={t('dashboard.occupancy_by_floor')}
+                floorLabel={t('unit.floor')}
                 ariaLabel={t('reports.occupancy')}
                 occupiedLabel={t('unit.status.occupied')}
                 vacantLabel={t('unit.status.vacant')}

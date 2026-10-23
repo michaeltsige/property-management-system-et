@@ -355,59 +355,116 @@ export function CollectionsChart({
 /** Occupancy by property: a horizontal stacked bar, one row per property. */
 export function OccupancyChart({
   rows,
+  floors = [],
+  floorsLabel,
+  floorLabel,
   ariaLabel,
   occupiedLabel,
   vacantLabel,
   chartDataLabel,
 }: {
   rows: { name: string; occupied: number; vacant: number }[];
+  /** Per-floor breakdown per property; rendered as a compact strip under the chart. */
+  floors?: { name: string; floors: { floor: number | null; occupied: number; vacant: number; total: number }[] }[];
+  floorsLabel?: string;
+  floorLabel?: string;
   ariaLabel: string;
   occupiedLabel: string;
   vacantLabel: string;
   chartDataLabel: string;
 }) {
+  const showFloors = floors.some((property) => property.floors.length > 0);
+
   return (
-    <EChart
-      ariaLabel={ariaLabel}
-      height={Math.max(180, rows.length * 44)}
-      summary={{
-        caption: chartDataLabel,
-        columns: ['', occupiedLabel, vacantLabel],
-        rows: rows.map((row) => [row.name, row.occupied, row.vacant]),
-      }}
-      option={{
-        grid: { left: 8, right: 24, top: 16, bottom: 8, containLabel: true },
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-        legend: {
-          data: [occupiedLabel, vacantLabel],
-          top: 0,
-          right: 0,
-          itemWidth: 10,
-          itemHeight: 10,
-          textStyle: { fontSize: 11, color: CHART_COLORS.axisLabel },
-        },
-        xAxis: { type: 'value', minInterval: 1, axisLabel: AXIS_LABEL, splitLine: { lineStyle: { color: CHART_COLORS.grid } } },
-        yAxis: { type: 'category', data: rows.map((row) => row.name), axisLabel: AXIS_LABEL, axisLine: { lineStyle: { color: CHART_COLORS.axisLine } } },
-        series: [
-          {
-            name: occupiedLabel,
-            type: 'bar',
-            stack: 'units',
-            barWidth: 14,
-            data: rows.map((row) => row.occupied),
-            itemStyle: { color: CHART_COLORS.brand },
+    <div>
+      <EChart
+        ariaLabel={ariaLabel}
+        height={Math.max(180, rows.length * 44)}
+        summary={{
+          caption: chartDataLabel,
+          columns: ['', occupiedLabel, vacantLabel],
+          rows: rows.map((row) => [row.name, row.occupied, row.vacant]),
+        }}
+        option={{
+          grid: { left: 8, right: 24, top: 16, bottom: 8, containLabel: true },
+          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
+          legend: {
+            data: [occupiedLabel, vacantLabel],
+            top: 0,
+            right: 0,
+            itemWidth: 10,
+            itemHeight: 10,
+            textStyle: { fontSize: 11, color: CHART_COLORS.axisLabel },
           },
-          {
-            name: vacantLabel,
-            type: 'bar',
-            stack: 'units',
-            barWidth: 14,
-            data: rows.map((row) => row.vacant),
-            itemStyle: { color: CHART_COLORS.grid },
-          },
-        ],
-      }}
-    />
+          xAxis: { type: 'value', minInterval: 1, axisLabel: AXIS_LABEL, splitLine: { lineStyle: { color: CHART_COLORS.grid } } },
+          yAxis: { type: 'category', data: rows.map((row) => row.name), axisLabel: AXIS_LABEL, axisLine: { lineStyle: { color: CHART_COLORS.axisLine } } },
+          series: [
+            {
+              name: occupiedLabel,
+              type: 'bar',
+              stack: 'units',
+              barWidth: 14,
+              data: rows.map((row) => row.occupied),
+              itemStyle: { color: CHART_COLORS.brand },
+            },
+            {
+              name: vacantLabel,
+              type: 'bar',
+              stack: 'units',
+              barWidth: 14,
+              data: rows.map((row) => row.vacant),
+              itemStyle: { color: CHART_COLORS.grid },
+            },
+          ],
+        }}
+      />
+
+      {showFloors && floorsLabel ? (
+        <div className="mt-4 border-t border-line pt-3">
+          <h4 className="text-xs font-semibold text-soft">{floorsLabel}</h4>
+          <div className="mt-2 grid gap-x-6 gap-y-2 sm:grid-cols-2">
+            {floors.map((property) =>
+              property.floors.map((floor) => (
+                <div
+                  key={`${property.name}-${floor.floor ?? 'na'}`}
+                  className="flex items-center justify-between gap-3 text-xs"
+                >
+                  <span className="min-w-16 truncate text-muted">
+                    {property.name}
+                    {floor.floor !== null ? (
+                      <span className="text-faint">
+                        {' '}
+                        · {floorLabel ?? 'Floor'} {floor.floor}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span
+                    className="flex items-center gap-[3px]"
+                    role="img"
+                    aria-label={`${floor.occupied} ${occupiedLabel}, ${floor.vacant} ${vacantLabel}`}
+                  >
+                    {Array.from({ length: floor.total }, (_, index) => (
+                      <span
+                        key={index}
+                        title={`${index < floor.occupied ? occupiedLabel : vacantLabel}`}
+                        className={
+                          index < floor.occupied
+                            ? 'h-3 w-3 rounded-[3px] bg-brand-600 dark:bg-brand-400'
+                            : 'h-3 w-3 rounded-[3px] bg-wash-strong'
+                        }
+                      />
+                    ))}
+                  </span>
+                  <span className="tabular text-muted">
+                    {floor.occupied}/{floor.total}
+                  </span>
+                </div>
+              )),
+            )}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

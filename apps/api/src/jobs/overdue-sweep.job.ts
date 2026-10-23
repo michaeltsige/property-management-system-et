@@ -1,10 +1,16 @@
 /**
  * Overdue sweep and reminder job.
  *
- * Finds charges that are past their due date with money still outstanding and
- * queues a notification for each tenant **in the tenant's own language**, using the
- * translatable templates from `@pms/i18n`. Repeats are throttled per charge so a
- * tenant is not messaged every day.
+ * Two messaging passes and one money pass, in one daily sweep:
+ *  - **Rent due soon**: an open rent charge whose due date (the lease's own
+ *    anniversary day) falls within the organization's `reminderDaysBefore`
+ *    window gets one heads-up SMS. A prepaid cycle (status `paid`) is never
+ *    reminded — the whole point of registering advance payments as future
+ *    charges is that "paid ahead" and "owing" look different.
+ *  - **Overdue**: charges past their due date with money outstanding, repeated
+ *    on a throttle, in the tenant's own language, using the translatable
+ *    templates from `@pms/i18n`.
+ *  - **Late fees**: applied before messaging so the numbers are current.
  */
 
 import type { PrismaClient } from '@prisma/client';
@@ -26,6 +32,9 @@ export interface OverdueSweepResult {
   smsSent: number;
   smsFailed: number;
   lateFeesApplied: number;
+  dueSoonQueued: number;
+  dueSoonSent: number;
+  dueSoonFailed: number;
 }
 
 export async function runOverdueSweep(
@@ -39,6 +48,9 @@ export async function runOverdueSweep(
     smsSent: 0,
     smsFailed: 0,
     lateFeesApplied: 0,
+    dueSoonQueued: 0,
+    dueSoonSent: 0,
+    dueSoonFailed: 0,
   };
   const sms = getSmsProvider();
 
@@ -72,6 +84,97 @@ export async function runOverdueSweep(
       now,
     );
     result.lateFeesApplied += lateFeeResult.applied;
+
+    // --- rent due soon (one heads-up per cycle) ------------------------------
+    if (settings.remindersEnabled !== false) {
+      const daysBefore = Number(settings.reminderDaysBefore ?? DEFAULT_ORG_SETTINGS.reminderDaysBefore);
+      if (daysBefore > 0) {
+        const windowEnd = new Date(now.getTime() + daysBefore * 24 * 60 * 60 * 1000);
+        const upcoming = await prisma.charge.findMany({
+          where: {
+            organizationId: organization.id,
+            type: 'rent',
+            status: { in: ['open', 'partial'] },
+            dueDate: { gte: now, lte: windowEnd },
+          },
+          include: { tenant: true, lease: true },
+          take: 500,
+        });
+
+        for (const charge of upcoming) {
+          const outstandingMinor = charge.amountMinor - charge.paidMinor;
+          if (outstandingMinor <= 0n) continue;
+          if (!charge.tenant?.phone) continue;
+
+          // One reminder per charge, ever — a second would be nagging, and the
+          // overdue sweep takes over after the due date passes.
+          const alreadyReminded = await prisma.notification.findFirst({
+            where: {
+              organizationId: organization.id,
+              templateKey: 'notification.rent_due_soon',
+              payload: { path: ['chargeId'], equals: charge.id },
+            },
+            select: { id: true },
+          });
+          if (alreadyReminded) continue;
+
+          const language = (charge.tenant.language ?? organization.language ?? 'en') as LanguageCode;
+          const calendar =
+            ((charge.lease?.billingCalendar ?? organization.calendar) as CalendarKind) ?? 'ethiopian';
+          const values = {
+            amount: formatMoney(
+              { amountMinor: Number(outstandingMinor), currency: charge.currency },
+              { language },
+            ),
+            dueDate: formatCivilDate(utcDateToCivil(charge.dueDate, calendar), {
+              language,
+              showEra: true,
+            }),
+          };
+
+          const notification = await prisma.notification.create({
+            data: {
+              organizationId: organization.id,
+              templateKey: 'notification.rent_due_soon',
+              channel: 'sms',
+              recipientPhone: charge.tenant.phone,
+              recipientUserId: null,
+              language,
+              payload: { chargeId: charge.id, ...values },
+              status: 'queued',
+            },
+          });
+          result.dueSoonQueued += 1;
+
+          try {
+            const sendResult = await sms.send({
+              to: charge.tenant.phone,
+              templateKey: 'notification.rent_due_soon',
+              values,
+              language,
+            });
+            await prisma.notification.update({
+              where: { id: notification.id },
+              data: {
+                status: sendResult.status === 'sent' ? 'sent' : 'failed',
+                providerRef: sendResult.providerRef,
+                sentAt: new Date(),
+                error: sendResult.detail ?? null,
+              },
+            });
+            if (sendResult.status === 'sent') result.dueSoonSent += 1;
+            else result.dueSoonFailed += 1;
+          } catch (error) {
+            await prisma.notification.update({
+              where: { id: notification.id },
+              data: { status: 'failed', error: String(error) },
+            });
+            result.dueSoonFailed += 1;
+            logger.warn({ err: error, chargeId: charge.id }, 'rent-due-soon SMS failed');
+          }
+        }
+      }
+    }
 
     if (settings.overdueRemindersEnabled === false) continue;
 

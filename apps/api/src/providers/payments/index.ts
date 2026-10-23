@@ -113,13 +113,6 @@ export function getPaymentProvider(
   return buildPaymentProvider(name, envCredentials(name));
 }
 
-export function listPaymentProviders(): { name: ProviderName; configured: boolean }[] {
-  return (['mock', 'telebirr', 'chapa'] as ProviderName[]).map((name) => ({
-    name,
-    configured: buildPaymentProvider(name, envCredentials(name)).isConfigured(),
-  }));
-}
-
 /**
  * Required credential fields an adapter of `name` still lacks.
  *

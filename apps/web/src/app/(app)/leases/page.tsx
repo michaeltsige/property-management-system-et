@@ -70,7 +70,6 @@ export default function LeasesPage() {
     startDate: todayIn(calendar),
     endDate: null,
   });
-  const [rent, setRent] = useState<number | null>(null);
   const [depositMode, setDepositMode] = useState<DepositType>('months_of_rent');
   const [depositMonths, setDepositMonths] = useState(2);
   const [depositAmount, setDepositAmount] = useState<number | null>(null);
@@ -106,7 +105,8 @@ export default function LeasesPage() {
             : undefined,
         startDate: form.startDate,
         endDate: form.endDate,
-        rentAmount: { amountMinor: rent ?? 0, currency },
+        // No rentAmount here: the lease takes the unit's market rent on the
+        // server, so the unit stays the single place where rent is set.
         // Months-of-rent deposits count as advance rent server-side: the first
         // months are charged and settled, so the tenant starts "paid".
         depositType: depositMode,
@@ -136,7 +136,6 @@ export default function LeasesPage() {
         }
       }
       setOpen(false);
-      setRent(null);
       setDepositAmount(null);
       setLeaseFile(null);
       leases.reload();
@@ -158,6 +157,13 @@ export default function LeasesPage() {
   }
 
   const unoccupied = (units.data?.units ?? []).filter((unit) => unit.status !== 'occupied');
+
+  // The lease's rent IS the unit's market rent — read from the selected unit,
+  // never typed here, so the unit stays the one place rent is managed.
+  const selectedUnit = unoccupied.find((unit) => unit.id === form.unitId) ?? null;
+  const unitRentMinor = selectedUnit?.marketRentMinor
+    ? Number(selectedUnit.marketRentMinor)
+    : null;
 
   return (
     <div>
@@ -272,7 +278,7 @@ export default function LeasesPage() {
             <Button variant="secondary" onClick={() => setOpen(false)}>
               {t('common.cancel')}
             </Button>
-            <Button form="lease-form" type="submit" disabled={pending || rent === null}>
+            <Button form="lease-form" type="submit" disabled={pending || unitRentMinor === null}>
               {pending ? t('app.loading') : t('common.save')}
             </Button>
           </>
@@ -322,8 +328,21 @@ export default function LeasesPage() {
             <FieldError>{fieldErrors.tenantId}</FieldError>
           </div>
 
-          <div className="sm:col-span-2">
-            <MoneyInput label={t('lease.rent_amount')} value={rent} onChange={setRent} required />
+          <div className="space-y-1 sm:col-span-2">
+            <Label>{t('lease.rent_amount')}</Label>
+            {selectedUnit && unitRentMinor !== null ? (
+              <>
+                <p
+                  aria-live="polite"
+                  className="flex h-9 items-center rounded-md border border-line bg-wash px-3 text-sm tabular text-strong"
+                >
+                  {formatAmount(unitRentMinor, selectedUnit.currency, language)}
+                </p>
+                <p className="text-[11px] text-muted">{t('lease.rent_from_unit')}</p>
+              </>
+            ) : (
+              <Alert tone="warning">{t('units.rent_hint')}</Alert>
+            )}
             <FieldError>{fieldErrors.rentAmount}</FieldError>
           </div>
 

@@ -75,6 +75,7 @@ export const Calendar = wrap('Calendar');
 export const CalendarAdd = wrap('CalendarAdd');
 export const CloseSquare = wrap('CloseSquare');
 export const Document = wrap('Document');
+export const Edit2 = wrap('Edit2');
 export const Export = wrap('Export');
 export const Import = wrap('Import');
 export const Moon = wrap('Moon');

@@ -486,33 +486,86 @@ reportsRouter.get(
   },
 );
 
-/** Occupancy by property. */
+/**
+ * Occupancy by property — and, since the dashboard grew a per-floor view, by
+ * floor inside each property.
+ *
+ * Without a `periodKey` this is the live snapshot (unit status). With one, a
+ * unit counts as occupied when a lease overlapped that period — so picking a
+ * past month shows what was actually occupied then, and picking a future month
+ * shows what is already booked (prepaid cycles included via their leases).
+ */
 reportsRouter.get('/reports/occupancy', requirePermission('reports.read'), async (req, res, next) => {
   try {
-    const { organizationId, prisma } = await resolveOrganizationScope(req);
+    const { organizationId, prisma, organization } = await resolveOrganizationScope(req);
+    const period = periodFromQuery(req.query, (organization.calendar as CalendarKind) ?? 'ethiopian');
 
     const properties = await prisma.property.findMany({
       where: { organizationId, deletedAt: null },
       include: {
-        units: { where: { deletedAt: null }, select: { id: true, status: true } },
+        units: {
+          where: { deletedAt: null },
+          select: { id: true, status: true, floor: true },
+          orderBy: [{ floor: 'asc' }, { label: 'asc' }],
+        },
       },
       orderBy: { name: 'asc' },
     });
 
+    // Period mode: which units had an active lease covering the period?
+    const occupiedUnitIds = new Set<string>();
+    if (req.query.periodKey) {
+      const periodStartUtc = civilToUtcDate(periodStart(period));
+      const periodEndUtc = civilToUtcDate(periodEnd(period));
+      const leases = await prisma.lease.findMany({
+        where: {
+          organizationId,
+          deletedAt: null,
+          status: { in: ['active', 'expired', 'terminated'] },
+          startDate: { lte: periodEndUtc },
+          OR: [{ endDate: null }, { endDate: { gte: periodStartUtc } }],
+        },
+        select: { unitId: true, status: true, endDate: true, terminatedOn: true },
+      });
+      for (const lease of leases) {
+        // A lease that terminated before the period began does not occupy it.
+        const effectiveEnd = lease.endDate ?? (lease.status === 'terminated' ? lease.terminatedOn : null);
+        if (effectiveEnd && effectiveEnd < periodStartUtc) continue;
+        occupiedUnitIds.add(lease.unitId);
+      }
+    }
+
     const rows = properties.map((property) => {
       const total = property.units.length;
       const byStatus: Record<string, number> = {};
-      for (const unit of property.units) byStatus[unit.status] = (byStatus[unit.status] ?? 0) + 1;
-      const occupied = (byStatus.occupied ?? 0) + (byStatus.notice ?? 0);
+      const floorMap = new Map<string, { floor: number | null; total: number; occupied: number; vacant: number }>();
+      let occupied = 0;
+      for (const unit of property.units) {
+        if (!req.query.periodKey) byStatus[unit.status] = (byStatus[unit.status] ?? 0) + 1;
+        const unitOccupied =
+          req.query.periodKey
+            ? occupiedUnitIds.has(unit.id)
+            : unit.status === 'occupied' || unit.status === 'notice';
+        if (unitOccupied) occupied += 1;
+        const floorKey = String(unit.floor ?? '');
+        const bucket = floorMap.get(floorKey) ?? { floor: unit.floor ?? null, total: 0, occupied: 0, vacant: 0 };
+        bucket.total += 1;
+        if (unitOccupied) bucket.occupied += 1;
+        else bucket.vacant += 1;
+        floorMap.set(floorKey, bucket);
+      }
       return {
         propertyId: property.id,
         name: property.name,
         regionCode: property.regionCode,
         totalUnits: total,
         occupiedUnits: occupied,
-        vacantUnits: byStatus.vacant ?? 0,
+        vacantUnits: total - occupied,
         occupancyRate: total === 0 ? 0 : Number(((occupied / total) * 100).toFixed(2)),
         byStatus,
+        floors: [...floorMap.values()].sort(
+          (a, b) => (a.floor ?? -999) - (b.floor ?? -999),
+        ),
       };
     });
 
@@ -520,6 +573,8 @@ reportsRouter.get('/reports/occupancy', requirePermission('reports.read'), async
     const occupiedUnits = rows.reduce((sum, row) => sum + row.occupiedUnits, 0);
 
     res.json({
+      period: period.key,
+      calendar: period.calendar,
       rows,
       totals: {
         totalUnits,

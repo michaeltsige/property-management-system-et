@@ -26,12 +26,6 @@ export type Role = (typeof ROLES)[number];
  * vice versa — so the product has no role-change surface; a member's role is
  * fixed when their account is created.
  */
-export const ROLE_LABELS: Record<Role, string> = {
-  owner_admin: 'Owner / Admin',
-  manager: 'Property Manager',
-  tenant: 'Tenant',
-};
-
 /** Organization lifecycle. */
 export const ORG_STATUSES = ['active', 'suspended', 'closed'] as const;
 export type OrgStatus = (typeof ORG_STATUSES)[number];
@@ -256,18 +250,26 @@ export const DOCUMENT_CATEGORY_GROUPS = [
 
 export type DocumentCategoryGroupKey = (typeof DOCUMENT_CATEGORY_GROUPS)[number]['key'];
 
+/**
+ * Upload allowlist. Office documents (Word/Excel) were removed deliberately:
+ * their formats can carry active content (macros) and are pointless for
+ * photos-of-documents workflows — every phone camera already produces JPEG/HEIC
+ * (converted client-side) and scans produce PDF. Each type is additionally
+ * verified by magic bytes server-side; the browser-declared MIME type is a hint,
+ * never the decision.
+ */
 export const ALLOWED_UPLOAD_MIME_TYPES = [
   'application/pdf',
   'image/jpeg',
   'image/png',
   'image/webp',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 ] as const;
 
 export const DEFAULT_MAX_UPLOAD_BYTES = 10 * 1024 * 1024; // 10 MB
+
+/** Audience of an organization notice (who should see it). */
+export const NOTICE_AUDIENCES = ['tenants', 'staff', 'all'] as const;
+export type NoticeAudience = (typeof NOTICE_AUDIENCES)[number];
 
 // ---------------------------------------------------------------------------
 // Notifications

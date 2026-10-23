@@ -73,7 +73,13 @@ const envSchema = z.object({
   TEST_DATABASE_URL: z.string().optional(),
 
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must be at least 32 characters'),
-  JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
+  /**
+   * Optional and unused today: refresh tokens are opaque random strings stored
+   * as SHA-256 hashes, so they need no signing secret. Kept in the schema so a
+   * future HMAC-signed refresh rollout is a code change, not an env migration;
+   * existing .env files that already carry it stay valid.
+   */
+  JWT_REFRESH_SECRET: z.string().min(32).optional(),
   JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).default(900),
   JWT_REFRESH_TTL_SECONDS: z.coerce.number().int().min(3600).default(2592000),
   PLATFORM_ADMIN_EMAILS: z

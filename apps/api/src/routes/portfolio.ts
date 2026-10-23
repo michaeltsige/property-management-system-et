@@ -13,6 +13,7 @@ import type { Prisma } from '@prisma/client';
 
 import { civilToUtcDate, periodForDate, utcDateToCivil, type CalendarKind } from '@pms/calendar';
 import {
+  bulkPropertySchema,
   createLeaseSchema,
   createPropertySchema,
   createTenantSchema,
@@ -96,6 +97,26 @@ export async function releaseUnitIfFree(
 // Properties
 // ---------------------------------------------------------------------------
 
+/**
+ * A property created through the portfolio screen means the portfolio exists —
+ * flip the signup onboarding state so the "finish your organization setup"
+ * banner stops nagging. Cheap no-op for everyone else.
+ */
+async function completeOnboardingIfPending(
+  tx: Prisma.TransactionClient,
+  organizationId: string,
+  actorUserId: string | null | undefined,
+): Promise<void> {
+  const key = { organizationId_key: { organizationId, key: 'onboardingStatus' } };
+  const state = await tx.organizationSetting.findUnique({ where: key });
+  if (state?.value === 'portfolio_pending') {
+    await tx.organizationSetting.update({
+      where: key,
+      data: { value: 'complete', updatedById: actorUserId ?? null },
+    });
+  }
+}
+
 portfolioRouter.post(
   '/properties',
   requirePermission('properties.write'),
@@ -139,10 +160,75 @@ portfolioRouter.post(
           after: { name: created.name, type: created.type, ownerId: created.ownerId },
           requestId: req.requestId,
         });
+        await completeOnboardingIfPending(tx, organizationId, req.auth?.userId);
         return created;
       });
 
       res.status(201).json({ property });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * Bulk property creation: one address/type for a naming pattern like
+ * "Villa {n}" → Villa 1 … Villa N. All-or-nothing in one transaction; unique
+ * name conflicts abort the batch.
+ */
+portfolioRouter.post(
+  '/properties/bulk',
+  requirePermission('properties.write'),
+  validate({ body: bulkPropertySchema }),
+  async (req, res, next) => {
+    try {
+      const organizationId = organizationIdOf(req);
+      const { naming, type, ownerId, address, notes, totalFloors } = req.body;
+      const { pattern, start, count, padding } = naming;
+
+      const properties = await getPrisma().$transaction(async (tx) => {
+        const resolvedOwnerId = await resolveOwner(tx, organizationId, ownerId);
+        const created: { id: string; name: string }[] = [];
+        for (let i = 0; i < count; i += 1) {
+          const name = pattern.replace('{n}', String(start + i).padStart(padding, '0'));
+          const row = await tx.property.create({
+            data: {
+              organizationId,
+              ownerId: resolvedOwnerId,
+              name,
+              type,
+              notes: notes ?? null,
+              totalFloors: totalFloors ?? null,
+              regionCode: address?.regionCode ?? null,
+              region: address?.region ?? null,
+              cityOrZone: address?.cityOrZone ?? null,
+              subCity: address?.subCity ?? null,
+              woreda: address?.woreda ?? null,
+              kebele: address?.kebele ?? null,
+              houseNumber: address?.houseNumber ?? null,
+              street: address?.street ?? null,
+              landmark: address?.landmark ?? null,
+              latitude: address?.latitude ?? null,
+              longitude: address?.longitude ?? null,
+            },
+            select: { id: true, name: true },
+          });
+          created.push(row);
+          await recordAudit(tx, {
+            organizationId,
+            actorUserId: req.auth?.userId,
+            action: 'create',
+            entityType: 'Property',
+            entityId: row.id,
+            after: { name: row.name, type, source: 'bulk' },
+            requestId: req.requestId,
+          });
+        }
+        await completeOnboardingIfPending(tx, organizationId, req.auth?.userId);
+        return created;
+      });
+
+      res.status(201).json({ properties, count: properties.length });
     } catch (error) {
       next(error);
     }
@@ -852,9 +938,20 @@ portfolioRouter.post(
       if (!unit) throw notFound('Unit not found in this organization');
       if (!tenant) throw notFound('Tenant not found in this organization');
 
+      // Rent lives on the unit (one place to manage it); the lease takes it
+      // automatically. An explicit rentAmount stays accepted for API clients,
+      // but the UI no longer sends one.
+      const rentAmountMinor = req.body.rentAmount
+        ? BigInt(req.body.rentAmount.amountMinor)
+        : unit.marketRentMinor;
+      if (rentAmountMinor === null || rentAmountMinor <= 0n) {
+        throw businessRule("Set the unit's market rent first — leases take their rent from the unit");
+      }
+      const rentCurrency = req.body.rentAmount?.currency ?? unit.currency;
+
       // The organization bills in one currency; a lease in another currency would
       // create ledger rows that can never be settled or reported coherently.
-      if (organization && req.body.rentAmount.currency !== organization.currency) {
+      if (organization && rentCurrency !== organization.currency) {
         throw businessRule(
           `Leases are billed in ${organization.currency}; change the organization currency first`,
         );
@@ -878,7 +975,7 @@ portfolioRouter.post(
       const depositAmountMinor =
         req.body.depositAmount?.amountMinor ??
         (req.body.depositType === 'months_of_rent' && req.body.depositMonths
-          ? Math.round(req.body.rentAmount.amountMinor * req.body.depositMonths)
+          ? Math.round(Number(rentAmountMinor) * req.body.depositMonths)
           : null);
 
       // The billing calendar is an organization-level owner decision; every
@@ -896,8 +993,8 @@ portfolioRouter.post(
             status: req.body.status,
             startDate,
             endDate,
-            rentAmountMinor: BigInt(req.body.rentAmount.amountMinor),
-            currency: req.body.rentAmount.currency,
+            rentAmountMinor,
+            currency: rentCurrency,
             billingFrequency: req.body.billingFrequency,
             // The due date follows the lease's own billing cycle — it is the
             // start date's day of month, not a separately configured day.
@@ -936,7 +1033,7 @@ portfolioRouter.post(
               leaseId: created.id,
               depositAmountMinor: BigInt(depositAmountMinor),
               depositMonths: req.body.depositMonths ?? 0,
-              currency: req.body.rentAmount.currency,
+              currency: rentCurrency,
               actorUserId: req.auth?.userId ?? null,
             });
           } else {
@@ -944,7 +1041,7 @@ portfolioRouter.post(
               organizationId,
               leaseId: created.id,
               amountMinor: BigInt(depositAmountMinor),
-              currency: req.body.rentAmount.currency,
+              currency: rentCurrency,
               actorUserId: req.auth?.userId ?? null,
               dueDate: startDate,
             });

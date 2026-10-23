@@ -32,7 +32,9 @@ const exportQuerySchema = z.object({
 function csvCell(value: string | number | bigint | null | undefined): string {
   if (value === null || value === undefined) return '';
   let text = String(value);
-  if (/^[=+\-@]/.test(text)) text = `'${text}`;
+  // Leading whitespace before a formula character is a known Excel bypass
+  // (=, +, -, @ but also Tab and CR, which Excel strips before evaluation).
+  if (/^[\s\t\r]*[=+\-@]/.test(text)) text = `'${text}`;
   if (/[",\n\r]/.test(text)) text = `"${text.replace(/"/g, '""')}"`;
   return text;
 }

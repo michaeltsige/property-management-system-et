@@ -15,7 +15,7 @@ credentials/access, licence uncertainty, destructive actions or stack changes.
 | 6. Contextual documents, checklists, expiry reminders                                                       | Not started                                                                                                                     |
 | 7. Consent, self-hosted font, realistic seed                                                                | Not started                                                                                                                     |
 | 8. CI-only Playwright, excluded from pnpm test and Cloud Shell startup                                      | Not started                                                                                                                     |
-| 9. Owner review round 2 (⑤⑦⑧⑨): tenant role lockdown, close-out notices, onboarding bundle, portal coverage | Merged (`cb1e5e6`, PR #57); audit in `docs/UPLOAD_AUTHORIZATION_AUDIT.md`                                                       |
+| 9. Owner review round 2 (⑤⑦⑧⑨): tenant role lockdown, close-out notices, onboarding bundle, portal coverage | Merged (`cb1e5e6`, PR #57); audit in `docs/archive/UPLOAD_AUTHORIZATION_AUDIT.md`                                                       |
 | 10. Tenant portal desktop pass (shell parity + density, round-2.5 of ⑤)                                     | Merged (`705ba15`, plus era fix `927e4d5` and org-calendar period fix `d83318b`); verified in a live authenticated browser flow |
 
 Constraints retained: local storage behind existing interface; no heavy new

@@ -5,6 +5,11 @@
  * dashboard shows the top few; this is the full history. Message bodies are
  * translated on the client from the stored template key, so a tenant switching
  * language sees their history in the language they switched to.
+ *
+ * Above the notices sit the staff-posted ANNOUNCEMENTS (with their pictures,
+ * Telegram-style): they are their own feed, and the section is deliberately
+ * quiet — nothing renders while it loads, or when the API has none — so the
+ * page keeps working before the backend ships the feature.
  */
 
 import { formatDate } from '@/lib/format';
@@ -34,12 +39,52 @@ export default function PortalNoticesPage() {
     () => (isTenant && ready ? api.portalNotices() : Promise.resolve(null)),
     [isTenant, ready],
   );
+  // Best-effort companion feed: a failure or an empty list just means no
+  // announcements section today.
+  const announcements = useAsync(
+    () => (isTenant && ready ? api.portalAnnouncements() : Promise.resolve(null)),
+    [isTenant, ready],
+  );
 
   if (!ready || !isTenant) return null;
 
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold tracking-tight text-strong">{t('portal.notices_title')}</h1>
+
+      {/* Announcements: the staff's posts, newest first. Rendered only when
+          there is something to show — no skeleton, no error UI. */}
+      {(announcements.data?.items.length ?? 0) > 0 ? (
+        <section>
+          <h2 className="text-sm font-semibold text-strong">{t('portal.announcements')}</h2>
+          <ul className="mt-2 space-y-3">
+            {(announcements.data?.items ?? []).map((item) => (
+              <li key={item.id}>
+                <Card>
+                  <CardContent className="p-4">
+                    {item.title ? <p className="font-semibold text-strong">{item.title}</p> : null}
+                    {item.imageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.imageUrl}
+                        alt=""
+                        className="mt-3 w-full rounded-lg border border-line object-cover max-h-96"
+                        loading="lazy"
+                      />
+                    ) : null}
+                    <p className="mt-3 whitespace-pre-wrap text-sm text-body">{item.body}</p>
+                    <p className="mt-2 text-[11px] text-faint">
+                      {[item.authorName, formatDate(item.publishedAt, { language, calendar })]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  </CardContent>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <Card>
         <CardContent className="p-0">

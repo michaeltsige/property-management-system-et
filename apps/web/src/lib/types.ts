@@ -315,6 +315,8 @@ export interface OccupancyRow {
   vacantUnits: number;
   occupancyRate: number;
   byStatus: Record<string, number>;
+  /** Per-floor breakdown for the selected period; units without a floor are grouped under null. */
+  floors?: { floor: number | null; total: number; occupied: number; vacant: number }[];
 }
 
 export interface CollectionRow {
@@ -417,6 +419,31 @@ export interface PortalNotice {
   payload: Record<string, unknown>;
   createdAt: string;
   status: string;
+}
+
+/** A staff-posted announcement (the Notices screen); shown with an optional image. */
+export interface PortalAnnouncement {
+  id: string;
+  title: string | null;
+  body: string;
+  propertyId: string | null;
+  /** Same-origin URL for the attached image, ready for <img src>; null when none. */
+  imageUrl: string | null;
+  publishedAt: string;
+  authorName: string | null;
+}
+
+/** Staff-side view of a posted notice (the admin Notices screen). */
+export interface Notice {
+  id: string;
+  title: string | null;
+  body: string;
+  propertyId: string | null;
+  property?: { id: string; name: string } | null;
+  audience: 'tenants' | 'staff' | 'all';
+  imageDocumentId: string | null;
+  publishedAt: string;
+  authorName: string | null;
 }
 
 /** A lease paper or receipt the tenant can open from the portal. */

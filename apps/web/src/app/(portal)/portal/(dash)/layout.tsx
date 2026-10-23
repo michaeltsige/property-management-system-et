@@ -40,6 +40,7 @@ import { cn } from '@/lib/utils';
 
 import { Button, Skeleton } from '@/components/ui';
 import { Logo } from '@/components/logo';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 const NAV_ITEMS = [
   { href: '/portal', labelKey: 'portal.nav.dashboard', icon: Element3 },
@@ -83,7 +84,9 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
                 aria-current={active ? 'page' : undefined}
                 onClick={onNavigate}
                 className={cn(
-                  'flex items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors',
+                  // min-h-11: 44px touch targets on the phone drawer; the
+                  // desktop rail keeps the staff shell's tuned density.
+                  'flex min-h-11 items-center gap-3 rounded-lg px-2.5 py-2 text-sm transition-colors lg:min-h-0',
                   active
                     ? 'bg-white/10 font-medium text-white'
                     : 'text-slate-300 hover:bg-white/5 hover:text-white',
@@ -157,7 +160,10 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
 
   const brand = (
     <div className="flex min-w-0 items-center gap-2.5">
-      <Logo size={34} className="shrink-0" />
+      {/* The rail and the drawer are permanently ink-900: the white-lettering
+          mark must be pinned, not left to follow the theme (the phone top bar
+          below sits on bg-surface and pins its own). */}
+      <Logo size={34} onDark className="shrink-0" />
       <p className="truncate text-sm font-semibold text-white">{t('portal.title')}</p>
     </div>
   );
@@ -232,6 +238,11 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
       <aside className="hidden h-full w-72 shrink-0 flex-col bg-ink-900 lg:flex">
         <div className="flex items-center gap-2.5 border-b border-white/10 px-4 py-3.5">{brand}</div>
         <NavLinks pathname={pathname} />
+        {/* The light/dark switch sits with the account block at the foot of the
+            rail; `rail` points its ghost colors at the permanent ink surface. */}
+        <div className="border-t border-white/10 px-3 pt-2.5">
+          <ThemeToggle rail />
+        </div>
         <div className="border-t border-white/10 p-3">{accountCard()}</div>
       </aside>
 
@@ -240,14 +251,17 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
         <Dialog.Portal>
           <Dialog.Overlay className="fixed inset-0 z-40 bg-ink-950/60 lg:hidden" />
           <Dialog.Content className="fixed inset-y-0 left-0 z-50 flex w-72 max-w-[85vw] flex-col bg-ink-900 shadow-float lg:hidden">
-            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-4">
+            {/* safe-area-inset-top: the drawer is the full screen, so on a
+                notched phone its first row would otherwise hide under the
+                cutout. env() is 0 everywhere else, so this is a no-op off iOS. */}
+            <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 pb-4 pt-[calc(1rem_+_env(safe-area-inset-top))]">
               <Dialog.Title className="min-w-0">{brand}</Dialog.Title>
               <Dialog.Description className="sr-only">{t('nav.menu')}</Dialog.Description>
               <Dialog.Close asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-faint hover:bg-white/10 hover:text-white"
+                  className="h-11 w-11 text-faint hover:bg-white/10 hover:text-white"
                   aria-label={t('common.close')}
                 >
                   <CloseSquare className="h-4 w-4" />
@@ -255,17 +269,20 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
               </Dialog.Close>
             </div>
             <NavLinks pathname={pathname} onNavigate={() => setMenuOpen(false)} />
-            <div className="border-t border-white/10 p-3">{accountCard()}</div>
+            <div className="border-t border-white/10 p-3 pb-[calc(0.75rem_+_env(safe-area-inset-bottom))]">
+              {accountCard()}
+            </div>
           </Dialog.Content>
         </Dialog.Portal>
       </Dialog.Root>
 
       <div className="flex h-full min-w-0 flex-1 flex-col">
         {/* Phone-only top bar; on desktop the rail carries the identity. */}
-        <header className="flex items-center gap-3 border-b border-edge bg-surface px-4 py-2.5 lg:hidden">
+        <header className="flex items-center gap-2 border-b border-edge bg-surface px-4 py-2.5 lg:hidden">
           <Button
             variant="ghost"
             size="icon"
+            className="h-11 w-11"
             aria-label={t('nav.menu')}
             aria-expanded={menuOpen}
             aria-haspopup="dialog"
@@ -273,10 +290,13 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
           >
             <MenuIcon className="h-5 w-5" />
           </Button>
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2">
             <Logo size={28} onDark={false} className="shrink-0" />
             <span className="truncate text-sm font-semibold text-strong">{t('portal.title')}</span>
           </div>
+          {/* Same 44px target as the hamburger; the default ghost colors already
+              read on the themed surface. */}
+          <ThemeToggle className="h-11 w-11" />
         </header>
 
         <main id="portal-main" tabIndex={-1} className="flex-1 overflow-y-auto p-4 focus:outline-none lg:p-6">

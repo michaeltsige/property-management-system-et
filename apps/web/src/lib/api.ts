@@ -31,6 +31,7 @@ import type {
   LeaseDetail,
   LeaseSummary,
   Member,
+  Notice,
   Notification,
   OccupancyRow,
   Payment,
@@ -39,6 +40,7 @@ import type {
   PortalCharge,
   PortalDocument,
   PortalMe,
+  PortalAnnouncement,
   PortalNotice,
   PortalPayment,
   PortalPaymentIntent,
@@ -317,6 +319,15 @@ export const api = {
   properties: () => apiFetch<{ properties: Property[] }>('/properties'),
   createProperty: (body: unknown) =>
     apiFetch<{ property: Property }>('/properties', { method: 'POST', body }),
+  /** Bulk-create properties from a name pattern ("Villa {n}" → Villa 1 …). */
+  bulkProperties: (body: unknown) =>
+    apiFetch<{ properties: Property[]; count: number }>('/properties/bulk', { method: 'POST', body }),
+  // --- notices (staff-posted announcements) ----------------------------------
+  notices: (query = '') => apiFetch<{ items: Notice[]; total: number }>(`/notices${query}`),
+  createNotice: (body: unknown) => apiFetch<{ notice: Notice }>('/notices', { method: 'POST', body }),
+  deleteNotice: (id: string) => apiFetch<void>(`/notices/${id}`, { method: 'DELETE' }),
+  /** Same-origin image URL for a notice's attached image (staff-side preview). */
+  noticeImageUrl: (id: string) => `/api/v1/notices/${id}/image`,
   units: () => apiFetch<{ units: Unit[] }>('/units'),
   importCsv: (kind: ImportKind, body: unknown) =>
     apiFetch<ImportReport>(`/imports/${kind}`, { method: 'POST', body }),
@@ -434,6 +445,8 @@ export const api = {
     `/api/v1/portal/payments/by-id/${encodeURIComponent(paymentId)}/receipt.pdf`,
   /** In-app notices for the signed-in tenant. */
   portalNotices: () => apiFetch<{ items: PortalNotice[] }>('/portal/notices'),
+  /** Staff-posted announcements for the signed-in tenant (with optional images). */
+  portalAnnouncements: () => apiFetch<{ items: PortalAnnouncement[] }>('/portal/announcements'),
   portalMaintenanceRequests: () => apiFetch<{ items: WorkOrder[] }>('/portal/maintenance-requests'),
   createPortalMaintenanceRequest: (body: { title: string; description?: string }) =>
     apiFetch<{ workOrder: WorkOrder }>('/portal/maintenance-requests', { method: 'POST', body }),
@@ -450,11 +463,11 @@ export const api = {
   summary: (query = '') => apiFetch<Summary>(`/reports/summary${query}`),
   rentRoll: (query = '') => apiFetch<RentRoll>(`/reports/rent-roll${query}`),
   arrears: (query = '') => apiFetch<Arrears>(`/reports/arrears${query}`),
-  occupancy: () =>
+  occupancy: (query = '') =>
     apiFetch<{
       rows: OccupancyRow[];
       totals: { totalUnits: number; occupiedUnits: number; vacantUnits: number; occupancyRate: number };
-    }>('/reports/occupancy'),
+    }>(`/reports/occupancy${query}`),
   collections: (query = '') =>
     apiFetch<{ calendar: string; currency: string; rows: CollectionRow[] }>(`/reports/collections${query}`),
   finishOnboarding: (body: unknown) =>

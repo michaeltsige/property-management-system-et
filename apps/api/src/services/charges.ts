@@ -465,6 +465,155 @@ export async function generateCharges(
   return result;
 }
 
+// ---------------------------------------------------------------------------
+// Prepaid advance — a payment beyond all open charges registers future cycles
+// ---------------------------------------------------------------------------
+
+export interface AdvancePrepaidRentParams {
+  organizationId: string;
+  /** The full LeaseForCharging-shaped lease (status 'active', currency matching). */
+  lease: LeaseForCharging & { tenantId: string | null; unitId: string | null };
+  /** Money to place on future cycles (minor units), in the lease's currency. */
+  availableMinor: bigint;
+  actorUserId?: string | null;
+  /** Safety cap on how many future cycles one payment may register. */
+  maxCycles?: number;
+}
+
+export interface AdvancedCycle {
+  chargeId: string;
+  periodKey: string;
+  amountMinor: bigint;
+  allocatedMinor: bigint;
+  status: 'open' | 'partial' | 'paid';
+}
+
+/**
+ * "Register this money for the next unpaid month."
+ *
+ * When a tenant pays ahead of what is billed (the landlord collected month 4
+ * while only cycles 1–3 exist), the surplus becomes *future rent charges* on
+ * the lease's own anniversary cycle instead of a stranded credit balance. Each
+ * created cycle is exactly what `generateCharges` would create later for that
+ * period — same period key, same idempotency — so the nightly job simply skips
+ * it (unique constraint), the prepayment shows up in rent-roll/summary for the
+ * future month, and no negative "credit" line ever forms.
+ *
+ * The money available must already have settled every open charge; the caller
+ * (recordPaymentInTx) guarantees that. A cycle whose rent exceeds the remaining
+ * money is still created and left `partial` — the books show where the money
+ * went, and the next payment tops it up.
+ */
+export async function advancePrepaidRentInTx(
+  tx: PrismaLike,
+  params: AdvancePrepaidRentParams,
+): Promise<AdvancedCycle[]> {
+  const { lease } = params;
+  if (params.availableMinor <= 0n) return [];
+
+  const calendar = calendarOf(lease);
+  const months = monthsPerChargeOf(lease);
+
+  // Where does billing stand? The latest cycle that already has a rent charge.
+  const existing = await tx.charge.findMany({
+    where: { organizationId: lease.organizationId, leaseId: lease.id, type: 'rent' },
+    select: { periodStart: true, periodKey: true },
+  });
+  let nextCycleIndex = 0;
+  for (const charge of existing) {
+    const start = utcDateToCivil(charge.periodStart, calendar);
+    const offset = billingMonthOffset(lease, { year: start.year, month: start.month });
+    if (offset === null || offset < 0) continue;
+    if (months > 1 && offset % months !== 0) continue;
+    const cycleIndex = lease.billingFrequency === 'custom' ? offset : Math.floor(offset / months);
+    nextCycleIndex = Math.max(nextCycleIndex, cycleIndex + 1);
+  }
+
+  const maxCycles = params.maxCycles ?? 36;
+  const created: AdvancedCycle[] = [];
+  let remaining = params.availableMinor;
+
+  for (let n = 0; n < maxCycles && remaining > 0n; n += 1, nextCycleIndex += 1) {
+    const amountMinor = amountForCycle(lease, nextCycleIndex);
+    if (amountMinor <= 0n) break; // past the lease's term
+
+    const cycle = cycleWindowFor(lease, nextCycleIndex);
+    const period: BillingPeriod = {
+      calendar,
+      year: cycle.start.year,
+      month: cycle.start.month,
+      key: `${cycle.start.year}-${String(cycle.start.month).padStart(2, '0')}`,
+    };
+    const allocated = remaining < amountMinor ? remaining : amountMinor;
+    const status = allocated >= amountMinor ? 'paid' : 'partial';
+
+    const charge = await tx.charge.create({
+      data: {
+        organizationId: lease.organizationId,
+        leaseId: lease.id,
+        tenantId: lease.tenantId,
+        unitId: lease.unitId,
+        type: 'rent',
+        description: `Rent for ${periodLabelFor(period)} — prepaid`,
+        periodKey: period.key,
+        periodCalendar: period.calendar,
+        periodStart: toUtcDate(cycle.start),
+        periodEnd: toUtcDate(cycle.end),
+        dueDate: toUtcDate(cycle.start),
+        amountMinor,
+        currency: lease.currency,
+        status: 'open',
+        createdById: params.actorUserId ?? null,
+      },
+    });
+
+    await postLedgerEntry(tx, {
+      organizationId: lease.organizationId,
+      leaseId: lease.id,
+      chargeId: charge.id,
+      kind: 'charge',
+      amountMinor,
+      currency: lease.currency,
+      occurredAt: toUtcDate(cycle.start),
+      memo: `Rent ${period.key} (${period.calendar}) — prepaid in advance`,
+      createdById: params.actorUserId ?? null,
+    });
+
+    // Keep the escalation tracker current, exactly like generateCharges does.
+    if ((lease.escalationPercent ?? 0) > 0 && (lease.escalationEveryMonths ?? 0) > 0) {
+      const monthsIn = nextCycleIndex * months;
+      const every = lease.escalationEveryMonths ?? 0;
+      if (monthsIn >= 0 && every > 0) {
+        const nextStep = (Math.floor(monthsIn / every) + 1) * every;
+        const nextCycleIndexForStep = Math.ceil(nextStep / months);
+        await tx.lease.update({
+          where: { id: lease.id },
+          data: { nextEscalationDate: toUtcDate(cycleStartFor(lease, nextCycleIndexForStep)) },
+        });
+      }
+    }
+
+    await recordAudit(tx, {
+      organizationId: lease.organizationId,
+      actorUserId: params.actorUserId ?? null,
+      action: 'generate',
+      entityType: 'Charge',
+      entityId: charge.id,
+      after: {
+        leaseId: lease.id,
+        periodKey: period.key,
+        amountMinor: amountMinor.toString(),
+        prepaid: true,
+      },
+    });
+
+    created.push({ chargeId: charge.id, periodKey: period.key, amountMinor, allocatedMinor: allocated, status });
+    remaining -= allocated;
+  }
+
+  return created;
+}
+
 function parsePeriodKeyFor(
   periodKey: string,
   calendar: CalendarKind,

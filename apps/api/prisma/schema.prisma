@@ -66,6 +66,7 @@ model Organization {
   taxRules      TaxRule[]
   overrides     TranslationOverride[]
   notifications Notification[]
+  notices Notice[]
   auditLogs     AuditLog[]
   idTypes       TenantIdType[]
 
@@ -272,6 +273,7 @@ model Property {
   units        Unit[]
   workOrders   WorkOrder[]
   documents    Document[]
+  notices      Notice[]
 
   @@unique([organizationId, id])
   @@index([organizationId, status])
@@ -713,6 +715,32 @@ model Notification {
 
   @@index([organizationId, status])
   @@index([organizationId, createdAt])
+}
+
+/// Organization announcements posted by staff ("Notices" screen): a Telegram-style
+/// message with an optional image, scoped to a property or organization-wide.
+/// `audience` controls visibility; tenants read it through the portal routes.
+model Notice {
+  id              String    @id @default(uuid()) @db.Uuid
+  organizationId  String    @db.Uuid
+  title           String?
+  body            String
+  /// Omitted = every property of the organization.
+  propertyId      String?   @db.Uuid
+  audience        String    @default("tenants") // tenants | staff | all
+  /// Optional image: a Document row (uploaded via POST /documents) in this organization.
+  imageDocumentId String?   @db.Uuid
+  authorUserId    String?   @db.Uuid
+  publishedAt     DateTime  @default(now())
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  deletedAt       DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  property Property? @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, publishedAt])
+  @@index([organizationId, audience])
 }
 
 model TranslationOverride {

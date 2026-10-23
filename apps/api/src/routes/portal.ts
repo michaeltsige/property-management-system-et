@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, type NextFunction, type Request } from 'express';
 import { z } from 'zod';
 import { translationManagerRows } from '@pms/i18n';
 import type { LanguageCode } from '@pms/calendar';
@@ -16,7 +16,8 @@ import { requirePermission } from '../middleware/rbac.js';
 import { validate } from '../middleware/validate.js';
 import { getPrisma } from '../lib/prisma.js';
 import { pstr, str } from '../lib/query.js';
-import { badRequest, businessRule, notFound } from '../lib/errors.js';
+import { badRequest, businessRule, notFound, AppError } from '../lib/errors.js';
+import { isMultipartRequest, parseMultipartUpload } from '../lib/multipart.js';
 import { nextTicketNumber } from './operations.js';
 import { authRateLimiter } from './auth.js';
 import { issueTokens } from '../services/auth.service.js';
@@ -88,8 +89,9 @@ portalRouter.delete(
 // --- OTP login (tenant side) ------------------------------------------------
 
 /**
- * Both unknown and known numbers answer identically, so the endpoint cannot be
- * used to discover who rents in which building.
+ * Tenant code request. The owner wants plain feedback: an unregistered phone
+ * gets an explicit 404 (translated via `portal.phone_not_registered`) instead
+ * of a fake `ok`.
  */
 portalRouter.post(
   '/portal/request-code',
@@ -99,7 +101,21 @@ portalRouter.post(
     try {
       const phone = normalizePhone(req.body.phone);
       if (!phone) throw businessRule('Enter a valid Ethiopian phone number');
-      await requestPortalCode(getPrisma(), phone, { requestId: req.requestId });
+      const result = await requestPortalCode(getPrisma(), phone, { requestId: req.requestId });
+      if (!result.ok && result.reason === 'not_registered') {
+        // Owner decision: tell the user plainly instead of pretending success.
+        // userMessageKey lets the portal login screen translate it in the
+        // tenant's language.
+        throw new AppError(404, 'NOT_FOUND', 'This phone number is not registered for the tenant portal', {
+          userMessageKey: 'portal.phone_not_registered',
+        });
+      }
+      if (!result.ok && result.reason === 'cooldown') {
+        throw new AppError(429, 'RATE_LIMITED', 'A code was requested recently; wait before asking again', {
+          details: { retryAfterSeconds: result.retryAfterSeconds },
+          userMessageKey: 'auth.too_many_attempts',
+        });
+      }
       res.json({ ok: true });
     } catch (error) {
       next(error);
@@ -449,6 +465,117 @@ portalRouter.get('/portal/notices', requireAuth, requirePermission('portal.use')
   }
 });
 
+// --- announcements (staff-posted notices, Telegram-style) ---------------------
+
+/**
+ * Staff-posted announcements visible to the signed-in tenant: audience
+ * `tenants` or `all`, organization-wide or scoped to a property the tenant
+ * leases. `imageUrl` is a same-origin path the portal UI can put straight into
+ * an <img> tag (the image endpoint below authorizes via the session cookie).
+ */
+portalRouter.get(
+  '/portal/announcements',
+  requireAuth,
+  requirePermission('portal.use'),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      const leaseUnits = await prisma.lease.findMany({
+        where: { organizationId: tenant.organizationId, tenantId: tenant.id, deletedAt: null },
+        select: { unit: { select: { propertyId: true } } },
+        distinct: ['unitId'],
+      });
+      const propertyIds = leaseUnits
+        .map((lease) => lease.unit?.propertyId)
+        .filter((id): id is string => Boolean(id));
+      const announcements = await prisma.notice.findMany({
+        where: {
+          organizationId: tenant.organizationId,
+          deletedAt: null,
+          audience: { in: ['tenants', 'all'] },
+          OR: [{ propertyId: null }, ...(propertyIds.length ? [{ propertyId: { in: propertyIds } }] : [])],
+        },
+        orderBy: { publishedAt: 'desc' },
+        take: 20,
+      });
+      const authors = announcements.some((a) => a.authorUserId)
+        ? await prisma.user.findMany({
+            where: {
+              id: {
+                in: [
+                  ...new Set(
+                    announcements
+                      .map((a) => a.authorUserId)
+                      .filter((id): id is string => Boolean(id)),
+                  ),
+                ],
+              },
+            },
+            select: { id: true, fullName: true },
+          })
+        : [];
+      const authorNames = new Map(authors.map((a) => [a.id, a.fullName]));
+      res.json({
+        items: announcements.map((announcement) => ({
+          id: announcement.id,
+          title: announcement.title,
+          body: announcement.body,
+          propertyId: announcement.propertyId,
+          imageUrl: announcement.imageDocumentId
+            ? `/portal/announcements/${announcement.id}/image`
+            : null,
+          publishedAt: announcement.publishedAt,
+          authorName: announcement.authorUserId
+            ? (authorNames.get(announcement.authorUserId) ?? null)
+            : null,
+        })),
+      });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/** Inline image for a tenant-visible announcement (<img> in the portal). */
+portalRouter.get(
+  '/portal/announcements/:noticeId/image',
+  requireAuth,
+  requirePermission('portal.use'),
+  validate({ params: z.object({ noticeId: uuidSchema }) }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const tenant = await portalTenant(prisma, req);
+      const announcement = await prisma.notice.findFirst({
+        where: {
+          id: pstr(req, 'noticeId'),
+          organizationId: tenant.organizationId,
+          deletedAt: null,
+          audience: { in: ['tenants', 'all'] },
+        },
+      });
+      if (!announcement?.imageDocumentId) throw notFound('Notice image not found');
+      const document = await prisma.document.findFirst({
+        where: { id: announcement.imageDocumentId, organizationId: tenant.organizationId, deletedAt: null },
+      });
+      if (!document) throw notFound('Notice image not found');
+
+      const stream = await getStorageDriver().stream(document.storageKey);
+      res.setHeader('Content-Type', document.mimeType);
+      res.setHeader('Content-Disposition', `inline; filename="${document.id}"`);
+      res.setHeader('Cache-Control', 'private, max-age=3600');
+      stream.on('error', (error) => {
+        if (res.headersSent) res.destroy(error);
+        else next(error);
+      });
+      stream.pipe(res);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 // --- payments (tenant-initiated, provider-confirmed) ------------------------
 
 /**
@@ -563,10 +690,46 @@ portalRouter.get(
 
 // --- proofs of payment (tenant uploads, staff review) -----------------------
 
+/**
+ * Multipart upload support for payment proofs (phone cameras): the parsed file
+ * and fields are re-expressed as the same JSON body the route already
+ * validates, so the storage/limits path stays single.
+ */
+async function attachMultipartPaymentProofBody(
+  req: Request,
+  _res: unknown,
+  next: NextFunction,
+) {
+  try {
+    if (!isMultipartRequest(req)) return next();
+    const { fields, file } = await parseMultipartUpload(req, {
+      maxBytes: getConfig().MAX_UPLOAD_BYTES,
+    });
+    if (!file) throw badRequest('Attach the file in the "file" field');
+    if (file.data.byteLength === 0) throw badRequest('The uploaded file is empty');
+    req.body = {
+      amount: {
+        amountMinor: Number(fields.amountMinor ?? Number.NaN),
+        currency: fields.currency ?? 'ETB',
+      },
+      method: fields.method ?? '',
+      ...(fields.reference ? { reference: fields.reference } : {}),
+      ...(fields.notes ? { notes: fields.notes } : {}),
+      filename: file.filename || 'upload',
+      mimeType: file.mimeType || 'application/octet-stream',
+      dataBase64: file.data.toString('base64'),
+    };
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
 portalRouter.post(
   '/portal/payment-proofs',
   requireAuth,
   requirePermission('portal.pay'),
+  attachMultipartPaymentProofBody,
   validate({ body: portalPaymentProofUploadSchema }),
   async (req, res, next) => {
     try {
@@ -628,6 +791,11 @@ portalRouter.get(
       const stream = await getStorageDriver().stream(document.storageKey);
       res.setHeader('Content-Type', document.mimeType);
       res.setHeader('Content-Disposition', `attachment; filename="${document.id}"`);
+      // A read that fails mid-flight must not hang the response.
+      stream.on('error', (error) => {
+        if (res.headersSent) res.destroy(error);
+        else next(error);
+      });
       stream.pipe(res);
     } catch (error) {
       next(error);
@@ -730,6 +898,11 @@ portalRouter.get(
         'Content-Disposition',
         `attachment; filename="${document.title ?? document.id}"`,
       );
+      // A read that fails mid-flight must not hang the response.
+      stream.on('error', (error) => {
+        if (res.headersSent) res.destroy(error);
+        else next(error);
+      });
       stream.pipe(res);
     } catch (error) {
       next(error);

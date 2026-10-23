@@ -94,12 +94,15 @@ export function PeriodPicker({
   onChange,
   calendar,
   months = 24,
+  /** How many future months the list offers (advance/prepaid cycles need them). */
+  futureMonths = 0,
   label,
 }: {
   periodKey: string;
   onChange: (periodKey: string) => void;
   calendar: CalendarKind;
   months?: number;
+  futureMonths?: number;
   label?: string;
 }) {
   const { language, t } = usePreferences();
@@ -108,7 +111,9 @@ export function PeriodPicker({
   const options = useMemo(() => {
     const today = todayIn(calendar);
     const list: { key: string; label: string }[] = [];
-    for (let offset = 0; offset < months; offset += 1) {
+    // Offsets run from `futureMonths` ahead back to `months - 1` behind; the
+    // list renders newest first.
+    for (let offset = -futureMonths; offset < months; offset += 1) {
       const index = today.year * monthsPerYear + (today.month - 1) - offset;
       const year = Math.floor(index / monthsPerYear);
       const month = (((index % monthsPerYear) + monthsPerYear) % monthsPerYear) + 1;
@@ -118,7 +123,7 @@ export function PeriodPicker({
       });
     }
     return list;
-  }, [calendar, months, monthsPerYear, language]);
+  }, [calendar, months, futureMonths, monthsPerYear, language]);
 
   return (
     <div className="flex items-center gap-2">
@@ -135,58 +140,6 @@ export function PeriodPicker({
           </option>
         ))}
       </Select>
-    </div>
-  );
-}
-
-/** Year/month/day steppers for the 13-month calendar, used by filters. */
-export function MonthAccordion({
-  calendar,
-  onPick,
-}: {
-  calendar: CalendarKind;
-  onPick: (periodKey: string) => void;
-}) {
-  const { language } = usePreferences();
-  const today = todayIn(calendar);
-  const [year, setYear] = useState(today.year);
-  const months = calendar === 'ethiopian' ? 13 : 12;
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" size="sm" onClick={() => setYear(year - 1)}>
-          {year - 1}
-        </Button>
-        <span className="text-sm font-semibold text-strong">
-          {year}
-          {calendar === 'ethiopian' ? ' E.C.' : ' G.C.'}
-        </span>
-        <Button variant="ghost" size="sm" onClick={() => setYear(year + 1)}>
-          {year + 1}
-        </Button>
-      </div>
-      <div className="grid grid-cols-4 gap-1 sm:grid-cols-7">
-        {Array.from({ length: months }, (_, index) => index + 1).map((month) => {
-          const isPagume = calendar === 'ethiopian' && month === 13;
-          return (
-            <button
-              key={month}
-              type="button"
-              onClick={() => onPick(`${year}-${String(month).padStart(2, '0')}`)}
-              className={cn(
-                'rounded-md border px-1 py-1 text-[11px]',
-                isPagume
-                  ? 'border-gold-400 text-gold-600 dark:text-gold-400'
-                  : 'border-line text-soft hover:bg-wash',
-              )}
-              title={`${daysInMonth({ year, month, calendar })} days`}
-            >
-              {monthName({ month, calendar }, language).slice(0, 3)}
-            </button>
-          );
-        })}
-      </div>
     </div>
   );
 }

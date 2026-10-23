@@ -52,17 +52,6 @@ export function formatDate(instant: string | Date, options: DisplayOptions = {})
   return formatCivilDate(civil, { language: language as LanguageCode, showEra });
 }
 
-/** A civil value (as returned by the server) rendered as a string. */
-export function formatCivil(
-  civil: { year: number; month: number; day: number; calendar: CalendarKind },
-  options: DisplayOptions = {},
-): string {
-  return formatCivilDate(civil as CivilDate, {
-    language: (options.language ?? 'en') as LanguageCode,
-    showEra: options.showEra ?? true,
-  });
-}
-
 /**
  * Both calendars side by side. Used wherever a date has legal weight — a lease
  * start, a due date — because the parties may each read a different one.

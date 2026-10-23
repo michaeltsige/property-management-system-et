@@ -72,9 +72,6 @@ export const conflict = (message: string, details?: AppErrorDetails): AppError =
 export const rateLimited = (message = 'Too many requests'): AppError =>
   new AppError(429, 'RATE_LIMITED', message, { userMessageKey: 'auth.too_many_attempts' });
 
-export const unprocessable = (message: string, details?: AppErrorDetails): AppError =>
-  new AppError(422, 'UNPROCESSABLE', message, { details });
-
 export const businessRule = (message: string, details?: AppErrorDetails): AppError =>
   new AppError(422, 'BUSINESS_RULE', message, { details });
 

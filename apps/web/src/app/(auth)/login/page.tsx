@@ -92,20 +92,22 @@ export default function LoginPage() {
           </CardContent>
         </Card>
 
-        <p className="mt-4 text-center text-xs text-white/70">
-          <Link href="/register" className="font-medium text-white underline-offset-2 hover:underline">
-            {t('auth.register_organization')}
-          </Link>
-        </p>
-
-        {/* Tenants sign in with a phone + one-time code on a separate door; the
-            staff login never hints whether a phone is enrolled, so the two flows
-            stay apart. Make the door findable, though. */}
-        <p className="mt-2 text-center text-xs text-white/70">
-          <Link href="/portal/login" className="underline-offset-2 hover:underline">
-            {t('auth.tenant_portal')}
-          </Link>
-        </p>
+        {/* The other doors, as buttons: dim links were invisible against the
+            photo background. Register is the outline-on-white treatment; the
+            tenant portal gets the gold variant so the two flows read apart. */}
+        <div className="mt-6 flex flex-col gap-2">
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className="w-full border-white/60 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+          >
+            <Link href="/register">{t('auth.register_organization')}</Link>
+          </Button>
+          <Button asChild variant="gold" size="lg" className="w-full">
+            <Link href="/portal/login">{t('auth.tenant_portal')}</Link>
+          </Button>
+        </div>
       </div>
     </div>
   );
