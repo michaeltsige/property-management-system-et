@@ -201,7 +201,7 @@ export default function MaintenancePage() {
             <Select
               value={status}
               onChange={(event) => setStatus(event.target.value)}
-              className="h-9 w-40"
+              className="h-9 w-full sm:w-40"
               aria-label={t('unit.status')}
             >
               <option value="">{t('common.filters')}</option>

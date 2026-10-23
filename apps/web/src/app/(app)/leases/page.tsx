@@ -173,8 +173,7 @@ export default function LeasesPage() {
         actions={
           <>
             <ExportCsvButton kind="leases" />
-            <Button onClick={() => setOpen(true)}>
-              <Add className="h-4 w-4" />
+            <Button leadingIcon={<Add className="h-4 w-4" />} onClick={() => setOpen(true)}>
               {t('common.create')}
             </Button>
           </>

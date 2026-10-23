@@ -63,28 +63,28 @@ export default function PortalLoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4">
+    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-y-auto px-4 py-6">
       {/* Same hero treatment as the staff sign-in: one photograph, one flat
           overlay, one card — no decorative chrome. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-cover bg-center"
+        className="fixed inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/images/login-hero.jpg')" }}
       />
-      <div aria-hidden="true" className="absolute inset-0 bg-ink-950/60" />
+      <div aria-hidden="true" className="fixed inset-0 bg-ink-950/60" />
       {/* Door language is a device choice, always one tap away (see door-language.tsx). */}
       <DoorLanguagePicker />
       <div className="relative w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <Logo size={80} onDark className="mx-auto mb-3" />
-          <h1 className="text-xl font-semibold tracking-tight text-white">{t('portal.title')}</h1>
+        <div className="mb-5 text-center">
+          <Logo size={64} onDark className="mx-auto mb-2" />
+          <h1 className="text-lg font-semibold tracking-tight text-white sm:text-xl">{t('portal.title')}</h1>
           <p className="mt-1 text-xs text-white/70">{t('portal.login_hint')}</p>
         </div>
 
         <Card className="shadow-float">
           <CardContent className="py-2">
             {step === 'phone' ? (
-              <form className="space-y-4" onSubmit={requestCode}>
+              <form className="space-y-3 sm:space-y-4" onSubmit={requestCode}>
                 <div className="space-y-1">
                   <Label htmlFor="portal-phone">{t('portal.phone')}</Label>
                   <Input
@@ -104,7 +104,7 @@ export default function PortalLoginPage() {
                 </Button>
               </form>
             ) : (
-              <form className="space-y-4" onSubmit={verify}>
+              <form className="space-y-3 sm:space-y-4" onSubmit={verify}>
                 <Alert tone="info">{t('portal.code_sent')}</Alert>
                 <div className="space-y-1">
                   <Label htmlFor="portal-code">{t('portal.code')}</Label>

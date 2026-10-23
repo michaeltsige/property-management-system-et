@@ -8,7 +8,12 @@
  *   credentials arrive. The simulation shares one module-level ledger, so
  *   initiate (request 1) and verify/complete (request 2) see the same state.
  * - **Live mode (`live`)**: real HTTP calls to api.chapa.co with the
- *   organization's secret key.
+ *   organization's secret key. The key prefix decides what Chapa does with
+ *   the request: `CHASECK_TEST-...` runs in Chapa's test mode (real hosted
+ *   checkout, real API surface, but the published test cards / test mobile
+ *   numbers from developer.chapa.co/integrations/testing-cards), and
+ *   `CHASECK-...` is the live key (real money). Both hit the same endpoint —
+ *   there is no separate sandbox URL.
  *
  * LIVE CONTRACT — confirmed against the official documentation
  * (developer.chapa.co, "Accept Payment" + "Webhooks", last checked 2026-10-16;

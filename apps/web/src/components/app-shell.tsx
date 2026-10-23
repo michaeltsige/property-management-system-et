@@ -318,7 +318,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-canvas">
+    <div className="flex h-[100dvh] overflow-hidden bg-canvas">
       <a
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-brand-800 focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-500"
@@ -434,12 +434,14 @@ export function PageHeader({
   useDocumentTitle(`${title} · ${t('app.name')}`);
 
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-      <div>
+    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
+      <div className="min-w-0">
         <h1 className="text-xl font-semibold tracking-tight text-strong">{title}</h1>
         {description ? <p className="mt-0.5 text-sm text-muted">{description}</p> : null}
       </div>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      {actions ? (
+        <div className="flex flex-wrap items-center gap-2 sm:justify-end">{actions}</div>
+      ) : null}
     </div>
   );
 }

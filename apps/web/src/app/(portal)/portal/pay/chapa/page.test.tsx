@@ -45,7 +45,12 @@ vi.mock('@/lib/api', async (importOriginal) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  context.get.mockReturnValue('PMS-6f1c2a90b3');
+  // Realistic mock: the sandbox sim lands with `tx_ref` (and never `trx_ref`);
+  // a real Chapa return lands with `trx_ref` (and never `tx_ref`). Returning
+  // the same value for every param would make `isRealChapaReturn` misfire.
+  context.get.mockImplementation((name: string) =>
+    name === 'tx_ref' ? 'PMS-6f1c2a90b3' : null,
+  );
 });
 
 describe('chapa sandbox checkout page', () => {

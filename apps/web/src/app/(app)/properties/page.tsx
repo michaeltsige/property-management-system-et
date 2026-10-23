@@ -254,10 +254,10 @@ export default function PropertiesPage() {
               {t('property.bulk_create')}
             </Button>
             <Button
+              leadingIcon={<Add className="h-4 w-4" />}
               disabled={!canWrite || (canReadOwners && (owners.loading || !!owners.error))}
               onClick={() => setOpen(true)}
             >
-              <Add className="h-4 w-4" />
               {t('common.create')}
             </Button>
           </>

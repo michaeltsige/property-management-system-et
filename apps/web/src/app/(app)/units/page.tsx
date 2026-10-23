@@ -225,13 +225,13 @@ export default function UnitsPage() {
               placeholder={t('common.search')}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="h-9 w-40"
+              className="h-9 w-full sm:w-40"
             />
             <Button
+              leadingIcon={<Add className="h-4 w-4" />}
               onClick={() => setOpen(true)}
               disabled={!canWrite || (properties.data?.properties.length ?? 0) === 0}
             >
-              <Add className="h-4 w-4" />
               {t('common.create')}
             </Button>
           </>

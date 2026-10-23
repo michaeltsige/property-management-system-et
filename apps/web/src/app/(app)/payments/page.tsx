@@ -132,7 +132,7 @@ export default function PaymentsPage() {
             <Select
               value={method}
               onChange={(event) => setMethod(event.target.value)}
-              className="h-9 w-40"
+              className="h-9 w-full sm:w-40"
               aria-label={t('payment.filter_method')}
             >
               <option value="">{t('common.filters')}</option>
@@ -146,8 +146,7 @@ export default function PaymentsPage() {
               <option value="other">{t('payment.method.other' as never)}</option>
             </Select>
             <ExportCsvButton kind="payments" />
-            <Button onClick={() => setOpen(true)}>
-              <Add className="h-4 w-4" />
+            <Button leadingIcon={<Add className="h-4 w-4" />} onClick={() => setOpen(true)}>
               {t('money.record_payment')}
             </Button>
           </>

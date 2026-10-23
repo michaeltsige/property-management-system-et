@@ -377,8 +377,14 @@ type AlertProps = VariantProps<typeof alertVariants>;
 
 export function Table({ className, ...props }: HTMLAttributes<HTMLTableElement>) {
   return (
+    // Single horizontal scroll on the outer wrapper, never nested. Cells must
+    // truncate or wrap (no inner overflow-x), so the only horizontal scroll is
+    // this container's — one thumb, one axis, no double-scroll on mobile.
     <div className="w-full overflow-x-auto">
-      <table className={cn('w-full border-collapse text-sm', className)} {...props} />
+      <table
+        className={cn('w-full border-collapse text-sm tabular-nums', className)}
+        {...props}
+      />
     </div>
   );
 }
@@ -390,7 +396,9 @@ export function Th({ className, scope = 'col', ...props }: ThHTMLAttributes<HTML
       className={cn(
         // Normal-case column headers (the operations-console convention):
         // shouting uppercase on every screen was one of the "vibecoded" tells.
-        'border-b border-edge/50 bg-brand-50/60 px-3 py-2 text-left text-xs font-semibold text-soft',
+        // whitespace-nowrap on headers so column labels never wrap mid-word;
+        // cells below can still wrap or truncate as needed.
+        'border-b border-edge/50 bg-brand-50/60 px-2 py-2 text-left text-xs font-semibold text-soft whitespace-nowrap sm:px-3',
         className,
       )}
       {...props}
@@ -401,7 +409,10 @@ export function Th({ className, scope = 'col', ...props }: ThHTMLAttributes<HTML
 export function Td({ className, ...props }: HTMLAttributes<HTMLTableCellElement>) {
   return (
     <td
-      className={cn('border-b border-line-soft px-3 py-2.5 align-middle text-body', className)}
+      // min-w-0 lets the cell shrink below its content's natural min-width,
+      // so truncate/max-w-* children can ellipsize instead of forcing the
+      // table wider (and creating the double-scroll the user reported).
+      className={cn('min-w-0 border-b border-line-soft px-2 py-2 align-middle text-body sm:px-3', className)}
       {...props}
     />
   );

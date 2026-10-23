@@ -1,23 +1,25 @@
 'use client';
 
 /**
- * The Chapa sandbox checkout — what tenants see while an organization runs the
- * Chapa gateway in test mode.
+ * The Chapa checkout return / sandbox page.
  *
- * Live Chapa sends the payer to checkout.chapa.co and redirects back with
- * `trx_ref`/`status` params; the sandbox simulates exactly that loop on this
- * app: the reference in the URL is the only state, everything else is
- * re-fetched from `GET /portal/payments/:providerRef` (scoped server-side to
- * the signed-in tenant, so an edited URL can only ever show that tenant's own
- * attempts), and confirming re-verifies with the provider before any money is
- * recorded. It is clearly labelled as a sandbox — no real money moves here.
- * When the organization switches the gateway to live mode, tenants are sent to
- * Chapa's own checkout instead and this page only serves as the return URL.
+ * Two arrival paths share this URL:
+ *
+ * 1. **Sandbox simulation** (no real Chapa key set): the redirect URL from the
+ *    API carries `tx_ref`; the page shows amount + a "Confirm payment" button.
+ *    Clicking it calls `/complete`, which runs the in-process mock verify.
+ * 2. **Real Chapa return** (CHASECK_TEST-... or live key set): the tenant has
+ *    already paid on Chapa's hosted checkout; Chapa redirects back with
+ *    `trx_ref` (and `status`, `ref_id` etc.). The page detects `trx_ref` and
+ *    auto-calls `/complete` — the server still re-verifies with Chapa's
+ *    `/transaction/verify/{tx_ref}` (Chapa's docs: verify is the source of
+ *    truth, the webhook is only a trigger), so this is safe even if Chapa's
+ *    redirect is tampered with.
  */
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 
 import { Logo } from '@/components/logo';
 import { api, ApiError } from '@/lib/api';
@@ -31,8 +33,11 @@ import { Alert, Badge, Button, Card, CardContent, Skeleton } from '@/components/
 function ChapaSandboxCheckout() {
   const router = useRouter();
   const params = useSearchParams();
-  // Live Chapa redirects back with `trx_ref`; the sandbox uses `tx_ref`.
+  // Real Chapa redirects back with `trx_ref`; the sandbox uses `tx_ref`.
   const providerRef = params.get('tx_ref') ?? params.get('trx_ref') ?? params.get('ref') ?? '';
+  // Real Chapa return signals auto-complete; the sandbox sim signals manual confirm.
+  // (Use `get` instead of `has` so test mocks that only stub `get` keep working.)
+  const isRealChapaReturn = params.get('trx_ref') !== null;
   const { session, ready, language, t } = usePreferences();
 
   useEffect(() => {
@@ -50,6 +55,8 @@ function ChapaSandboxCheckout() {
   );
   const { pending: completing, error: completeError, run } = useAction();
   const [completed, setCompleted] = useState<PortalCompletedPayment | null>(null);
+  // Guard against double-completing in StrictMode and on hot reloads.
+  const autoFiredRef = useRef(false);
 
   async function confirm() {
     await run(async () => {
@@ -57,6 +64,17 @@ function ChapaSandboxCheckout() {
       setCompleted(result);
     }).catch(() => undefined);
   }
+
+  // Real-Chapa return: the tenant has already paid. Auto-verify+complete on
+  // first arrival once the intent is loaded and still pending. (If the intent
+  // is already succeeded, the receipt branch handles it without another call.)
+  useEffect(() => {
+    if (!isRealChapaReturn || autoFiredRef.current) return;
+    if (!intent.data || intent.data.status === 'succeeded') return;
+    autoFiredRef.current = true;
+    void confirm();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isRealChapaReturn, intent.data]);
 
   if (!ready || !session) {
     return (
@@ -67,9 +85,13 @@ function ChapaSandboxCheckout() {
   }
 
   const alreadySucceeded = intent.data?.status === 'succeeded';
+  // When the tenant comes back from real Chapa, we auto-fire /complete (above);
+  // hide the manual "Confirm payment" branch during that window so the user
+  // doesn't see a button that's about to disappear.
+  const autoCompleting = isRealChapaReturn && !completed && !alreadySucceeded && completing;
 
   return (
-    <div className="min-h-screen bg-canvas">
+    <div className="min-h-[100dvh] bg-canvas">
       <header className="border-b border-line bg-surface">
         <div className="mx-auto flex max-w-md items-center justify-between px-4 py-3">
           <Logo size={34} onDark={false} />
@@ -123,6 +145,11 @@ function ChapaSandboxCheckout() {
                     </Link>
                   </div>
                 </>
+              ) : autoCompleting ? (
+                <div className="space-y-3 py-2 text-center">
+                  <Skeleton className="mx-auto h-8 w-40" />
+                  <p className="text-xs text-muted">{t('portal.pay_starting')}</p>
+                </div>
               ) : (
                 <>
                   <div>
@@ -134,27 +161,33 @@ function ChapaSandboxCheckout() {
                       {session.organization.name} · {intent.data.providerRef}
                     </p>
                   </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {(['telebirr', 'cbe_birr', 'amole', 'chapa'] as const).map((method) => (
-                      <span
-                        key={method}
-                        className="rounded-full border border-line bg-wash px-2.5 py-1 text-xs font-medium text-soft"
-                      >
-                        {t(`payment.method.${method}` as never)}
-                      </span>
-                    ))}
-                  </div>
+                  {isRealChapaReturn ? null : (
+                    <div className="flex flex-wrap gap-1.5">
+                      {(['telebirr', 'cbe_birr', 'amole', 'chapa'] as const).map((method) => (
+                        <span
+                          key={method}
+                          className="rounded-full border border-line bg-wash px-2.5 py-1 text-xs font-medium text-soft"
+                        >
+                          {t(`payment.method.${method}` as never)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {completeError ? <Alert tone="danger">{completeError}</Alert> : null}
-                  <div className="space-y-2">
-                    <Button className="w-full" onClick={confirm} disabled={completing}>
-                      {completing ? t('portal.pay_starting') : t('portal.chapa_confirm')}
-                    </Button>
-                    <Link href="/portal" className="block">
-                      <Button variant="secondary" className="w-full">
-                        {t('portal.mock_cancel')}
+                  {/* Real Chapa return: no manual button — the page auto-completes.
+                      Sandbox sim: show the explicit "Confirm payment" button. */}
+                  {isRealChapaReturn ? null : (
+                    <div className="space-y-2">
+                      <Button className="w-full" onClick={confirm} disabled={completing}>
+                        {completing ? t('portal.pay_starting') : t('portal.chapa_confirm')}
                       </Button>
-                    </Link>
-                  </div>
+                      <Link href="/portal" className="block">
+                        <Button variant="secondary" className="w-full">
+                          {t('portal.mock_cancel')}
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
                 </>
               )}
             </CardContent>

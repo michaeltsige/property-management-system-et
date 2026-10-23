@@ -160,10 +160,9 @@ export default function TenantsPage() {
               placeholder={t('common.search')}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="h-9 w-40"
+              className="h-9 w-full sm:w-40"
             />
-            <Button onClick={() => setOpen(true)}>
-              <Add className="h-4 w-4" />
+            <Button leadingIcon={<Add className="h-4 w-4" />} onClick={() => setOpen(true)}>
               {t('common.create')}
             </Button>
           </>

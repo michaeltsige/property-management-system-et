@@ -167,8 +167,7 @@ function DocumentsView() {
         titleKey="nav.documents"
         description={`${ALLOWED_UPLOAD_MIME_TYPES.length} accepted file types · ${maxMb} MB maximum`}
         actions={
-          <Button onClick={() => setOpen(true)}>
-            <Add className="h-4 w-4" />
+          <Button leadingIcon={<Add className="h-4 w-4" />} onClick={() => setOpen(true)}>
             {t('documents.upload')}
           </Button>
         }

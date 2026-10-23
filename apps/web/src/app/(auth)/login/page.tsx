@@ -41,27 +41,27 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center px-4">
+    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-y-auto px-4 py-6">
       {/* Addis Ababa at golden hour; the flat dark overlay keeps text readable
           (WCAG) without decorative gradients. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-cover bg-center"
+        className="fixed inset-0 bg-cover bg-center"
         style={{ backgroundImage: "url('/images/login-hero.jpg')" }}
       />
-      <div aria-hidden="true" className="absolute inset-0 bg-ink-950/60" />
+      <div aria-hidden="true" className="fixed inset-0 bg-ink-950/60" />
       {/* Door language is a device choice, always one tap away (see door-language.tsx). */}
       <DoorLanguagePicker />
       <div className="relative w-full max-w-sm">
-        <div className="mb-6 text-center">
-          <Logo size={88} onDark className="mx-auto mb-3" />
-          <h1 className="text-xl font-semibold tracking-tight text-white">{t('app.name')}</h1>
+        <div className="mb-5 text-center">
+          <Logo size={72} onDark className="mx-auto mb-2" />
+          <h1 className="text-lg font-semibold tracking-tight text-white sm:text-xl">{t('app.name')}</h1>
           <p className="mt-1 text-xs text-white/70">{t('app.tagline')}</p>
         </div>
 
         <Card className="shadow-float">
           <CardContent className="py-2">
-            <form className="space-y-4" onSubmit={onSubmit}>
+            <form className="space-y-3 sm:space-y-4" onSubmit={onSubmit}>
               <div className="space-y-1">
                 <Label htmlFor="email">{t('auth.email')}</Label>
                 <Input
@@ -95,7 +95,7 @@ export default function LoginPage() {
         {/* The other doors, as buttons: dim links were invisible against the
             photo background. Register is the outline-on-white treatment; the
             tenant portal gets the gold variant so the two flows read apart. */}
-        <div className="mt-6 flex flex-col gap-2">
+        <div className="mt-4 flex flex-col gap-2 sm:mt-6">
           <Button
             asChild
             variant="outline"
