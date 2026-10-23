@@ -9,13 +9,12 @@
 
 import { useId, useMemo, useState } from 'react';
 
-import { daysInMonth, monthName, todayIn, type CalendarKind } from '@pms/calendar';
+import { monthName, todayIn, type CalendarKind } from '@pms/calendar';
 
 import { fromInputAmount, toInputAmount } from '@/lib/format';
 import { usePreferences } from '@/lib/preferences';
-import { cn } from '@/lib/utils';
 
-import { Button, Input, Label, Select } from './ui';
+import { Input, Label, Select } from './ui';
 
 export function MoneyInput({
   value,
