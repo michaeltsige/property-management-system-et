@@ -58,6 +58,21 @@ describe('primitives', () => {
     );
     expect(screen.getByRole('link', { name: 'New lease' })).toHaveAttribute('href', '/leases?new=1');
   });
+
+  // Regression for the empty-buttons report (2026-11): the leadingIcon change
+  // destructured `children` out of props and the default branch stopped
+  // rendering it — every plain <Button>label</Button> rendered an empty box
+  // and every asChild button rendered nothing at all.
+  it('renders the label of a plain button', () => {
+    render(<Button type="submit">Sign in</Button>);
+    expect(screen.getByRole('button', { name: 'Sign in' })).toBeInTheDocument();
+  });
+
+  it('renders the label of a leading-icon button next to the icon', () => {
+    render(<Button leadingIcon={<span data-testid="icon" />}>Create tenant</Button>);
+    expect(screen.getByRole('button', { name: 'Create tenant' })).toBeInTheDocument();
+    expect(screen.getByTestId('icon')).toBeInTheDocument();
+  });
 });
 
 describe('Modal', () => {

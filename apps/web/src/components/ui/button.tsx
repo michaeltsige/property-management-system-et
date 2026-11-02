@@ -67,7 +67,11 @@ export function Button({ className, variant, size, asChild = false, leadingIcon,
       </Component>
     );
   }
-  return <Component className={cn(buttonVariants({ variant, size }), className)} {...props} />;
+  return (
+    <Component className={cn(buttonVariants({ variant, size }), className)} {...props}>
+      {children}
+    </Component>
+  );
 }
 
 export { buttonVariants };
