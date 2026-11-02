@@ -71,6 +71,41 @@ describe('resolution order', () => {
     expect(resolved.source).toBe('missing');
     expect(resolved.text).toBe('this.key.does.not.exist');
   });
+
+  it('never lets an empty or whitespace override blank out the UI', () => {
+    // Regression: a legacy writer stored empty/whitespace override text, and
+    // the override branch returned it verbatim — every matching button label
+    // rendered as an empty box. Such rows must be treated as absent.
+    const overrides: TranslationOverride[] = [
+      // Empty organization override for a key the English catalog answers.
+      { key: 'csv.title', language: 'en', text: '', organizationId, status: 'reviewed' },
+      // Whitespace-only global override.
+      { key: 'tenant.portal_disable', language: 'en', text: '   ', organizationId: null, status: 'reviewed' },
+    ];
+
+    const csv = resolveMessage('csv.title', { language: 'en', organizationId, overrides });
+    expect(csv.source).toBe('catalog');
+    expect(csv.text).toBe(EN_CATALOG['csv.title']);
+
+    const portal = resolveMessage('tenant.portal_disable', {
+      language: 'en',
+      organizationId,
+      overrides,
+    });
+    expect(portal.source).toBe('catalog');
+    expect(portal.text).toBe(EN_CATALOG['tenant.portal_disable']);
+  });
+
+  it('still prefers a usable override over the catalog', () => {
+    const overrides: TranslationOverride[] = [
+      // The bad row comes first in the array: `find` must skip it, not stop at it.
+      { key: 'auth.sign_in', language: 'en', text: '', organizationId, status: 'machine_draft' },
+      { key: 'auth.sign_in', language: 'en', text: 'Enter', organizationId, status: 'reviewed' },
+    ];
+    const resolved = resolveMessage('auth.sign_in', { language: 'en', organizationId, overrides });
+    expect(resolved.source).toBe('organization_override');
+    expect(resolved.text).toBe('Enter');
+  });
 });
 
 describe('ICU formatting', () => {

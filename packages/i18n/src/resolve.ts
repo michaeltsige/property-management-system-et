@@ -71,6 +71,20 @@ export function shippedMessage(language: LanguageCode, key: TranslationKey): str
   return undefined;
 }
 
+/**
+ * An override whose text is empty or whitespace-only is corrupt data, not a
+ * translation: it must never blank out a button label that the shipped catalog
+ * answers. Empty overrides have reached production databases before (legacy
+ * writers predating the `min(1)` validation), and because the override branch
+ * of `resolveMessage` returns `text` verbatim, a single bad row rendered every
+ * matching control as an empty box. Such rows are treated as absent here —
+ * resolution falls through to the global override, the shipped catalog and
+ * English, exactly as if the row had been deleted.
+ */
+function isUsableOverride(override: TranslationOverride): boolean {
+  return typeof override.text === 'string' && override.text.trim().length > 0;
+}
+
 export function resolveMessage(
   key: TranslationKey,
   options: {
@@ -86,7 +100,7 @@ export function resolveMessage(
   const forKey = overrides.filter((o) => o.key === key && o.language === language);
 
   const organizationOverride = organizationId
-    ? forKey.find((o) => o.organizationId === organizationId)
+    ? forKey.find((o) => o.organizationId === organizationId && isUsableOverride(o))
     : undefined;
   if (organizationOverride) {
     return {
@@ -98,7 +112,7 @@ export function resolveMessage(
     };
   }
 
-  const globalOverride = forKey.find((o) => o.organizationId === null);
+  const globalOverride = forKey.find((o) => o.organizationId === null && isUsableOverride(o));
   if (globalOverride) {
     return {
       key,

@@ -131,10 +131,17 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         rows: { key: string; current: string; status: string; source: string }[];
       };
       // Only rows that came from an override are sent to the translator; shipped
-      // catalog text is already in the bundle.
+      // catalog text is already in the bundle. Rows whose resolved text is
+      // empty/whitespace are dropped here as well: the resolver also guards
+      // against them, but they never need to reach the client state at all.
       setOverrides(
         payload.rows
-          .filter((row) => row.source === 'organization_override' || row.source === 'global_override')
+          .filter(
+            (row) =>
+              (row.source === 'organization_override' || row.source === 'global_override') &&
+              typeof row.current === 'string' &&
+              row.current.trim().length > 0,
+          )
           .map((row) => ({
             key: row.key,
             language,

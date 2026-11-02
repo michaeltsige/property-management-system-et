@@ -574,7 +574,11 @@ export const documentUploadMetaSchema = z.object({
 export const translationOverrideSchema = z.object({
   key: translationKeySchema,
   language: languageSchema,
-  text: z.string().min(1).max(4000),
+  // Trim + min(1): a whitespace-only "translation" must be rejected, not saved.
+  // Empty override text blanks out every control that renders the key (the
+  // resolver skips such rows, but they should never be written in the first
+  // place).
+  text: z.string().trim().min(1).max(4000),
   /** Organization scope; omit for a platform-wide override (platform admins only). */
   organizationId: uuidSchema.optional(),
   status: z.enum(['machine_draft', 'unreviewed', 'reviewed']).default('unreviewed'),

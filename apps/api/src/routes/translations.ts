@@ -122,7 +122,12 @@ translationsRouter.post(
         throw badRequest(`Unexpected CSV header. Expected: ${TRANSLATION_CSV_HEADER.join(',')}`);
       }
 
-      const rows = parsed.slice(1).filter((values) => values.length >= 4 && values[0] && values[3]);
+      // Rows need a key, a target language and non-blank text: a whitespace-only
+      // "translation" would blank out the key's UI once imported (the resolver
+      // guards against it, but such rows are rejected here too).
+      const rows = parsed
+        .slice(1)
+        .filter((values) => values.length >= 4 && values[0]?.trim() && values[3]?.trim());
       if (req.body.dryRun) {
         res.json({ dryRun: true, wouldImport: rows.length });
         return;
@@ -131,7 +136,10 @@ translationsRouter.post(
       const result = await getPrisma().$transaction(async (tx) => {
         let imported = 0;
         for (const values of rows) {
-          const [key, language, , text] = values as [string, string, string, string];
+          const [rawKey, rawLanguage, , rawText] = values as [string, string, string, string];
+          const key = rawKey.trim();
+          const language = rawLanguage.trim();
+          const text = rawText.trim();
           if (!['am', 'om', 'ti'].includes(language)) continue;
 
           const existing = await tx.translationOverride.findFirst({

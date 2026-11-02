@@ -100,7 +100,7 @@ export default function LoginPage() {
             asChild
             variant="outline"
             size="lg"
-            className="w-full border-white/60 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+            className="w-full border-white/60 bg-white/10 text-white hover:bg-white/20 hover:text-white dark:border-white/60 dark:text-white"
           >
             <Link href="/register">{t('auth.register_organization')}</Link>
           </Button>
