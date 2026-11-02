@@ -231,6 +231,16 @@ this contract, confirmed from the official documentation on 2026-10-16:
   exact endpoints were not confirmed from the docs at the time of writing, so
   the adapter refuses with a clear message instead of guessing URLs. Refunds
   run from the Chapa dashboard until then.
+- **Test credentials (test mode, checked 2026-11-02)** — Chapa's hosted
+  checkout only succeeds with their published test instruments
+  (developer.chapa.co/test/testing-cards and developer.chapa.co/test/
+  testing-mobile); any mobile number not on that list returns "failed":
+  - Mobile money — telebirr / CBEBirr / COOPPay-ebirr / Awash / Amole:
+    `0900123456`, `0900112233`, `0900881111` (Awash Bank and Amole also ask
+    for an OTP: `12345`); M-Pesa: `0700123456`, `0700112233`, `0700881111`.
+  - Cards — Visa `4200 0000 0000 0000`, Mastercard `5400 0000 0000 0000`,
+    Amex `3700 0000 0000 0000` (CVV `1234`), UnionPay `6200 0000 0000 0000`,
+    Diners `3800 0000 0000 0000`; other cards use CVV `123`, expiry `12/34`.
 - **Test mode** — the adapter's built-in sandbox simulation emulates this same
   contract in-process (same tx_ref shape, checkout redirect, verify semantics,
   signed webhooks). No network, no Chapa account.

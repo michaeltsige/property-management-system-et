@@ -10,10 +10,10 @@
  * - **Live mode (`live`)**: real HTTP calls to api.chapa.co with the
  *   organization's secret key. The key prefix decides what Chapa does with
  *   the request: `CHASECK_TEST-...` runs in Chapa's test mode (real hosted
- *   checkout, real API surface, but the published test cards / test mobile
- *   numbers from developer.chapa.co/integrations/testing-cards), and
- *   `CHASECK-...` is the live key (real money). Both hit the same endpoint —
- *   there is no separate sandbox URL.
+ *   checkout, real API surface, but only the published test cards / mobile
+ *   numbers succeed — developer.chapa.co/test/testing-cards and
+ *   /test/testing-mobile), and `CHASECK-...` is the live key (real money).
+ *   Both hit the same endpoint — there is no separate sandbox URL.
  *
  * LIVE CONTRACT — confirmed against the official documentation
  * (developer.chapa.co, "Accept Payment" + "Webhooks", last checked 2026-10-16;
