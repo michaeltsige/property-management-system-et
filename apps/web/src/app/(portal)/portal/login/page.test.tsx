@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EN_CATALOG } from '@pms/i18n';
 import PortalLoginPage from '@/app/(portal)/portal/login/page';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import type * as ApiModule from '@/lib/api';
 
 const context = vi.hoisted(() => ({
@@ -21,7 +21,11 @@ vi.mock('@/lib/preferences', () => ({
     { code: 'ti', label: 'ትግርኛ', english: 'Tigrinya' },
   ],
   usePreferences: () => ({
-    t: (key: keyof typeof EN_CATALOG) => EN_CATALOG[key] ?? key,
+    t: (key: keyof typeof EN_CATALOG, values?: Record<string, string | number>) => {
+      const template = EN_CATALOG[key] ?? (key as string);
+      if (!values) return template;
+      return template.replace(/\{(\w+)\}/g, (_match, name: string) => String(values[name] ?? `{${name}}`));
+    },
     signIn: context.signIn,
     language: 'en',
     setLanguage: () => undefined,
@@ -37,7 +41,7 @@ beforeEach(() => {
 });
 
 describe('tenant portal login', () => {
-  it('asks for a phone number first, then for the code', async () => {
+  it('asks for a phone number first, then for the code with a 60s resend countdown', async () => {
     vi.mocked(api.portalRequestCode).mockResolvedValue({ ok: true });
     const user = userEvent.setup();
     render(<PortalLoginPage />);
@@ -48,6 +52,12 @@ describe('tenant portal login', () => {
 
     expect(api.portalRequestCode).toHaveBeenCalledWith({ phone: '0911234567' });
     expect(await screen.findByText(EN_CATALOG['portal.code_sent'])).toBeDefined();
+    // The countdown replaces the vague "you already asked recently" message:
+    // the resend button starts disabled and names the seconds.
+    const resend = screen.getByRole('button', {
+      name: EN_CATALOG['auth.resend_in'].replace('{seconds}', '60'),
+    });
+    expect((resend as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('signs the tenant in with the verified code', async () => {
@@ -85,9 +95,11 @@ describe('tenant portal login', () => {
     expect(context.replace).toHaveBeenCalledWith('/portal');
   });
 
-  it('shows the API error for a wrong code', async () => {
+  it('says only the code is wrong (never "email or code")', async () => {
     vi.mocked(api.portalRequestCode).mockResolvedValue({ ok: true });
-    vi.mocked(api.portalVerify).mockRejectedValue(new Error('Email or code is incorrect'));
+    vi.mocked(api.portalVerify).mockRejectedValue(
+      new ApiError(401, 'UNAUTHENTICATED', 'The code is incorrect'),
+    );
     const user = userEvent.setup();
     render(<PortalLoginPage />);
 
@@ -96,7 +108,42 @@ describe('tenant portal login', () => {
     await user.type(await screen.findByLabelText(EN_CATALOG['portal.code']), '000000');
     await user.click(screen.getByRole('button', { name: EN_CATALOG['portal.verify'] }));
 
-    expect(await screen.findByText('Email or code is incorrect')).toBeDefined();
+    expect(await screen.findByText(EN_CATALOG['auth.code_incorrect'])).toBeDefined();
     expect(context.signIn).not.toHaveBeenCalled();
+  });
+
+  it('maps an expired-code answer to the expired message', async () => {
+    vi.mocked(api.portalRequestCode).mockResolvedValue({ ok: true });
+    vi.mocked(api.portalVerify).mockRejectedValue(
+      new ApiError(401, 'UNAUTHENTICATED', 'This code has expired. Request a new one.'),
+    );
+    const user = userEvent.setup();
+    render(<PortalLoginPage />);
+
+    await user.type(screen.getByLabelText(EN_CATALOG['portal.phone']), '0911234567');
+    await user.click(screen.getByRole('button', { name: EN_CATALOG['portal.send_code'] }));
+    await user.type(await screen.findByLabelText(EN_CATALOG['portal.code']), '999999');
+    await user.click(screen.getByRole('button', { name: EN_CATALOG['portal.verify'] }));
+
+    expect(await screen.findByText(EN_CATALOG['auth.code_expired'])).toBeDefined();
+  });
+
+  it('treats a mid-cooldown 429 as a countdown, not a message', async () => {
+    vi.mocked(api.portalRequestCode).mockRejectedValueOnce(
+      new ApiError(429, 'RATE_LIMITED', 'A code was requested recently', {
+        retryAfterSeconds: 42,
+      }),
+    );
+    const user = userEvent.setup();
+    render(<PortalLoginPage />);
+
+    await user.type(screen.getByLabelText(EN_CATALOG['portal.phone']), '0911234567');
+    await user.click(screen.getByRole('button', { name: EN_CATALOG['portal.send_code'] }));
+
+    // Straight to the code step with the server's remaining seconds on the clock.
+    expect(await screen.findByText(EN_CATALOG['portal.code_sent'])).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: EN_CATALOG['auth.resend_in'].replace('{seconds}', '42') }),
+    ).toBeDefined();
   });
 });

@@ -29,8 +29,12 @@ export interface ApiErrorBody {
   error: {
     code: string;
     message: string;
-    /** Field-level validation details, when the failure came from Zod. */
-    details?: { path: string; message: string }[];
+    /**
+     * Endpoint-specific details. Validation failures carry the Zod field list
+     * under `fields`; other errors may carry their own values (e.g. the portal
+     * OTP cooldown's `retryAfterSeconds`, which drives the web countdown).
+     */
+    details?: { fields?: { path: string; message: string }[] } & Record<string, unknown>;
     requestId?: string;
   };
 }

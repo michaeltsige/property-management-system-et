@@ -231,17 +231,21 @@ export async function verifyPortalCode(
   meta: { requestId?: string },
 ) {
   const tenant = await findEnrolledTenantByPhone(prisma, phone);
-  if (!tenant?.user) throw unauthenticated('Email or code is incorrect');
+  // The phone number was already validated at request-code time (explicit 404
+  // there), so by the verify step the only thing that can be wrong is the
+  // code — saying "phone or code" here just confuses the tenant.
+  if (!tenant?.user) throw unauthenticated('The code is incorrect');
 
   const otp = await prisma.tenantOtp.findFirst({
     where: { tenantId: tenant.id, consumedAt: null },
     orderBy: { createdAt: 'desc' },
   });
-  if (!otp || otp.expiresAt.getTime() < Date.now()) throw unauthenticated('Code expired or not requested');
+  if (!otp || otp.expiresAt.getTime() < Date.now())
+    throw unauthenticated('This code has expired. Request a new one.');
   if (otp.attempts >= OTP_MAX_ATTEMPTS) throw unauthenticated('Too many attempts; request a new code');
   if (!hashesMatch(otp.codeHash, hashCode(code))) {
     await prisma.tenantOtp.update({ where: { id: otp.id }, data: { attempts: { increment: 1 } } });
-    throw unauthenticated('Email or code is incorrect');
+    throw unauthenticated('The code is incorrect');
   }
 
   await prisma.tenantOtp.update({ where: { id: otp.id }, data: { consumedAt: new Date() } });

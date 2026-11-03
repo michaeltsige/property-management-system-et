@@ -33,7 +33,12 @@ export function errorHandler(error: unknown, req: Request, res: Response, _next:
       code: appError.code,
       message: appError.message,
       requestId: req.requestId,
-      ...(appError.details?.fields ? { details: appError.details.fields } : {}),
+      // The full details object: field issues for validation failures AND
+      // endpoint-specific values (e.g. `retryAfterSeconds` on the portal OTP
+      // cooldown 429) — the web countdown needs that number. Validation
+      // details keep their `{ fields: [...] }` shape, which is exactly what
+      // the client's field-error mapping reads.
+      ...(appError.details ? { details: appError.details } : {}),
     },
   };
 

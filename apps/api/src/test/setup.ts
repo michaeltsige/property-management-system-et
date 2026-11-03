@@ -11,6 +11,15 @@ import { getPrisma, disconnectPrisma } from '../lib/prisma.js';
 
 loadEnv({ path: new URL('../../.env', import.meta.url).pathname });
 
+// The suite pins the payment provider to the mock: portal-payment, receipt and
+// gateway tests assert the mock loop ("the mock provider is the active adapter
+// in tests"), and a developer's local .env with PAYMENT_PROVIDER=chapa or a
+// CHAPA_SECRET_KEY must not be able to flip the platform default under them.
+// Chapa's own transports (v1/v2) are covered by dedicated adapter tests that
+// construct the adapter directly.
+process.env.PAYMENT_PROVIDER = 'mock';
+delete process.env.CHAPA_SECRET_KEY;
+
 // Fail fast if tests are somehow pointed at a non-test database.
 const url = databaseUrl(getConfig());
 const databaseName = new URL(url).pathname.replace(/^\//, '').split('?')[0] ?? '';

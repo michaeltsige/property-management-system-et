@@ -212,6 +212,10 @@ export const EN_CATALOG = {
   'auth.verify_submit': 'Verify and continue',
   'auth.verify_resend': 'Resend code',
   'auth.verify_resent': 'A new code is on its way.',
+  'auth.resend_in': 'Resend code (in {seconds}s)',
+  'auth.change_number': 'Use a different number',
+  'auth.code_incorrect': 'The code is incorrect. Please try again.',
+  'auth.code_expired': 'This code has expired. Request a new one.',
   'auth.dev_code': 'Development only — your code is {code}',
 
   // --- email templates (transactional mail, rendered per recipient) --------

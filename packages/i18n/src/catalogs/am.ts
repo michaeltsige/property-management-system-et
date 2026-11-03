@@ -731,6 +731,10 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'auth.verify_submit': 'ያረጋግጡ እና ይቀጥሉ',
   'auth.verify_resend': 'ኮድ እንደገና ላክ',
   'auth.verify_resent': 'አዲስ ኮድ በመንገድ ላይ ነው።',
+  'auth.resend_in': 'ኮድ እንደገና ላክ (በ{seconds} ሰከንድ ውስጥ)',
+  'auth.change_number': 'ሌላ ቁጥር ይጠቀሙ',
+  'auth.code_incorrect': 'ኮዱ ትክክል አይደለም። እባክዎ እንደገና ይሞክሩ።',
+  'auth.code_expired': 'ኮዱ አብቃቷል። አዲስ ይጠይቁ።',
   'auth.dev_code': 'ለልማት ብቻ — ኮድዎ {code} ነው',
   'email.verification.subject': 'የኢሜይል አድራሻዎን ያረጋግጡ',
   'email.verification.body':

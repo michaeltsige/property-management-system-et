@@ -6,10 +6,15 @@
  * There is no password anywhere in this flow. An unregistered phone number
  * gets a plain "not registered" message (server 404, code NOT_FOUND) — the
  * owner prefers honest feedback over enumeration-avoidance.
+ *
+ * The resend button runs a visible 60-second countdown (like every standard
+ * OTP screen) instead of the server replying with a vague "you recently asked"
+ * message; if the server does answer 429 (fresh page load mid-cooldown), the
+ * countdown restarts from its `retryAfterSeconds` instead of showing text.
  */
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Logo } from '@/components/logo';
 import OtpInput from '@/components/otp-input';
@@ -19,6 +24,9 @@ import { usePreferences } from '@/lib/preferences';
 
 import { Alert, Button, Card, CardContent, Input, Label } from '@/components/ui';
 
+/** Must match the API's OTP_RESEND_COOLDOWN_SECONDS. */
+const RESEND_COOLDOWN_SECONDS = 60;
+
 export default function PortalLoginPage() {
   const router = useRouter();
   const { signIn, t } = usePreferences();
@@ -27,17 +35,55 @@ export default function PortalLoginPage() {
   const [step, setStep] = useState<'phone' | 'code'>('phone');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [resendIn, setResendIn] = useState(0);
+
+  // Tick the countdown while it is running; zero disables itself.
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const timer = setInterval(() => setResendIn((seconds) => Math.max(0, seconds - 1)), 1000);
+    return () => clearInterval(timer);
+  }, [resendIn]);
 
   async function requestCode(event: React.FormEvent) {
     event.preventDefault();
     setPending(true);
     setError(null);
     try {
-      await api.portalRequestCode({ phone });
+      await api.portalRequestCode({ phone: phone.trim() });
       setStep('code');
+      setCode('');
+      setResendIn(RESEND_COOLDOWN_SECONDS);
     } catch (cause) {
       if (cause instanceof ApiError && cause.status === 404) {
         setError(t('portal.phone_not_registered'));
+      } else if (cause instanceof ApiError && cause.status === 429) {
+        // A code was requested moments ago and is still valid — act like the
+        // resend timer: show the code step and count down what is left.
+        const details = cause.details as { retryAfterSeconds?: number } | undefined;
+        const seconds = Number(details?.retryAfterSeconds ?? RESEND_COOLDOWN_SECONDS);
+        setStep('code');
+        setResendIn(Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : RESEND_COOLDOWN_SECONDS);
+      } else {
+        setError(cause instanceof Error ? cause.message : String(cause));
+      }
+    } finally {
+      setPending(false);
+    }
+  }
+
+  async function resendCode() {
+    setPending(true);
+    setError(null);
+    try {
+      await api.portalRequestCode({ phone: phone.trim() });
+      setCode('');
+      setResendIn(RESEND_COOLDOWN_SECONDS);
+    } catch (cause) {
+      if (cause instanceof ApiError && cause.status === 429) {
+        // Still inside the server's cooldown: restart the countdown, say nothing.
+        const details = cause.details as { retryAfterSeconds?: number } | undefined;
+        const seconds = Number(details?.retryAfterSeconds ?? RESEND_COOLDOWN_SECONDS);
+        setResendIn(Number.isFinite(seconds) && seconds > 0 ? Math.ceil(seconds) : RESEND_COOLDOWN_SECONDS);
       } else {
         setError(cause instanceof Error ? cause.message : String(cause));
       }
@@ -51,12 +97,22 @@ export default function PortalLoginPage() {
     setPending(true);
     setError(null);
     try {
-      const result = await api.portalVerify({ phone, code });
+      const result = await api.portalVerify({ phone: phone.trim(), code });
       // Identity only; the tokens stayed server-side in HttpOnly cookies.
       signIn({ user: result.user, organization: result.organization, role: result.role });
       router.replace('/portal');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      // The phone was already validated at request time, so only the code can
+      // be wrong here — say exactly that (expired codes get their own line).
+      if (cause instanceof ApiError && cause.status === 401) {
+        setError(
+          typeof cause.message === 'string' && cause.message.toLowerCase().includes('expired')
+            ? t('auth.code_expired')
+            : t('auth.code_incorrect'),
+        );
+      } else {
+        setError(cause instanceof Error ? cause.message : String(cause));
+      }
     } finally {
       setPending(false);
     }
@@ -128,14 +184,24 @@ export default function PortalLoginPage() {
                   type="button"
                   variant="secondary"
                   className="w-full"
+                  disabled={pending || resendIn > 0}
+                  onClick={() => void resendCode()}
+                >
+                  {resendIn > 0 ? t('auth.resend_in', { seconds: resendIn }) : t('portal.resend')}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
                   disabled={pending}
                   onClick={() => {
                     setStep('phone');
                     setCode('');
                     setError(null);
+                    setResendIn(0);
                   }}
                 >
-                  {t('portal.resend')}
+                  {t('auth.change_number')}
                 </Button>
               </form>
             )}

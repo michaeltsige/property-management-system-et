@@ -764,6 +764,10 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'auth.verify_submit': 'Mirkaneessi fi itti fufi',
   'auth.verify_resend': 'Koodii irra deebiin eriki',
   'auth.verify_resent': 'Koodiin haaraan karaa irra jira.',
+  'auth.resend_in': 'Koodii irra deebii ergi (sekonii {seconds} keessaa)',
+  'auth.change_number': 'Lakkoofsa addaa fayadami',
+  'auth.code_incorrect': 'Koodiin dogoggoraati. Maaloo irra deebii yaali.',
+  'auth.code_expired': 'Koodiin dhuma isaa qabda. Koodii haaraa gaafadhu.',
   'auth.dev_code': 'Guddisuu qofaaf — koodiin kee {code} dha',
   'email.verification.subject': 'Imeelii kee mirkaneessi',
   'email.verification.body':

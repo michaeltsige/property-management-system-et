@@ -730,6 +730,10 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'auth.verify_submit': 'ኣረጋግጽን ቀጽልን',
   'auth.verify_resend': 'ኮድ ደጊምካ ሰደድ',
   'auth.verify_resent': 'ሓድሽ ኮድ ትሕቲ ኪመጽእ ኣሎ።',
+  'auth.resend_in': 'ኮድ ድጋሚ ለኣኽዎ (ውሽጢ {seconds} ካልኢት)',
+  'auth.change_number': 'ካልእ ቁጽሪ ተጠቐም',
+  'auth.code_incorrect': 'እቲ ኮድ ስሕተት እዩ። በጃኻ ድጋሚ ፈትኖ።',
+  'auth.code_expired': 'እቲ ኮድ ኣብቂዑ ኣሎ። ሓድሽ ሕተቱ።',
   'auth.dev_code': 'ንምምዕባል ጥራይ — ኮድካ {code} እዩ',
   'email.verification.subject': 'ኢመይልካ ኣረጋግጽ',
   'email.verification.body':
