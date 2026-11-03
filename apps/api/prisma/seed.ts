@@ -210,8 +210,10 @@ async function main(): Promise<void> {
         passwordHash,
         language: 'en',
         calendar: 'ethiopian',
+        // Demo accounts skip the verification flow: seeded mailboxes are fake.
+        emailVerifiedAt: new Date(),
       },
-      update: { fullName: person.fullName, passwordHash },
+      update: { fullName: person.fullName, passwordHash, emailVerifiedAt: new Date() },
     });
     await prisma.membership.upsert({
       where: { organizationId_userId: { organizationId: organization.id, userId: user.id } },
@@ -367,9 +369,33 @@ async function main(): Promise<void> {
       status: 'occupied',
       typeLabel: index % 2 === 0 ? '2BR' : '3BR',
     })),
-    { propertyId: meg.id, label: 'G-01', floor: 0, areaSqm: 120, marketRentMinor: BigInt(4_500_000), status: 'occupied', typeLabel: 'Shop' },
-    { propertyId: meg.id, label: 'G-02', floor: 0, areaSqm: 95, marketRentMinor: BigInt(2_800_000), status: 'occupied', typeLabel: 'Office' },
-    { propertyId: meg.id, label: 'F-01', floor: 1, areaSqm: 90, marketRentMinor: BigInt(2_200_000), status: 'vacant', typeLabel: 'Office' },
+    {
+      propertyId: meg.id,
+      label: 'G-01',
+      floor: 0,
+      areaSqm: 120,
+      marketRentMinor: BigInt(4_500_000),
+      status: 'occupied',
+      typeLabel: 'Shop',
+    },
+    {
+      propertyId: meg.id,
+      label: 'G-02',
+      floor: 0,
+      areaSqm: 95,
+      marketRentMinor: BigInt(2_800_000),
+      status: 'occupied',
+      typeLabel: 'Office',
+    },
+    {
+      propertyId: meg.id,
+      label: 'F-01',
+      floor: 1,
+      areaSqm: 90,
+      marketRentMinor: BigInt(2_200_000),
+      status: 'vacant',
+      typeLabel: 'Office',
+    },
     ...['A-101', 'A-102', 'A-103', 'A-104'].map((label, index) => ({
       propertyId: saris.id,
       label,
@@ -381,12 +407,25 @@ async function main(): Promise<void> {
       status: 'occupied',
       typeLabel: '2BR',
     })),
-    { propertyId: villa.id, label: 'MAIN', floor: 0, bedrooms: 4, bathrooms: 3, areaSqm: 240, marketRentMinor: BigInt(6_500_000), status: 'unavailable' },
+    {
+      propertyId: villa.id,
+      label: 'MAIN',
+      floor: 0,
+      bedrooms: 4,
+      bathrooms: 3,
+      areaSqm: 240,
+      marketRentMinor: BigInt(6_500_000),
+      status: 'unavailable',
+    },
   ];
   const units = new Map<string, { id: string; label: string; propertyId: string }>();
   for (const seed of unitSeeds) {
     const unit = await prisma.unit.create({ data: { organizationId: organization.id, ...seed } });
-    units.set(`${seed.propertyId}:${seed.label}`, { id: unit.id, label: unit.label, propertyId: seed.propertyId });
+    units.set(`${seed.propertyId}:${seed.label}`, {
+      id: unit.id,
+      label: unit.label,
+      propertyId: seed.propertyId,
+    });
   }
   const unitOf = (propertyId: string, label: string) => units.get(`${propertyId}:${label}`)!;
 
@@ -477,27 +516,152 @@ async function main(): Promise<void> {
   };
 
   const leaseSeeds: LeaseSeed[] = [
-    { unit: unitOf(bole.id, '101'), tenantIndex: 0, rentMinor: 1_500_000n, dueDay: 5, startShift: -13, status: 'active', behavior: 'reliable', depositMonths: 2 },
-    { unit: unitOf(bole.id, '102'), tenantIndex: 1, rentMinor: 1_800_000n, dueDay: 5, startShift: -13, status: 'active', behavior: 'late', depositMonths: 2 },
-    { unit: unitOf(bole.id, '201'), tenantIndex: 2, rentMinor: 1_250_000n, dueDay: 10, startShift: -10, status: 'active', behavior: 'partial', depositMonths: 1 },
-    { unit: unitOf(bole.id, '202'), tenantIndex: 3, rentMinor: 2_000_000n, dueDay: 1, startShift: -8, status: 'active', behavior: 'reliable', escalation: { percent: 5, everyMonths: 12 }, depositMonths: 2 },
-    { unit: unitOf(bole.id, '301'), tenantIndex: 4, rentMinor: 1_550_000n, dueDay: 5, startShift: -13, status: 'active', behavior: 'delinquent', depositMonths: 1 },
-    { unit: unitOf(bole.id, '302'), tenantIndex: 5, rentMinor: 1_400_000n, dueDay: 15, startShift: -6, status: 'active', behavior: 'reliable', depositMonths: 2 },
-    { unit: unitOf(bole.id, '103'), tenantIndex: 6, rentMinor: 1_300_000n, dueDay: 5, startShift: -13, status: 'expired', endShift: -2, behavior: 'ended', depositMonths: 1 },
-    { unit: unitOf(bole.id, '303'), tenantIndex: 7, rentMinor: 1_600_000n, dueDay: 5, startShift: 1, status: 'pending', behavior: 'none', depositMonths: 2 },
-    { unit: unitOf(meg.id, 'G-01'), tenantIndex: 8, rentMinor: 4_500_000n, dueDay: 1, startShift: -13, status: 'active', frequency: 'quarterly', behavior: 'reliable', depositMonths: 3 },
-    { unit: unitOf(meg.id, 'G-02'), tenantIndex: 9, rentMinor: 2_800_000n, dueDay: 1, startShift: -5, status: 'active', behavior: 'partial', depositMonths: 2 },
-    { unit: unitOf(saris.id, 'A-101'), tenantIndex: 10, rentMinor: 1_100_000n, dueDay: 7, startShift: -12, status: 'active', behavior: 'reliable', depositMonths: 1 },
-    { unit: unitOf(saris.id, 'A-102'), tenantIndex: 11, rentMinor: 1_350_000n, dueDay: 7, startShift: -13, status: 'active', behavior: 'partial', depositMonths: 2 },
+    {
+      unit: unitOf(bole.id, '101'),
+      tenantIndex: 0,
+      rentMinor: 1_500_000n,
+      dueDay: 5,
+      startShift: -13,
+      status: 'active',
+      behavior: 'reliable',
+      depositMonths: 2,
+    },
+    {
+      unit: unitOf(bole.id, '102'),
+      tenantIndex: 1,
+      rentMinor: 1_800_000n,
+      dueDay: 5,
+      startShift: -13,
+      status: 'active',
+      behavior: 'late',
+      depositMonths: 2,
+    },
+    {
+      unit: unitOf(bole.id, '201'),
+      tenantIndex: 2,
+      rentMinor: 1_250_000n,
+      dueDay: 10,
+      startShift: -10,
+      status: 'active',
+      behavior: 'partial',
+      depositMonths: 1,
+    },
+    {
+      unit: unitOf(bole.id, '202'),
+      tenantIndex: 3,
+      rentMinor: 2_000_000n,
+      dueDay: 1,
+      startShift: -8,
+      status: 'active',
+      behavior: 'reliable',
+      escalation: { percent: 5, everyMonths: 12 },
+      depositMonths: 2,
+    },
+    {
+      unit: unitOf(bole.id, '301'),
+      tenantIndex: 4,
+      rentMinor: 1_550_000n,
+      dueDay: 5,
+      startShift: -13,
+      status: 'active',
+      behavior: 'delinquent',
+      depositMonths: 1,
+    },
+    {
+      unit: unitOf(bole.id, '302'),
+      tenantIndex: 5,
+      rentMinor: 1_400_000n,
+      dueDay: 15,
+      startShift: -6,
+      status: 'active',
+      behavior: 'reliable',
+      depositMonths: 2,
+    },
+    {
+      unit: unitOf(bole.id, '103'),
+      tenantIndex: 6,
+      rentMinor: 1_300_000n,
+      dueDay: 5,
+      startShift: -13,
+      status: 'expired',
+      endShift: -2,
+      behavior: 'ended',
+      depositMonths: 1,
+    },
+    {
+      unit: unitOf(bole.id, '303'),
+      tenantIndex: 7,
+      rentMinor: 1_600_000n,
+      dueDay: 5,
+      startShift: 1,
+      status: 'pending',
+      behavior: 'none',
+      depositMonths: 2,
+    },
+    {
+      unit: unitOf(meg.id, 'G-01'),
+      tenantIndex: 8,
+      rentMinor: 4_500_000n,
+      dueDay: 1,
+      startShift: -13,
+      status: 'active',
+      frequency: 'quarterly',
+      behavior: 'reliable',
+      depositMonths: 3,
+    },
+    {
+      unit: unitOf(meg.id, 'G-02'),
+      tenantIndex: 9,
+      rentMinor: 2_800_000n,
+      dueDay: 1,
+      startShift: -5,
+      status: 'active',
+      behavior: 'partial',
+      depositMonths: 2,
+    },
+    {
+      unit: unitOf(saris.id, 'A-101'),
+      tenantIndex: 10,
+      rentMinor: 1_100_000n,
+      dueDay: 7,
+      startShift: -12,
+      status: 'active',
+      behavior: 'reliable',
+      depositMonths: 1,
+    },
+    {
+      unit: unitOf(saris.id, 'A-102'),
+      tenantIndex: 11,
+      rentMinor: 1_350_000n,
+      dueDay: 7,
+      startShift: -13,
+      status: 'active',
+      behavior: 'partial',
+      depositMonths: 2,
+    },
   ];
 
-  const leaseRefs = ['BLD-101-24', 'BLD-102-24', 'BLD-201-24', 'BLD-202-24', 'BLD-301-24', 'BLD-302-24', 'BLD-103-24', 'BLD-303-25', 'MEG-G01-24', 'MEG-G02-25', 'SRS-101-24', 'SRS-102-24'];
+  const leaseRefs = [
+    'BLD-101-24',
+    'BLD-102-24',
+    'BLD-201-24',
+    'BLD-202-24',
+    'BLD-301-24',
+    'BLD-302-24',
+    'BLD-103-24',
+    'BLD-303-25',
+    'MEG-G01-24',
+    'MEG-G02-25',
+    'SRS-101-24',
+    'SRS-102-24',
+  ];
 
   const leases: { seed: LeaseSeed; id: string }[] = [];
   for (const [index, seed] of leaseSeeds.entries()) {
-    const endDate = seed.status === 'expired' && seed.endShift !== undefined
-      ? addDays(periodStartUtc(seed.endShift), -1)
-      : undefined;
+    const endDate =
+      seed.status === 'expired' && seed.endShift !== undefined
+        ? addDays(periodStartUtc(seed.endShift), -1)
+        : undefined;
     const depositAmount = seed.depositMonths ? seed.rentMinor * BigInt(seed.depositMonths) : undefined;
     const lease = await prisma.lease.create({
       data: {
@@ -517,7 +681,7 @@ async function main(): Promise<void> {
         depositType: seed.depositMonths ? 'months_of_rent' : 'none',
         depositMonths: seed.depositMonths,
         depositAmountMinor: depositAmount,
-        depositHeldMinor: seed.status === 'active' ? depositAmount ?? 0n : 0n,
+        depositHeldMinor: seed.status === 'active' ? (depositAmount ?? 0n) : 0n,
         escalationPercent: seed.escalation?.percent,
         escalationEveryMonths: seed.escalation?.everyMonths,
         signedAt: seed.status === 'pending' ? undefined : addDays(periodStartUtc(seed.startShift), -3),
@@ -539,9 +703,7 @@ async function main(): Promise<void> {
   const periodKeys = Array.from({ length: -BACKFILL_SHIFT + 1 }, (_, index) =>
     periodKeyOf(BACKFILL_SHIFT + index),
   );
-  const billingLeaseIds = leases
-    .filter(({ seed }) => seed.behavior !== 'none')
-    .map(({ id }) => id);
+  const billingLeaseIds = leases.filter(({ seed }) => seed.behavior !== 'none').map(({ id }) => id);
   const generation = await generateCharges(prisma, {
     organizationId: organization.id,
     periodKeys,
@@ -651,9 +813,7 @@ async function main(): Promise<void> {
     },
   });
 
-  console.warn(
-    `Charges generated: ${generation.created} rent periods (+ water, late fee, waived parking).`,
-  );
+  console.warn(`Charges generated: ${generation.created} rent periods (+ water, late fee, waived parking).`);
 
   // --- payments: per-tenant behaviour across the backfill ---------------------
   const PAYMENT_METHODS_CYCLE = [
@@ -682,7 +842,9 @@ async function main(): Promise<void> {
       method: method.method,
       paidAt,
       provider: method.provider ?? null,
-      providerRef: method.provider ? `DEMO-${method.method.toUpperCase()}-${String(paymentSeq).padStart(4, '0')}` : null,
+      providerRef: method.provider
+        ? `DEMO-${method.method.toUpperCase()}-${String(paymentSeq).padStart(4, '0')}`
+        : null,
       reference: `DEMO-${String(paymentSeq).padStart(4, '0')}`,
       notes: 'Demo backfill',
       allocations: [{ chargeId, amount: { amountMinor: Number(amountMinor), currency: 'ETB' } }],
@@ -704,30 +866,72 @@ async function main(): Promise<void> {
         const extras = await prisma.charge.findMany({
           where: { leaseId, dueDate: charge.dueDate, status: 'open', type: { not: 'rent' } },
         });
-        await payCharge(leaseId, seed.tenantIndex, charge.id, charge.amountMinor, addDays(charge.dueDate, -2), method);
+        await payCharge(
+          leaseId,
+          seed.tenantIndex,
+          charge.id,
+          charge.amountMinor,
+          addDays(charge.dueDate, -2),
+          method,
+        );
         for (const extra of extras) {
-          await payCharge(leaseId, seed.tenantIndex, extra.id, extra.amountMinor, addDays(charge.dueDate, -2), method);
+          await payCharge(
+            leaseId,
+            seed.tenantIndex,
+            extra.id,
+            extra.amountMinor,
+            addDays(charge.dueDate, -2),
+            method,
+          );
         }
       } else if (seed.behavior === 'late') {
         // Always pays in full — but six days after the due date, every time.
-        await payCharge(leaseId, seed.tenantIndex, charge.id, charge.amountMinor, addDays(charge.dueDate, 6), { method: 'bank_transfer' });
+        await payCharge(
+          leaseId,
+          seed.tenantIndex,
+          charge.id,
+          charge.amountMinor,
+          addDays(charge.dueDate, 6),
+          { method: 'bank_transfer' },
+        );
       } else if (seed.behavior === 'partial') {
         // 70% on the due date in cash; roughly every third bill gets caught up
         // two weeks later, the rest keeps drifting as arrears.
         const part = BigInt(Math.floor(Number(charge.amountMinor) * 0.7));
         await payCharge(leaseId, seed.tenantIndex, charge.id, part, charge.dueDate, { method: 'cash' });
         if (index % 3 === 1) {
-          await payCharge(leaseId, seed.tenantIndex, charge.id, charge.amountMinor - part, addDays(charge.dueDate, 14), { method: 'bank_transfer' });
+          await payCharge(
+            leaseId,
+            seed.tenantIndex,
+            charge.id,
+            charge.amountMinor - part,
+            addDays(charge.dueDate, 14),
+            { method: 'bank_transfer' },
+          );
         }
       } else if (seed.behavior === 'delinquent') {
         // Paid like clockwork — until three periods ago, then nothing at all.
         const stopPayingFrom = charges.length - 3;
         if (index < stopPayingFrom) {
-          await payCharge(leaseId, seed.tenantIndex, charge.id, charge.amountMinor, addDays(charge.dueDate, -1), method);
+          await payCharge(
+            leaseId,
+            seed.tenantIndex,
+            charge.id,
+            charge.amountMinor,
+            addDays(charge.dueDate, -1),
+            method,
+          );
         }
       } else if (seed.behavior === 'ended') {
         // The ended lease settled every bill before moving out.
-        await payCharge(leaseId, seed.tenantIndex, charge.id, charge.amountMinor, addDays(charge.dueDate, -2), method);
+        await payCharge(
+          leaseId,
+          seed.tenantIndex,
+          charge.id,
+          charge.amountMinor,
+          addDays(charge.dueDate, -2),
+          method,
+        );
       }
     }
   }
@@ -751,80 +955,182 @@ async function main(): Promise<void> {
 
   // --- vendors and maintenance -----------------------------------------------
   const vendorPlumbing = await prisma.vendor.create({
-    data: { organizationId: organization.id, name: 'Blue Nile Plumbing', category: 'plumbing', phone: '+251911200101', email: 'work@bluenileplumbing.demo', tinNumber: '0012345678' },
+    data: {
+      organizationId: organization.id,
+      name: 'Blue Nile Plumbing',
+      category: 'plumbing',
+      phone: '+251911200101',
+      email: 'work@bluenileplumbing.demo',
+      tinNumber: '0012345678',
+    },
   });
   const vendorElectric = await prisma.vendor.create({
-    data: { organizationId: organization.id, name: 'Addis Spark Electrical', category: 'electrical', phone: '+251911200102', email: 'dispatch@addisspark.demo', tinNumber: '0012345679' },
+    data: {
+      organizationId: organization.id,
+      name: 'Addis Spark Electrical',
+      category: 'electrical',
+      phone: '+251911200102',
+      email: 'dispatch@addisspark.demo',
+      tinNumber: '0012345679',
+    },
   });
   const vendorHvac = await prisma.vendor.create({
-    data: { organizationId: organization.id, name: 'NiceCool HVAC', category: 'hvac', phone: '+251911200104', email: 'service@nicecool.demo', tinNumber: '0012345681' },
+    data: {
+      organizationId: organization.id,
+      name: 'NiceCool HVAC',
+      category: 'hvac',
+      phone: '+251911200104',
+      email: 'service@nicecool.demo',
+      tinNumber: '0012345681',
+    },
   });
   const vendorCleaning = await prisma.vendor.create({
-    data: { organizationId: organization.id, name: 'Sheba Facilities Care', category: 'cleaning', phone: '+251911200103', email: 'hello@shebacare.demo', tinNumber: '0012345680' },
+    data: {
+      organizationId: organization.id,
+      name: 'Sheba Facilities Care',
+      category: 'cleaning',
+      phone: '+251911200103',
+      email: 'hello@shebacare.demo',
+      tinNumber: '0012345680',
+    },
   });
 
   const now = new Date();
   const workOrders = [
     {
-      propertyId: bole.id, unitId: unitOf(bole.id, '301').id, tenantId: tenants[4]!.id,
-      title: 'Kitchen sink leaking under the cabinet', description: 'Water pools under the sink every time the tap runs; the cabinet base is soaked.',
-      category: 'plumbing', priority: 'urgent', status: 'open', reportedAt: addDays(now, -2),
+      propertyId: bole.id,
+      unitId: unitOf(bole.id, '301').id,
+      tenantId: tenants[4]!.id,
+      title: 'Kitchen sink leaking under the cabinet',
+      description: 'Water pools under the sink every time the tap runs; the cabinet base is soaked.',
+      category: 'plumbing',
+      priority: 'urgent',
+      status: 'open',
+      reportedAt: addDays(now, -2),
       estimatedCostMinor: 150_000n,
     },
     {
-      propertyId: bole.id, unitId: unitOf(bole.id, '101').id, tenantId: tenants[0]!.id,
-      title: 'Bedroom socket sparking', description: 'The socket next to the bed sparked when unplugging a heater.',
-      category: 'electrical', priority: 'high', status: 'assigned', reportedAt: addDays(now, -4),
-      scheduledFor: addDays(now, 2), vendorId: vendorElectric.id, estimatedCostMinor: 90_000n,
+      propertyId: bole.id,
+      unitId: unitOf(bole.id, '101').id,
+      tenantId: tenants[0]!.id,
+      title: 'Bedroom socket sparking',
+      description: 'The socket next to the bed sparked when unplugging a heater.',
+      category: 'electrical',
+      priority: 'high',
+      status: 'assigned',
+      reportedAt: addDays(now, -4),
+      scheduledFor: addDays(now, 2),
+      vendorId: vendorElectric.id,
+      estimatedCostMinor: 90_000n,
     },
     {
-      propertyId: meg.id, unitId: unitOf(meg.id, 'G-01').id, tenantId: tenants[8]!.id,
-      title: 'AC not cooling in the shop', description: 'The split AC runs but the air is not cold; customers complain in the afternoon.',
-      category: 'hvac', priority: 'normal', status: 'in_progress', reportedAt: addDays(now, -9),
-      vendorId: vendorHvac.id, estimatedCostMinor: 450_000n,
+      propertyId: meg.id,
+      unitId: unitOf(meg.id, 'G-01').id,
+      tenantId: tenants[8]!.id,
+      title: 'AC not cooling in the shop',
+      description: 'The split AC runs but the air is not cold; customers complain in the afternoon.',
+      category: 'hvac',
+      priority: 'normal',
+      status: 'in_progress',
+      reportedAt: addDays(now, -9),
+      vendorId: vendorHvac.id,
+      estimatedCostMinor: 450_000n,
     },
     {
-      propertyId: saris.id, unitId: unitOf(saris.id, 'A-102').id, tenantId: tenants[11]!.id,
-      title: 'Rooftop water pump failure', description: 'No water reaches the top floor; the pump hums but does not start.',
-      category: 'water_pump', priority: 'urgent', status: 'in_progress', reportedAt: addDays(now, -6),
+      propertyId: saris.id,
+      unitId: unitOf(saris.id, 'A-102').id,
+      tenantId: tenants[11]!.id,
+      title: 'Rooftop water pump failure',
+      description: 'No water reaches the top floor; the pump hums but does not start.',
+      category: 'water_pump',
+      priority: 'urgent',
+      status: 'in_progress',
+      reportedAt: addDays(now, -6),
       estimatedCostMinor: 320_000n,
       notes: {
         create: [
-          { organizationId: organization.id, authorName: 'Demo Technician', body: 'Technician confirmed the pump needs replacement — model GB-15.', internal: false, createdAt: addDays(now, -5) },
-          { organizationId: organization.id, authorName: 'Demo Owner', body: 'Vendor quoted 3,200 ETB including labour. Approved.', internal: true, createdAt: addDays(now, -4) },
+          {
+            organizationId: organization.id,
+            authorName: 'Demo Technician',
+            body: 'Technician confirmed the pump needs replacement — model GB-15.',
+            internal: false,
+            createdAt: addDays(now, -5),
+          },
+          {
+            organizationId: organization.id,
+            authorName: 'Demo Owner',
+            body: 'Vendor quoted 3,200 ETB including labour. Approved.',
+            internal: true,
+            createdAt: addDays(now, -4),
+          },
         ],
       },
     },
     {
       propertyId: bole.id,
-      title: 'Corridor lights out on floor 2', description: 'Three of the corridor bulbs are burnt out; the floor is dark at night.',
-      category: 'electrical', priority: 'normal', status: 'completed', reportedAt: addDays(now, -25),
-      completedAt: addDays(now, -21), vendorId: vendorElectric.id,
-      estimatedCostMinor: 130_000n, actualCostMinor: 120_000n,
+      title: 'Corridor lights out on floor 2',
+      description: 'Three of the corridor bulbs are burnt out; the floor is dark at night.',
+      category: 'electrical',
+      priority: 'normal',
+      status: 'completed',
+      reportedAt: addDays(now, -25),
+      completedAt: addDays(now, -21),
+      vendorId: vendorElectric.id,
+      estimatedCostMinor: 130_000n,
+      actualCostMinor: 120_000n,
     },
     {
-      propertyId: bole.id, unitId: unitOf(bole.id, '202').id, tenantId: tenants[3]!.id,
-      title: 'Front door lock replacement', description: 'The lock cylinder jams; the tenant had to climb through the kitchen window once.',
-      category: 'carpentry', priority: 'low', status: 'completed', reportedAt: addDays(now, -40),
-      completedAt: addDays(now, -37), estimatedCostMinor: 90_000n, actualCostMinor: 85_000n,
+      propertyId: bole.id,
+      unitId: unitOf(bole.id, '202').id,
+      tenantId: tenants[3]!.id,
+      title: 'Front door lock replacement',
+      description: 'The lock cylinder jams; the tenant had to climb through the kitchen window once.',
+      category: 'carpentry',
+      priority: 'low',
+      status: 'completed',
+      reportedAt: addDays(now, -40),
+      completedAt: addDays(now, -37),
+      estimatedCostMinor: 90_000n,
+      actualCostMinor: 85_000n,
     },
     {
-      propertyId: meg.id, unitId: unitOf(meg.id, 'F-01').id,
-      title: 'Repaint office before listing', description: 'Walls are scuffed after the previous tenant moved out.',
-      category: 'painting', priority: 'low', status: 'on_hold', reportedAt: addDays(now, -12),
+      propertyId: meg.id,
+      unitId: unitOf(meg.id, 'F-01').id,
+      title: 'Repaint office before listing',
+      description: 'Walls are scuffed after the previous tenant moved out.',
+      category: 'painting',
+      priority: 'low',
+      status: 'on_hold',
+      reportedAt: addDays(now, -12),
       estimatedCostMinor: 300_000n,
     },
     {
-      propertyId: bole.id, unitId: unitOf(bole.id, '102').id, tenantId: tenants[1]!.id,
-      title: 'Bathroom faucet drip', description: 'Constant drip from the bath faucet; the tenant can shut it off at the valve.',
-      category: 'plumbing', priority: 'normal', status: 'completed', reportedAt: addDays(now, -18),
-      completedAt: addDays(now, -16), vendorId: vendorPlumbing.id, actualCostMinor: 45_000n,
+      propertyId: bole.id,
+      unitId: unitOf(bole.id, '102').id,
+      tenantId: tenants[1]!.id,
+      title: 'Bathroom faucet drip',
+      description: 'Constant drip from the bath faucet; the tenant can shut it off at the valve.',
+      category: 'plumbing',
+      priority: 'normal',
+      status: 'completed',
+      reportedAt: addDays(now, -18),
+      completedAt: addDays(now, -16),
+      vendorId: vendorPlumbing.id,
+      actualCostMinor: 45_000n,
     },
     {
-      propertyId: saris.id, unitId: unitOf(saris.id, 'A-101').id, tenantId: tenants[10]!.id,
-      title: 'Deep clean after move-in', description: 'Requesting a full clean including windows before furniture arrives.',
-      category: 'cleaning', priority: 'normal', status: 'completed', reportedAt: addDays(now, -60),
-      completedAt: addDays(now, -58), vendorId: vendorCleaning.id, actualCostMinor: 60_000n,
+      propertyId: saris.id,
+      unitId: unitOf(saris.id, 'A-101').id,
+      tenantId: tenants[10]!.id,
+      title: 'Deep clean after move-in',
+      description: 'Requesting a full clean including windows before furniture arrives.',
+      category: 'cleaning',
+      priority: 'normal',
+      status: 'completed',
+      reportedAt: addDays(now, -60),
+      completedAt: addDays(now, -58),
+      vendorId: vendorCleaning.id,
+      actualCostMinor: 60_000n,
     },
   ];
   for (const workOrder of workOrders) {
@@ -840,7 +1146,12 @@ async function main(): Promise<void> {
   for (const { seed, id: leaseId } of leases) {
     if (seed.status === 'pending') continue;
     const tenant = tenants[seed.tenantIndex]!;
-    const propertyName = seed.unit.propertyId === bole.id ? boleName : seed.unit.propertyId === meg.id ? 'Megenagna Commercial' : 'Saris Residences';
+    const propertyName =
+      seed.unit.propertyId === bole.id
+        ? boleName
+        : seed.unit.propertyId === meg.id
+          ? 'Megenagna Commercial'
+          : 'Saris Residences';
     const stored = await storage.save({
       organizationId: organization.id,
       filename: `lease-agreement-${seed.unit.label}.pdf`,
@@ -1025,7 +1336,11 @@ async function main(): Promise<void> {
     });
     if (seed.behavior === 'delinquent' || seed.behavior === 'partial') {
       const oldestUnpaid = await prisma.charge.findFirst({
-        where: { leaseId: leases.find((entry) => entry.seed === seed)!.id, status: { in: ['open', 'partial'] }, type: 'rent' },
+        where: {
+          leaseId: leases.find((entry) => entry.seed === seed)!.id,
+          status: { in: ['open', 'partial'] },
+          type: 'rent',
+        },
         orderBy: { dueDate: 'asc' },
       });
       if (oldestUnpaid) {

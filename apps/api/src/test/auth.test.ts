@@ -16,7 +16,7 @@ import { TEST_PASSWORD, createOrganizationFixture } from './helpers.js';
 const app = createApp();
 
 describe('registration', () => {
-  it('creates the organization, owner and default settings in one step', async () => {
+  it('creates the organization, owner and default settings in one step, then demands email verification', async () => {
     const response = await request(app)
       .post('/api/v1/auth/register')
       .send({
@@ -31,8 +31,12 @@ describe('registration', () => {
       .expect(201);
 
     expect(response.body.organization.slug).toBe('abebe-properties');
-    expect(response.body.tokens.accessToken).toBeTruthy();
-    expect(response.body.tokens.refreshToken).toBeTruthy();
+    // No tokens at registration: the session starts after the emailed code is
+    // redeemed (see the email verification describe below).
+    expect(response.body.tokens).toBeUndefined();
+    expect(response.body.verificationRequired).toBe(true);
+    // The mock provider cannot deliver mail, so dev/test responses echo the code.
+    expect(response.body.devVerificationCode).toMatch(/^\d{6}$/);
 
     const prisma = getPrisma();
     const organization = await prisma.organization.findUniqueOrThrow({
@@ -47,6 +51,9 @@ describe('registration', () => {
     expect(user.phone).toBe('+251911234567');
     // Passwords are argon2id, never plaintext.
     expect(user.passwordHash.startsWith('$argon2id$')).toBe(true);
+    // New signups start unverified, with a stored (hashed) verification code.
+    expect(user.emailVerifiedAt).toBeNull();
+    expect(user.emailVerificationCodeHash).toMatch(/^[0-9a-f]{64}$/);
   });
 
   it('rejects a duplicate email and weak passwords', async () => {
@@ -233,5 +240,178 @@ describe('authorization basics', () => {
       .set('Authorization', `Bearer ${fixture.accessToken}`)
       .send({ periodKeys: ['2019-01'] })
       .expect(403);
+  });
+});
+
+describe('email verification', () => {
+  async function registerUnverified(email: string): Promise<string> {
+    const response = await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        organizationName: `Verify Org ${email.split('@')[0]}`,
+        fullName: 'Verify Me',
+        email,
+        password: 'StrongPass123',
+        language: 'en',
+        calendar: 'gregorian',
+      })
+      .expect(201);
+    return response.body.devVerificationCode as string;
+  }
+
+  it('blocks sign-in until the emailed code is redeemed', async () => {
+    const email = 'verify-gate@example.test';
+    await registerUnverified(email);
+
+    const blocked = await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email, password: 'StrongPass123' })
+      .expect(403);
+    expect(blocked.body.error.code).toBe('EMAIL_NOT_VERIFIED');
+  });
+
+  it('rejects a wrong code, then activates on the right one and starts a session', async () => {
+    const email = 'verify-flow@example.test';
+    const code = await registerUnverified(email);
+
+    await request(app)
+      .post('/api/v1/auth/verify-email')
+      .send({ email, code: '000000' === code ? '111111' : '000000' })
+      .expect(401);
+
+    const verified = await request(app).post('/api/v1/auth/verify-email').send({ email, code }).expect(200);
+    expect(verified.body.tokens.accessToken).toBeTruthy();
+    expect(verified.body.role).toBe('owner_admin');
+    expect(verified.body.emailVerified).toBe(true);
+    expect(verified.body.user).toMatchObject({ email });
+
+    // The code was single-use: a second redemption fails.
+    await request(app).post('/api/v1/auth/verify-email').send({ email, code }).expect(401);
+
+    // The user is now marked verified and can sign in.
+    const prisma = getPrisma();
+    const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+    expect(user.emailVerifiedAt).not.toBeNull();
+    expect(user.emailVerificationCodeHash).toBeNull();
+
+    await request(app).post('/api/v1/auth/login').send({ email, password: 'StrongPass123' }).expect(200);
+  });
+
+  it('re-issues a fresh code via resend-verification and invalidates the old one', async () => {
+    const email = 'verify-resend@example.test';
+    const firstCode = await registerUnverified(email);
+
+    const resent = await request(app).post('/api/v1/auth/resend-verification').send({ email }).expect(200);
+    expect(resent.body.ok).toBe(true);
+    const secondCode = resent.body.devVerificationCode as string;
+    expect(secondCode).toMatch(/^\d{6}$/);
+
+    await request(app).post('/api/v1/auth/verify-email').send({ email, code: firstCode }).expect(401);
+    await request(app).post('/api/v1/auth/verify-email').send({ email, code: secondCode }).expect(200);
+  });
+
+  it('never reveals whether an address has an account', async () => {
+    const known = await request(app)
+      .post('/api/v1/auth/resend-verification')
+      .send({ email: 'verify-gate@example.test' })
+      .expect(200);
+    const unknown = await request(app)
+      .post('/api/v1/auth/resend-verification')
+      .send({ email: 'ghost-unknown@example.test' })
+      .expect(200);
+    // Same body shape; only the dev code differs (present only for real accounts).
+    expect(known.body.ok).toBe(true);
+    expect(unknown.body).toEqual({ ok: true });
+    expect(unknown.body.devVerificationCode).toBeUndefined();
+  });
+});
+
+describe('password reset', () => {
+  async function requestReset(email: string): Promise<string> {
+    const response = await request(app).post('/api/v1/auth/forgot-password').send({ email }).expect(200);
+    expect(response.body.ok).toBe(true);
+    return response.body.devResetCode as string;
+  }
+
+  it('emails a code, rejects the wrong one, then resets and revokes old sessions', async () => {
+    const fixture = await createOrganizationFixture('reset');
+    const prisma = getPrisma();
+    const user = await prisma.user.findUniqueOrThrow({ where: { id: fixture.userId } });
+
+    const code = await requestReset(user.email);
+    expect(code).toMatch(/^\d{6}$/);
+
+    await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ email: user.email, code: '000000', password: 'BrandNew123' })
+      .expect(401);
+
+    const reset = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ email: user.email, code, password: 'BrandNew123' })
+      .expect(200);
+    expect(reset.body.ok).toBe(true);
+
+    // The code is single-use.
+    await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ email: user.email, code, password: 'BrandNew123' })
+      .expect(401);
+
+    // Old sessions are dead; the new password signs in.
+    await request(app).post('/api/v1/auth/refresh').send({ refreshToken: fixture.refreshToken }).expect(401);
+    await request(app)
+      .post('/api/v1/auth/login')
+      .send({ email: user.email, password: 'BrandNew123' })
+      .expect(200);
+  });
+
+  it('marks the address verified (recovery path for an unverified account)', async () => {
+    const email = 'reset-unverified@example.test';
+    await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        organizationName: 'Reset Unverified Org',
+        fullName: 'Reset Unverified',
+        email,
+        password: 'StrongPass123',
+        language: 'en',
+        calendar: 'gregorian',
+      })
+      .expect(201);
+
+    const code = await requestReset(email);
+    await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({ email, code, password: 'Recovered123' })
+      .expect(200);
+
+    const user = await getPrisma().user.findUniqueOrThrow({ where: { email } });
+    expect(user.emailVerifiedAt).not.toBeNull();
+    await request(app).post('/api/v1/auth/login').send({ email, password: 'Recovered123' }).expect(200);
+  });
+
+  it('stays silent for unknown addresses and tenant-only users', async () => {
+    const unknown = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({ email: 'nobody-reset@example.test' })
+      .expect(200);
+    expect(unknown.body).toEqual({ ok: true });
+    expect(unknown.body.devResetCode).toBeUndefined();
+
+    // A user with memberships is staff; a tenant-linked user without any is not.
+    const prisma = getPrisma();
+    const passwordHash = await hashPassword(TEST_PASSWORD);
+    const tenantOnly = await prisma.user.create({
+      data: { email: 'tenant-only-reset@example.test', fullName: 'Tenant Only', passwordHash },
+    });
+    const tenantOnlyResponse = await request(app)
+      .post('/api/v1/auth/forgot-password')
+      .send({ email: tenantOnly.email })
+      .expect(200);
+    expect(tenantOnlyResponse.body).toEqual({ ok: true });
+
+    const stored = await prisma.user.findUniqueOrThrow({ where: { id: tenantOnly.id } });
+    expect(stored.passwordResetCodeHash).toBeNull();
   });
 });

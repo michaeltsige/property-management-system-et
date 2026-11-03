@@ -20,6 +20,12 @@ export interface EmailMessage {
   values?: Record<string, string | number>;
   language: LanguageCode;
   overrides?: readonly TranslationOverride[];
+  /**
+   * Optional distinct subject line. When omitted the body template doubles as
+   * the subject (the legacy notification behaviour: one text, both places).
+   */
+  subjectKey?: TranslationKey;
+  subjectValues?: Record<string, string | number>;
 }
 
 export interface EmailSendResult {
@@ -40,6 +46,13 @@ export function renderEmailBody(message: EmailMessage): string {
   return translator.t(message.templateKey, message.values ?? {});
 }
 
+/** Render the subject, falling back to the body when no dedicated subject exists. */
+export function renderEmailSubject(message: EmailMessage): string {
+  if (!message.subjectKey) return renderEmailBody(message);
+  const translator = createTranslator({ language: message.language, overrides: message.overrides ?? [] });
+  return translator.t(message.subjectKey, message.subjectValues ?? {});
+}
+
 export class MockEmailProvider implements EmailProvider {
   readonly name = 'mock';
   readonly outbox: { to: string; subject: string; body: string; language: LanguageCode; at: Date }[] = [];
@@ -50,11 +63,12 @@ export class MockEmailProvider implements EmailProvider {
 
   async send(message: EmailMessage): Promise<EmailSendResult> {
     const body = renderEmailBody(message);
-    this.outbox.push({ to: message.to, subject: body, body, language: message.language, at: new Date() });
+    const subject = renderEmailSubject(message);
+    this.outbox.push({ to: message.to, subject, body, language: message.language, at: new Date() });
     if (getConfig().isDevelopment) {
       // Demo affordance: in dev there is no real inbox, so the message must be
       // readable somewhere. Production never logs message bodies.
-      logger.info({ to: message.to, body }, 'DEV demo: mock email body');
+      logger.info({ to: message.to, subject, body }, 'DEV demo: mock email body');
     } else {
       logger.info(
         { to: message.to, language: message.language, template: message.templateKey },
@@ -97,6 +111,7 @@ export class ResendEmailProvider implements EmailProvider {
     }
 
     const body = renderEmailBody(message);
+    const subject = renderEmailSubject(message);
     let response: Response;
     try {
       response = await fetch(`${this.baseUrl}/emails`, {
@@ -108,7 +123,7 @@ export class ResendEmailProvider implements EmailProvider {
         body: JSON.stringify({
           from: config.EMAIL_FROM,
           to: [message.to],
-          subject: body,
+          subject,
           text: body,
         }),
       });

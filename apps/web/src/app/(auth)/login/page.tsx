@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import { usePreferences } from '@/lib/preferences';
 
 import { Logo } from '@/components/logo';
@@ -17,12 +17,16 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  // The API refuses sign-in until the emailed code is redeemed; offer the
+  // verify page instead of a dead end (the machine code comes from the API).
+  const [needsVerification, setNeedsVerification] = useState(false);
   const [pending, setPending] = useState(false);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setPending(true);
     setError(null);
+    setNeedsVerification(false);
     try {
       const result = await api.login({ email, password });
       signIn({
@@ -34,7 +38,12 @@ export default function LoginPage() {
       });
       router.replace('/dashboard');
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      if (cause instanceof ApiError && cause.code === 'EMAIL_NOT_VERIFIED') {
+        setNeedsVerification(true);
+        setError(t('auth.email_not_verified'));
+      } else {
+        setError(cause instanceof Error ? cause.message : String(cause));
+      }
     } finally {
       setPending(false);
     }
@@ -88,6 +97,21 @@ export default function LoginPage() {
               <Button type="submit" className="w-full" disabled={pending}>
                 {pending ? t('app.loading') : t('auth.sign_in')}
               </Button>
+              {needsVerification ? (
+                <Button asChild variant="secondary" className="w-full">
+                  <Link href={`/verify-email?email=${encodeURIComponent(email.trim())}`}>
+                    {t('auth.verify_title')}
+                  </Link>
+                </Button>
+              ) : null}
+              <p className="text-center text-xs text-muted">
+                <Link
+                  href="/forgot-password"
+                  className="text-brand-700 underline-offset-2 hover:underline dark:text-brand-300"
+                >
+                  {t('auth.forgot_password')}
+                </Link>
+              </p>
             </form>
           </CardContent>
         </Card>

@@ -11,6 +11,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createApp } from '../app.js';
 import { getPrisma } from '../lib/prisma.js';
+import { mockEmailProvider } from '../providers/email/index.js';
 import { authHeader, createOrganizationFixture } from './helpers.js';
 
 const app = createApp();
@@ -79,6 +80,52 @@ describe('organization members', () => {
     const emails = (response.body.members as { email: string }[]).map((member) => member.email);
     expect(emails).toContain(fixture.email);
     expect(emails).not.toContain('tenant-team@example.com');
+  });
+});
+
+describe('invite emails', () => {
+  it('emails the accept-invite link and still returns the token for hand-over', async () => {
+    const fixture = await createOrganizationFixture('invite');
+    const outboxBefore = mockEmailProvider.outbox.length;
+
+    const response = await request(app)
+      .post('/api/v1/organizations/members')
+      .set(authHeader(fixture))
+      .send({ email: 'new.manager@example.test', role: 'manager', fullName: 'New Manager' })
+      .expect(201);
+
+    const invite = response.body.invite as { token: string; email: string; emailed: boolean };
+    // The token still rides along (hand-over fallback when mail is not configured).
+    expect(invite.token).toMatch(/[A-Za-z0-9_-]{20,}/);
+    expect(invite.emailed).toBe(true);
+
+    // The mock provider recorded the invitation mail with the accept link.
+    const sent = mockEmailProvider.outbox.slice(outboxBefore).find((mail) => mail.to === invite.email);
+    expect(sent).toBeTruthy();
+    expect(sent?.subject).toContain('invited to join');
+    expect(sent?.body).toContain(`/accept-invite?token=${invite.token}`);
+    expect(sent?.body).toContain('Property Manager');
+  });
+
+  it('resend-invite emails a fresh link for a pending membership', async () => {
+    const fixture = await createOrganizationFixture('invite-resend');
+    const created = await request(app)
+      .post('/api/v1/organizations/members')
+      .set(authHeader(fixture))
+      .send({ email: 'pending.member@example.test', role: 'owner_admin' })
+      .expect(201);
+
+    const outboxBefore = mockEmailProvider.outbox.length;
+    const response = await request(app)
+      .post(`/api/v1/organizations/members/${created.body.membership.id as string}/resend-invite`)
+      .set(authHeader(fixture))
+      .expect(200);
+
+    const invite = response.body.invite as { token: string; email: string; emailed: boolean; role: string };
+    expect(invite.emailed).toBe(true);
+    expect(invite.role).toBe('owner_admin');
+    const sent = mockEmailProvider.outbox.slice(outboxBefore).find((mail) => mail.to === invite.email);
+    expect(sent?.body).toContain(`/accept-invite?token=${invite.token}`);
   });
 });
 

@@ -15,6 +15,7 @@ export const ERROR_CODES = [
   'VALIDATION_ERROR',
   'UNAUTHENTICATED',
   'FORBIDDEN',
+  'EMAIL_NOT_VERIFIED',
   'NOT_FOUND',
   'CONFLICT',
   'RATE_LIMITED',
@@ -62,6 +63,14 @@ export const unauthenticated = (message = 'Authentication required'): AppError =
 
 export const forbidden = (message = 'Not permitted'): AppError =>
   new AppError(403, 'FORBIDDEN', message, { userMessageKey: 'error.forbidden' });
+
+/**
+ * 403 with its own machine code so the web login screen can offer the
+ * verify-email page instead of a dead end. Thrown only AFTER the password has
+ * been verified, so it never reveals whether an email has an account.
+ */
+export const emailNotVerified = (message: string): AppError =>
+  new AppError(403, 'EMAIL_NOT_VERIFIED', message, { userMessageKey: 'auth.email_not_verified' });
 
 export const notFound = (message = 'Not found'): AppError =>
   new AppError(404, 'NOT_FOUND', message, { userMessageKey: 'error.not_found' });

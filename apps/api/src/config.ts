@@ -68,6 +68,10 @@ const envSchema = z.object({
   // Defaults to CORS_ORIGINS[0]; set it when the public URL differs from the
   // first CORS entry (proxies, custom domains, separate portal host).
   PORTAL_RETURN_ORIGIN: optionalUrl,
+  // Origin emails link back to (accept-invite). Defaults to CORS_ORIGINS[0],
+  // which is the web app in every normal deployment; set it when the web app
+  // lives on a different host than the first CORS entry.
+  WEB_APP_ORIGIN: optionalUrl,
 
   DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
   TEST_DATABASE_URL: z.string().optional(),
@@ -172,6 +176,15 @@ export function getConfig(): AppConfig {
   return cached;
 }
 
+/**
+ * The origin emails link back to (accept-invite links). CORS_ORIGINS[0] is the
+ * web app origin in every normal deployment, so the explicit variable is only
+ * needed when the two diverge.
+ */
+export function webAppOrigin(config: AppConfig = getConfig()): string {
+  return config.WEB_APP_ORIGIN ?? config.CORS_ORIGINS[0] ?? 'http://localhost:3000';
+}
+
 /** The database URL to use, honouring the test database during tests. */
 export function databaseUrl(config: AppConfig = getConfig()): string {
   if (config.isTest) {
@@ -200,7 +213,9 @@ export function configWarnings(config: AppConfig = getConfig()): string[] {
     if (config.EMAIL_PROVIDER === 'mock')
       warnings.push('EMAIL_PROVIDER=mock in production: no email will actually be sent.');
     if (config.EMAIL_PROVIDER === 'resend' && !config.RESEND_API_KEY)
-      warnings.push('EMAIL_PROVIDER=resend without RESEND_API_KEY: email sends will fail until a key is set.');
+      warnings.push(
+        'EMAIL_PROVIDER=resend without RESEND_API_KEY: email sends will fail until a key is set.',
+      );
     if (config.STORAGE_DRIVER === 'local')
       warnings.push('STORAGE_DRIVER=local in production: uploads are not durable or shared.');
   }

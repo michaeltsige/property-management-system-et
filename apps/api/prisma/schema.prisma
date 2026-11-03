@@ -87,6 +87,15 @@ model User {
   lastLoginAt     DateTime?
   failedLoginCount Int      @default(0)
   lockedUntil     DateTime?
+  // Email verification + password reset. Codes are stored hashed (SHA-256) and
+  // single-use; null emailVerifiedAt means "not verified yet". Existing rows
+  // were backfilled as verified by the migration, so only brand-new signups
+  // ever walk the verification flow.
+  emailVerifiedAt             DateTime?
+  emailVerificationCodeHash   String?
+  emailVerificationExpiresAt  DateTime?
+  passwordResetCodeHash       String?
+  passwordResetExpiresAt      DateTime?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 

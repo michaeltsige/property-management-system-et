@@ -274,10 +274,12 @@ export const api = {
   // Session endpoints live on the web server: they call the API, set HttpOnly
   // cookies and return identity only. Tokens never reach this code (ADR-0026).
   register: (body: unknown) =>
-    apiFetch<{ user: StoredSession['user']; organization: StoredSession['organization'] }>(
-      '/api/session/register',
-      { method: 'POST', body },
-    ),
+    apiFetch<{
+      /** Always true today: signup ends on the verify-email page. */
+      verificationRequired: true;
+      /** Echoed only when the API runs without a real mail provider (dev/test). */
+      devVerificationCode?: string;
+    }>('/api/session/register', { method: 'POST', body }),
   login: (body: { email: string; password: string }) =>
     apiFetch<{
       user: StoredSession['user'];
@@ -287,6 +289,31 @@ export const api = {
       /** Every organization the user can switch to. */
       memberships: { organizationId: string; name: string; slug: string; role: string }[];
     }>('/api/session/login', { method: 'POST', body }),
+  /**
+   * Redeem the emailed 6-digit code. The web server exchanges it for a session
+   * and sets the HttpOnly cookies, exactly like login — so a fresh signup goes
+   * registration → verify → app without a separate sign-in.
+   */
+  verifyEmail: (body: { email: string; code: string }) =>
+    apiFetch<{
+      user: StoredSession['user'];
+      organization: StoredSession['organization'];
+      role: string;
+      memberships: { organizationId: string; name: string; slug: string; role: string }[];
+      emailVerified: true;
+    }>('/api/session/verify-email', { method: 'POST', body }),
+  /** Ask for a fresh verification code. The answer is identical for unknown addresses. */
+  resendVerification: (body: { email: string }) =>
+    apiFetch<{ ok: true; devVerificationCode?: string }>('/auth/resend-verification', {
+      method: 'POST',
+      body,
+    }),
+  /** Request a password-reset code. The answer is identical for unknown addresses. */
+  forgotPassword: (body: { email: string }) =>
+    apiFetch<{ ok: true; devResetCode?: string }>('/auth/forgot-password', { method: 'POST', body }),
+  /** Trade the emailed code for a new password; all existing sessions are revoked. */
+  resetPassword: (body: { email: string; code: string; password: string }) =>
+    apiFetch<{ ok: true }>('/auth/reset-password', { method: 'POST', body }),
   logout: () => apiFetch<void>('/api/session/logout', { method: 'POST', body: {} }),
   me: () => apiFetch<{ user: StoredSession['user'] & { role?: string } }>('/api/session/me'),
   /** Ask for an OTP; the answer is identical for known and unknown numbers. */
@@ -307,8 +334,7 @@ export const api = {
   createOwner: (body: unknown) => apiFetch<{ owner: Owner }>('/owners', { method: 'POST', body }),
   updateOwner: (id: string, body: unknown) =>
     apiFetch<{ owner: Owner }>(`/owners/${id}`, { method: 'PATCH', body }),
-  deleteBuilding: (buildingId: string) =>
-    apiFetch<null>(`/buildings/${buildingId}`, { method: 'DELETE' }),
+  deleteBuilding: (buildingId: string) => apiFetch<null>(`/buildings/${buildingId}`, { method: 'DELETE' }),
   createBuilding: (body: unknown) => apiFetch<{ building: Building }>('/buildings', { method: 'POST', body }),
   updateBuilding: (id: string, body: unknown) =>
     apiFetch<{ building: Building }>(`/buildings/${id}`, { method: 'PATCH', body }),
@@ -485,20 +511,27 @@ export const api = {
     apiFetch<{ gateway: PaymentGatewayStatus }>('/organizations/payment-gateway', { method: 'DELETE' }),
   members: () => apiFetch<{ members: Member[] }>('/organizations/members'),
   /**
-   * Invite a staff member. No email provider is connected, so the one-time
-   * invite token comes back in the response — the UI shows it as a link to
-   * hand to the invitee (they pick their password on /accept-invite).
+   * Invite a staff member. The accept-invite link is emailed to the invitee
+   * (`emailed` reports delivery); the one-time token also comes back in the
+   * response so the UI can show it for hand-over when mail is not configured.
+   * The invitee picks their password on /accept-invite.
    */
   inviteMember: (body: { email: string; role?: 'owner_admin' | 'manager'; fullName?: string }) =>
-    apiFetch<{ membership: Member; invite: { token: string; expiresAt: string; email: string } }>(
-      '/organizations/members',
-      { method: 'POST', body },
-    ),
+    apiFetch<{
+      membership: Member;
+      invite: { token: string; expiresAt: string; email: string; emailed?: boolean; emailError?: string };
+    }>('/organizations/members', { method: 'POST', body }),
   resendInvite: (membershipId: string) =>
-    apiFetch<{ membership: Member; invite: { token: string; expiresAt: string; email: string } }>(
-      `/organizations/members/${membershipId}/resend-invite`,
-      { method: 'POST' },
-    ),
+    apiFetch<{
+      invite: {
+        token: string;
+        expiresAt: string;
+        email: string;
+        role?: string;
+        emailed?: boolean;
+        emailError?: string;
+      };
+    }>(`/organizations/members/${membershipId}/resend-invite`, { method: 'POST' }),
   /** Redeem an invite token; unauthenticated by design (the token is the credential). */
   acceptInvite: (body: { token: string; password: string }) =>
     apiFetch<{ email: string; organization: { id: string; name: string; slug: string } }>(

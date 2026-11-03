@@ -8,13 +8,32 @@
 import { Router } from 'express';
 import { z } from 'zod';
 
-import { loginSchema, refreshTokenSchema, registerSchema, acceptInviteSchema } from '@pms/shared';
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  refreshTokenSchema,
+  registerSchema,
+  acceptInviteSchema,
+  resendVerificationSchema,
+  resetPasswordSchema,
+  verifyEmailSchema,
+} from '@pms/shared';
 
 import { getConfig } from '../config.js';
 import { createRateLimiter } from '../middleware/rate-limit.js';
 import { validate } from '../middleware/validate.js';
 import { requireAuth } from '../middleware/context.js';
-import { acceptInvite, login, logout, refresh, registerOrganization } from '../services/auth.service.js';
+import {
+  acceptInvite,
+  forgotPassword,
+  login,
+  logout,
+  refresh,
+  registerOrganization,
+  resendVerification,
+  resetPassword,
+  verifyEmail,
+} from '../services/auth.service.js';
 
 const config = getConfig();
 
@@ -81,6 +100,75 @@ authRouter.post(
   async (req, res, next) => {
     try {
       const result = await acceptInvite(req.body, {
+        requestId: req.requestId,
+        ip: req.ip ?? undefined,
+        userAgent: req.header('user-agent') ?? undefined,
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * Email verification. Redeeming the code mints the first session, so the web
+ * session layer proxies this — tokens never reach the browser directly.
+ */
+authRouter.post(
+  '/verify-email',
+  authRateLimiter,
+  validate({ body: verifyEmailSchema }),
+  async (req, res, next) => {
+    try {
+      const result = await verifyEmail(req.body, {
+        requestId: req.requestId,
+        ip: req.ip ?? undefined,
+        userAgent: req.header('user-agent') ?? undefined,
+      });
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/** Ask for a fresh verification code. Always `ok` — never reveals account existence. */
+authRouter.post(
+  '/resend-verification',
+  authRateLimiter,
+  validate({ body: resendVerificationSchema }),
+  async (req, res, next) => {
+    try {
+      res.json(await resendVerification(req.body));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/** Ask for a password-reset code. Always `ok` — never reveals account existence. */
+authRouter.post(
+  '/forgot-password',
+  authRateLimiter,
+  validate({ body: forgotPasswordSchema }),
+  async (req, res, next) => {
+    try {
+      res.json(await forgotPassword(req.body));
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/** Trade the emailed code for a new password; every live session is revoked. */
+authRouter.post(
+  '/reset-password',
+  authRateLimiter,
+  validate({ body: resetPasswordSchema }),
+  async (req, res, next) => {
+    try {
+      const result = await resetPassword(req.body, {
         requestId: req.requestId,
         ip: req.ip ?? undefined,
         userAgent: req.header('user-agent') ?? undefined,

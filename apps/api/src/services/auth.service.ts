@@ -1,5 +1,6 @@
 /**
- * Authentication: organization registration, login, refresh-token rotation, logout.
+ * Authentication: organization registration, login, refresh-token rotation, logout,
+ * email verification and password reset.
  *
  * Design notes
  * ------------
@@ -9,7 +10,12 @@
  * - Refresh tokens are opaque random values, stored hashed and rotated on every
  *   use; reuse of a rotated token is treated as a breach (all sessions revoked).
  * - Registration creates the organization, the owner user and an
- *   owner_admin membership in one transaction, plus the default settings.
+ *   owner_admin membership in one transaction, plus the default settings, and
+ *   sends a 6-digit verification code — the account cannot sign in until the
+ *   code is redeemed (`POST /auth/verify-email`).
+ * - Password reset trades a 6-digit email code (15-minute TTL, single use) for
+ *   a new password and revokes every live session. Redeeming any emailed
+ *   credential (invite, verification, reset) marks the address verified.
  */
 
 import type { z } from 'zod';
@@ -18,16 +24,31 @@ import type { PrismaClient } from '@prisma/client';
 import { DEFAULT_ORG_SETTINGS, signupBillingSchema, type Role } from '@pms/shared';
 import type { CalendarKind, LanguageCode } from '@pms/calendar';
 import type { CurrencyCode } from '@pms/shared';
+import { createTranslator, type TranslationKey } from '@pms/i18n';
 
 import { getConfig } from '../config.js';
-import { conflict, forbidden, notFound, unauthenticated } from '../lib/errors.js';
-import { generateRefreshToken, hashPassword, hashRefreshToken, verifyPassword } from '../lib/crypto.js';
+import { conflict, emailNotVerified, forbidden, notFound, unauthenticated } from '../lib/errors.js';
+import {
+  generateEmailCode,
+  generateRefreshToken,
+  hashEmailCode,
+  hashPassword,
+  hashRefreshToken,
+  secureEqualHex,
+  verifyPassword,
+} from '../lib/crypto.js';
 import { getPrisma } from '../lib/prisma.js';
+import { logger } from '../lib/logger.js';
+import { getEmailProvider } from '../providers/email/index.js';
 import { recordAudit } from './audit.js';
 import { signAccessToken } from '../middleware/auth.js';
 
 const MAX_FAILED_LOGINS = 10;
 const LOCKOUT_MINUTES = 15;
+/** Email verification codes live a day — long enough to sleep on it, short enough to expire. */
+const EMAIL_VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+/** Password reset codes are shorter-lived: they change credentials. */
+const PASSWORD_RESET_TTL_MS = 15 * 60 * 1000;
 
 export interface AuthTokens {
   accessToken: string;
@@ -70,6 +91,64 @@ async function uniqueSlug(prisma: PrismaClient, preferred: string): Promise<stri
     candidate = `${preferred}-${suffix}`;
   }
   return candidate;
+}
+
+// ---------------------------------------------------------------------------
+// Email codes (verification + password reset)
+// ---------------------------------------------------------------------------
+
+export type EmailCodePurpose = 'verification' | 'password_reset';
+
+/** Store a fresh single-use code (hashed) on the user and return the raw code for the email. */
+async function issueEmailCode(userId: string, purpose: EmailCodePurpose): Promise<string> {
+  const prisma = getPrisma();
+  const code = generateEmailCode();
+  const data =
+    purpose === 'verification'
+      ? {
+          emailVerificationCodeHash: hashEmailCode(code),
+          emailVerificationExpiresAt: new Date(Date.now() + EMAIL_VERIFICATION_TTL_MS),
+        }
+      : {
+          passwordResetCodeHash: hashEmailCode(code),
+          passwordResetExpiresAt: new Date(Date.now() + PASSWORD_RESET_TTL_MS),
+        };
+  await prisma.user.update({ where: { id: userId }, data });
+  return code;
+}
+
+/** Send transactional auth mail; a provider outage is recorded, never thrown. */
+async function sendAuthEmail(params: {
+  to: string;
+  language: string;
+  templateKey: TranslationKey;
+  values: Record<string, string | number>;
+  subjectKey?: TranslationKey;
+}): Promise<void> {
+  try {
+    const result = await getEmailProvider().send({
+      to: params.to,
+      language: (params.language as LanguageCode) ?? 'en',
+      templateKey: params.templateKey,
+      values: params.values,
+      subjectKey: params.subjectKey,
+    });
+    if (result.status !== 'sent') {
+      logger.warn({ to: params.to, detail: result.detail }, 'auth email was not delivered');
+    }
+  } catch (error) {
+    logger.warn({ to: params.to, err: error }, 'auth email send failed');
+  }
+}
+
+/** The raw code is echoed back only when nothing real could have been delivered. */
+function devCode(code: string): string | undefined {
+  const config = getConfig();
+  return config.NODE_ENV !== 'production' && config.EMAIL_PROVIDER === 'mock' ? code : undefined;
+}
+
+function localizedAppName(language: string): string {
+  return createTranslator({ language: (language as LanguageCode) ?? 'en' }).t('app.name');
 }
 
 export async function registerOrganization(input: RegisterInput, meta: { requestId?: string; ip?: string }) {
@@ -170,15 +249,32 @@ export async function registerOrganization(input: RegisterInput, meta: { request
     return { organization, user };
   });
 
-  const tokens = await issueTokens(user.id, organization.id, 'owner_admin', user.email, isPlatformAdmin, {
-    requestId: meta.requestId,
-    ip: meta.ip,
+  // No tokens here: the account activates when the emailed 6-digit code is
+  // redeemed (POST /auth/verify-email), which mints the first session.
+  const code = await issueEmailCode(user.id, 'verification');
+  await sendAuthEmail({
+    to: user.email,
+    language: user.language,
+    templateKey: 'email.verification.body',
+    values: { appName: localizedAppName(user.language), code },
+    subjectKey: 'email.verification.subject',
+  });
+
+  await recordAudit(prisma, {
+    actorUserId: user.id,
+    action: 'verify',
+    entityType: 'User',
+    entityId: user.id,
+    after: { event: 'verification_code_sent' },
+    requestId: meta.requestId ?? null,
+    ipAddress: meta.ip ?? null,
   });
 
   return {
     organization: { id: organization.id, name: organization.name, slug: organization.slug },
     user: { id: user.id, email: user.email, fullName: user.fullName },
-    tokens,
+    verificationRequired: true as const,
+    devVerificationCode: devCode(code),
   };
 }
 
@@ -225,6 +321,13 @@ export async function login(
       ipAddress: meta.ip ?? null,
     });
     throw invalid();
+  }
+
+  // Only AFTER the password is proven: otherwise this error would tell the
+  // world which addresses have accounts. The web app maps the machine code to
+  // the verify-email page instead of a dead end.
+  if (!user.emailVerifiedAt) {
+    throw emailNotVerified('Verify your email address before signing in. Check your inbox for the code.');
   }
 
   const memberships = await prisma.membership.findMany({
@@ -454,7 +557,15 @@ export async function acceptInvite(
   const [user] = await prisma.$transaction([
     prisma.user.update({
       where: { id: membership.userId },
-      data: { passwordHash, failedLoginCount: 0, lockedUntil: null },
+      data: {
+        passwordHash,
+        failedLoginCount: 0,
+        lockedUntil: null,
+        // The single-use invite token was delivered to this address; redeeming
+        // it demonstrates control of the inbox the same way a verification code
+        // would. Invited accounts must not be locked out by the login gate.
+        emailVerifiedAt: membership.user.emailVerifiedAt ?? new Date(),
+      },
     }),
     prisma.membership.update({
       where: { id: membership.id },
@@ -486,4 +597,213 @@ export async function acceptInvite(
       slug: membership.organization.slug,
     },
   };
+}
+
+// ---------------------------------------------------------------------------
+// Email verification
+// ---------------------------------------------------------------------------
+
+/**
+ * Redeem the emailed verification code: marks the address verified and mints
+ * the first session, so a fresh signup goes registration → verify → app
+ * without a separate login. Unauthenticated by design — the code IS the
+ * credential — but rate limited like every other auth endpoint.
+ */
+export async function verifyEmail(
+  input: { email: string; code: string },
+  meta: { requestId?: string; ip?: string; userAgent?: string } = {},
+) {
+  const prisma = getPrisma();
+  const user = await prisma.user.findUnique({ where: { email: input.email } });
+
+  // Same answer for unknown email, wrong code, expired code and already-used
+  // code — nothing about which one it was.
+  const invalid = () => unauthenticated('This verification code is not valid. Request a new one.');
+  if (!user || !user.emailVerificationCodeHash || !user.emailVerificationExpiresAt) throw invalid();
+  if (user.emailVerifiedAt) throw conflict('This email address is already verified — sign in instead.');
+  if (user.emailVerificationExpiresAt < new Date()) throw invalid();
+  if (!secureEqualHex(user.emailVerificationCodeHash, hashEmailCode(input.code))) throw invalid();
+  if (!user.isActive) throw forbidden('This account has been disabled');
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      emailVerifiedAt: new Date(),
+      emailVerificationCodeHash: null,
+      emailVerificationExpiresAt: null,
+    },
+  });
+
+  await recordAudit(prisma, {
+    actorUserId: user.id,
+    action: 'verify',
+    entityType: 'User',
+    entityId: user.id,
+    after: { emailVerified: true },
+    requestId: meta.requestId ?? null,
+    ipAddress: meta.ip ?? null,
+  });
+
+  // A fresh signup has exactly one membership, but resolve it the way login
+  // does so a verified user with several organizations still lands somewhere.
+  const memberships = await prisma.membership.findMany({
+    where: { userId: user.id, status: 'active' },
+    include: { organization: true },
+    orderBy: { createdAt: 'asc' },
+  });
+  const membership = memberships.find((m) => m.organization.status === 'active') ?? memberships[0];
+  if (!membership) {
+    throw forbidden('This account has no active organization membership');
+  }
+
+  const tokens = await issueTokens(
+    user.id,
+    membership.organizationId,
+    membership.role as Role,
+    user.email,
+    user.isPlatformAdmin,
+    meta,
+  );
+
+  return {
+    tokens,
+    emailVerified: true as const,
+    role: membership.role,
+    user: {
+      id: user.id,
+      email: user.email,
+      fullName: user.fullName,
+      calendar: user.calendar,
+      language: user.language,
+    },
+    organization: {
+      id: membership.organization.id,
+      name: membership.organization.name,
+      slug: membership.organization.slug,
+      calendar: membership.organization.calendar,
+      currency: membership.organization.currency,
+    },
+    memberships: memberships.map((m) => ({
+      organizationId: m.organizationId,
+      name: m.organization.name,
+      slug: m.organization.slug,
+      role: m.role,
+    })),
+  };
+}
+
+/**
+ * Send a fresh verification code. The response is identical whether or not the
+ * address has an account, so the endpoint cannot be used to enumerate users.
+ */
+export async function resendVerification(input: { email: string }) {
+  const prisma = getPrisma();
+  const user = await prisma.user.findUnique({ where: { email: input.email } });
+  if (user && !user.emailVerifiedAt && user.isActive) {
+    const code = await issueEmailCode(user.id, 'verification');
+    await sendAuthEmail({
+      to: user.email,
+      language: user.language,
+      templateKey: 'email.verification.body',
+      values: { appName: localizedAppName(user.language), code },
+      subjectKey: 'email.verification.subject',
+    });
+    await recordAudit(prisma, {
+      actorUserId: user.id,
+      action: 'verify',
+      entityType: 'User',
+      entityId: user.id,
+      after: { event: 'verification_code_resent' },
+    });
+    return { ok: true as const, devVerificationCode: devCode(code) };
+  }
+  return { ok: true as const };
+}
+
+// ---------------------------------------------------------------------------
+// Password reset (staff accounts; tenants sign in with OTP)
+// ---------------------------------------------------------------------------
+
+/**
+ * Request a password-reset code. Staff accounts (any membership) get an email
+ * with a 6-digit code; unknown addresses and tenant-only users — who never use
+ * a password, the portal is OTP-only — get the same silent ok, so the endpoint
+ * cannot be used to enumerate accounts.
+ */
+export async function forgotPassword(input: { email: string }) {
+  const prisma = getPrisma();
+  const user = await prisma.user.findUnique({
+    where: { email: input.email },
+    include: { memberships: { select: { id: true }, take: 1 } },
+  });
+  if (user && user.isActive && user.memberships.length > 0) {
+    const code = await issueEmailCode(user.id, 'password_reset');
+    await sendAuthEmail({
+      to: user.email,
+      language: user.language,
+      templateKey: 'email.password_reset.body',
+      values: { code },
+      subjectKey: 'email.password_reset.subject',
+    });
+    await recordAudit(prisma, {
+      actorUserId: user.id,
+      action: 'update',
+      entityType: 'User',
+      entityId: user.id,
+      after: { event: 'password_reset_requested' },
+    });
+    return { ok: true as const, devResetCode: devCode(code) };
+  }
+  return { ok: true as const };
+}
+
+/**
+ * Trade the emailed code for a new password: single use, expiry enforced,
+ * every live session revoked, and the address counts as verified (the code
+ * proved inbox ownership — this is also the recovery path for an unverified
+ * account that lost its verification email).
+ */
+export async function resetPassword(
+  input: { email: string; code: string; password: string },
+  meta: { requestId?: string; ip?: string; userAgent?: string } = {},
+) {
+  const prisma = getPrisma();
+  const user = await prisma.user.findUnique({ where: { email: input.email } });
+
+  const invalid = () => unauthenticated('This reset code is not valid. Request a new one.');
+  if (!user || !user.passwordResetCodeHash || !user.passwordResetExpiresAt) throw invalid();
+  if (user.passwordResetExpiresAt < new Date()) throw invalid();
+  if (!secureEqualHex(user.passwordResetCodeHash, hashEmailCode(input.code))) throw invalid();
+  if (!user.isActive) throw forbidden('This account has been disabled');
+
+  const passwordHash = await hashPassword(input.password);
+  await prisma.$transaction([
+    prisma.authSession.updateMany({
+      where: { userId: user.id, revokedAt: null },
+      data: { revokedAt: new Date() },
+    }),
+    prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordHash,
+        passwordResetCodeHash: null,
+        passwordResetExpiresAt: null,
+        failedLoginCount: 0,
+        lockedUntil: null,
+        emailVerifiedAt: user.emailVerifiedAt ?? new Date(),
+      },
+    }),
+  ]);
+
+  await recordAudit(prisma, {
+    actorUserId: user.id,
+    action: 'update',
+    entityType: 'User',
+    entityId: user.id,
+    after: { passwordReset: true, sessionsRevoked: true },
+    requestId: meta.requestId ?? null,
+    ipAddress: meta.ip ?? null,
+  });
+
+  return { ok: true as const };
 }

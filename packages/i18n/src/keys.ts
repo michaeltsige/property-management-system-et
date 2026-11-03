@@ -118,7 +118,8 @@ export const EN_CATALOG = {
   'bulk.type_hint': 'Give the batch a type like 1BR or Studio — market rent is then managed per type.',
   'bulk.market_rent_optional': 'Market rent (optional)',
   'bulk.per_floor_counts': 'Units per floor (optional overrides)',
-  'bulk.per_floor_hint': 'One number per floor, in the same order as the floors list, e.g. 4, 4, 2 — floors can hold a different number of units.',
+  'bulk.per_floor_hint':
+    'One number per floor, in the same order as the floors list, e.g. 4, 4, 2 — floors can hold a different number of units.',
   'bulk.bedrooms': 'Bedrooms (optional)',
   'bulk.bathrooms': 'Bathrooms (optional)',
   'bulk.area': 'Area (m², optional)',
@@ -190,6 +191,43 @@ export const EN_CATALOG = {
   'auth.session_expired': 'Your session has expired. Please sign in again.',
   'auth.too_many_attempts': 'Too many attempts. Please try again in {minutes} minutes.',
 
+  // --- auth: email verification and password reset -------------------------
+  'auth.email_not_verified': 'Please verify your email address before signing in.',
+  'auth.forgot_password': 'Forgot password?',
+  'auth.forgot_title': 'Reset your password',
+  'auth.forgot_hint': 'Enter the email on your staff account and we will send a 6-digit reset code.',
+  'auth.forgot_submit': 'Send reset code',
+  'auth.forgot_sent':
+    'If that address belongs to a staff account, a reset code is on its way. It expires in 15 minutes.',
+  'auth.reset_title': 'Choose a new password',
+  'auth.reset_code': 'Reset code',
+  'auth.reset_new_password': 'New password',
+  'auth.reset_confirm': 'Confirm new password',
+  'auth.reset_submit': 'Reset password',
+  'auth.reset_done': 'Your password has been updated. Sign in with the new password.',
+  'auth.reset_password_mismatch': 'The two passwords do not match.',
+  'auth.verify_title': 'Verify your email',
+  'auth.verify_hint': 'We sent a 6-digit code to {email}. Enter it below to activate your account.',
+  'auth.verify_code': 'Verification code',
+  'auth.verify_submit': 'Verify and continue',
+  'auth.verify_resend': 'Resend code',
+  'auth.verify_resent': 'A new code is on its way.',
+  'auth.dev_code': 'Development only — your code is {code}',
+
+  // --- email templates (transactional mail, rendered per recipient) --------
+  'email.verification.subject': 'Verify your email address',
+  'email.verification.body':
+    'Welcome to {appName}! Your verification code is {code}. It expires in 24 hours. If you did not create this account, you can ignore this email.',
+  'email.invite.subject': 'You are invited to join {organizationName}',
+  'email.invite.body':
+    '{inviterName} invited you to join {organizationName} on {appName} as {role}. Open this link to set your password and accept the invitation: {link} The link expires on {expiresAt}. If you were not expecting this invitation, you can ignore this email.',
+  'email.password_reset.subject': 'Reset your password',
+  'email.password_reset.body':
+    'Your password reset code is {code}. It expires in 15 minutes. If you did not request a reset, ignore this email and your password stays unchanged.',
+  // Notification template keys that previously had no catalog text.
+  'notification.invite_user': 'You have been invited to join {organizationName}',
+  'notification.password_reset': 'Your password reset code is {code}',
+
   // --- tenant portal ----------------------------------------------------
   'portal.title': 'Tenant portal',
   'portal.login_hint': 'Sign in with the phone number you gave your landlord. We will text you a code.',
@@ -200,7 +238,8 @@ export const EN_CATALOG = {
   'portal.verify': 'Sign in',
   'portal.resend': 'Request a new code',
   'portal.otp_hint': 'Enter the 6-digit code — pasting works too',
-  'portal.phone_not_registered': 'This phone number is not registered for the tenant portal. Please contact your landlord.',
+  'portal.phone_not_registered':
+    'This phone number is not registered for the tenant portal. Please contact your landlord.',
   'portal.announcements': 'Announcements',
   'portal.welcome': 'Welcome, {name}',
   'portal.my_leases': 'My leases',
@@ -332,6 +371,7 @@ export const EN_CATALOG = {
   'user.resend_invite': 'Resend invite',
   'user.copy_link': 'Copy link',
   'user.invite_copied': 'Copied',
+  'user.invite_emailed': 'A copy of this link was also emailed to them.',
 
   'invite.title': 'Set up your account',
   'invite.subtitle':

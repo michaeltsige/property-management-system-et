@@ -22,6 +22,7 @@ import { notFound } from '../lib/errors.js';
 import { recordAudit } from '../services/audit.js';
 import { getPrisma } from '../lib/prisma.js';
 import {
+  deliverInviteEmail,
   getOrganization,
   getSettings,
   inviteMember,
@@ -91,16 +92,41 @@ organizationsRouter.post(
   validate({ body: inviteUserSchema }),
   async (req, res, next) => {
     try {
-      const result = await inviteMember(getPrisma(), {
-        organizationId: organizationIdOf(req),
-        actorUserId: req.auth?.userId ?? '',
+      const prisma = getPrisma();
+      const organizationId = organizationIdOf(req);
+      const actorUserId = req.auth?.userId ?? '';
+      const result = await inviteMember(prisma, {
+        organizationId,
+        actorUserId,
         email: req.body.email,
         role: req.body.role as Role,
         fullName: req.body.fullName,
       });
+      // Email the accept link; a mail outage never fails the invite — the
+      // single-use token rides along in the response for hand-over either way.
+      const [organization, inviter, invitee] = await Promise.all([
+        prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } }),
+        prisma.user.findUnique({ where: { id: actorUserId }, select: { fullName: true } }),
+        prisma.user.findUnique({ where: { email: result.invite.email }, select: { language: true } }),
+      ]);
+      const delivery =
+        organization && inviter
+          ? await deliverInviteEmail({
+              to: result.invite.email,
+              token: result.invite.token,
+              role: req.body.role as Role,
+              expiresAt: result.invite.expiresAt,
+              organizationName: organization.name,
+              inviterName: inviter.fullName,
+              language: invitee?.language ?? 'en',
+            })
+          : { emailed: false, emailError: 'Organization or inviter could not be loaded' };
       // The invite token is shown once so staff can hand it to the invitee;
       // it is stored hashed and can be re-issued via resend-invite.
-      res.status(201).json({ membership: result.membership, invite: result.invite });
+      res.status(201).json({
+        membership: result.membership,
+        invite: { ...result.invite, ...delivery },
+      });
     } catch (error) {
       next(error);
     }
@@ -113,12 +139,32 @@ organizationsRouter.post(
   validate({ params: z.object({ membershipId: z.string().uuid() }) }),
   async (req, res, next) => {
     try {
-      const result = await resendInvite(getPrisma(), {
-        organizationId: organizationIdOf(req),
-        actorUserId: req.auth?.userId ?? '',
+      const prisma = getPrisma();
+      const organizationId = organizationIdOf(req);
+      const actorUserId = req.auth?.userId ?? '';
+      const result = await resendInvite(prisma, {
+        organizationId,
+        actorUserId,
         membershipId: pstr(req, 'membershipId'),
       });
-      res.json(result);
+      const [organization, inviter, invitee] = await Promise.all([
+        prisma.organization.findUnique({ where: { id: organizationId }, select: { name: true } }),
+        prisma.user.findUnique({ where: { id: actorUserId }, select: { fullName: true } }),
+        prisma.user.findUnique({ where: { email: result.invite.email }, select: { language: true } }),
+      ]);
+      const delivery =
+        organization && inviter
+          ? await deliverInviteEmail({
+              to: result.invite.email,
+              token: result.invite.token,
+              role: result.invite.role,
+              expiresAt: result.invite.expiresAt,
+              organizationName: organization.name,
+              inviterName: inviter.fullName,
+              language: invitee?.language ?? 'en',
+            })
+          : { emailed: false, emailError: 'Organization or inviter could not be loaded' };
+      res.json({ invite: { ...result.invite, ...delivery } });
     } catch (error) {
       next(error);
     }
@@ -227,17 +273,13 @@ organizationsRouter.post(
 // Responses never contain credential values — only set/missing state and a
 // `••••last4` hint. See services/gateway.ts for the secret-handling rules.
 
-organizationsRouter.get(
-  '/payment-gateway',
-  requirePermission('org.read'),
-  async (req, res, next) => {
-    try {
-      res.json({ gateway: await getGatewayStatus(getPrisma(), organizationIdOf(req)) });
-    } catch (error) {
-      next(error);
-    }
-  },
-);
+organizationsRouter.get('/payment-gateway', requirePermission('org.read'), async (req, res, next) => {
+  try {
+    res.json({ gateway: await getGatewayStatus(getPrisma(), organizationIdOf(req)) });
+  } catch (error) {
+    next(error);
+  }
+});
 
 organizationsRouter.put(
   '/payment-gateway',

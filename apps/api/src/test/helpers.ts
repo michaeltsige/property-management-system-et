@@ -40,7 +40,14 @@ export async function createOrganizationFixture(
   });
 
   const user = await prisma.user.create({
-    data: { email: `${label}-${suffix}@test.local`, fullName: `${label} owner`, passwordHash },
+    data: {
+      email: `${label}-${suffix}@test.local`,
+      fullName: `${label} owner`,
+      passwordHash,
+      // Fixtures simulate established accounts: the login gate only applies to
+      // brand-new signups that have not redeemed their verification code.
+      emailVerifiedAt: new Date(),
+    },
   });
 
   await prisma.membership.create({

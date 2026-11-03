@@ -46,11 +46,13 @@ export default function TeamPage() {
   const members = useAsync(() => api.members(), []);
   const [invite, setInvite] = useState({ email: '', fullName: '' });
   const { pending, error, message, setMessage, run } = useAction();
-  // The one-time invite link to hand over, with its expiry.
+  // The one-time invite link to hand over, with its expiry. `emailed` says
+  // whether the accept link also went out by email.
   const [inviteOutcome, setInviteOutcome] = useState<{
     email: string;
     token: string;
     expiresAt: string;
+    emailed?: boolean;
   } | null>(null);
   const [copied, setCopied] = useState(false);
   const canManage = roleHasPermission(session?.role as Role, 'users.manage');
@@ -67,6 +69,7 @@ export default function TeamPage() {
         email: result.invite.email,
         token: result.invite.token,
         expiresAt: result.invite.expiresAt,
+        emailed: result.invite.emailed === true,
       });
       setCopied(false);
       setMessage(null);
@@ -82,6 +85,7 @@ export default function TeamPage() {
         email: result.invite.email,
         token: result.invite.token,
         expiresAt: result.invite.expiresAt,
+        emailed: result.invite.emailed === true,
       });
       setCopied(false);
       setMessage(null);
@@ -113,15 +117,18 @@ export default function TeamPage() {
       {message ? <Alert tone="success">{message}</Alert> : null}
       {error ? <Alert tone="danger">{error}</Alert> : null}
 
-      {/* No email provider is connected, so the invite is handed over here:
-          a one-time link the invitee opens to choose their password. */}
+      {/* The invite link is always shown: the email may not be configured, and
+          the invitee needs a way in even when delivery failed. */}
       {inviteOutcome ? (
         <Alert tone="success" title={t('user.invited', { email: inviteOutcome.email })}>
           <div className="mt-1 space-y-2">
-            <p className="text-xs">{t('user.invite_token_hint', {
-              email: inviteOutcome.email,
-              date: new Date(inviteOutcome.expiresAt).toLocaleDateString(),
-            })}</p>
+            <p className="text-xs">
+              {t('user.invite_token_hint', {
+                email: inviteOutcome.email,
+                date: new Date(inviteOutcome.expiresAt).toLocaleDateString(),
+              })}
+            </p>
+            {inviteOutcome.emailed ? <p className="text-xs font-medium">{t('user.invite_emailed')}</p> : null}
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
               <Input
                 readOnly
@@ -133,11 +140,7 @@ export default function TeamPage() {
               <Button variant="outline" size="sm" onClick={() => void copyLink(inviteOutcome.token)}>
                 {copied ? t('user.invite_copied') : t('user.copy_link')}
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setInviteOutcome(null)}
-              >
+              <Button variant="ghost" size="sm" onClick={() => setInviteOutcome(null)}>
                 {t('common.close')}
               </Button>
             </div>
@@ -172,9 +175,7 @@ export default function TeamPage() {
                   onChange={(event) => setInvite((current) => ({ ...current, fullName: event.target.value }))}
                 />
               </div>
-              <p className="sm:col-span-2 text-xs text-muted">
-                {t('user.invite_hint')}
-              </p>
+              <p className="sm:col-span-2 text-xs text-muted">{t('user.invite_hint')}</p>
               <div className="sm:col-span-2">
                 <Button type="submit" disabled={pending}>
                   {pending ? t('app.loading') : t('user.invite')}

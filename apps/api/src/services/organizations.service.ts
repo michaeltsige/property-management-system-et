@@ -8,15 +8,81 @@
 
 import type { PrismaClient } from '@prisma/client';
 
-import { DEFAULT_ORG_SETTINGS, PAYMENT_GATEWAY_SETTING_KEY, STAFF_ROLES, type Role, type UpdateOrganizationSettings } from '@pms/shared';
+import {
+  DEFAULT_ORG_SETTINGS,
+  PAYMENT_GATEWAY_SETTING_KEY,
+  STAFF_ROLES,
+  type Role,
+  type UpdateOrganizationSettings,
+} from '@pms/shared';
+import type { LanguageCode } from '@pms/calendar';
+import { createTranslator } from '@pms/i18n';
 
+import { webAppOrigin } from '../config.js';
 import { conflict, notFound } from '../lib/errors.js';
 import { generateRefreshToken, hashPassword } from '../lib/crypto.js';
+import { getEmailProvider } from '../providers/email/index.js';
+import { logger } from '../lib/logger.js';
 import { recordAudit } from './audit.js';
 
 /** Invitation tokens use the same shape as refresh tokens: opaque, stored hashed. */
 function generateInviteToken(): { token: string; hash: string } {
   return generateRefreshToken();
+}
+
+const EMAIL_LOCALES: Record<string, string> = { en: 'en', am: 'am-ET', om: 'om-ET', ti: 'ti-ET' };
+
+export interface InviteEmailDelivery {
+  emailed: boolean;
+  emailError?: string;
+}
+
+/**
+ * Email the accept-invite link to the invitee. A provider failure never fails
+ * the invite: the single-use token is still returned to the inviter (the team
+ * screen shows it for hand-over), and the delivery outcome rides along in the
+ * response so the UI can say whether the email went out.
+ */
+export async function deliverInviteEmail(params: {
+  to: string;
+  token: string;
+  role: Role;
+  expiresAt: Date;
+  organizationName: string;
+  inviterName: string;
+  language: string;
+}): Promise<InviteEmailDelivery> {
+  const language = (params.language as LanguageCode) ?? 'en';
+  const translator = createTranslator({ language });
+  const link = `${webAppOrigin()}/accept-invite?token=${encodeURIComponent(params.token)}`;
+  const expiresAt = new Intl.DateTimeFormat(EMAIL_LOCALES[language] ?? 'en', {
+    dateStyle: 'medium',
+  }).format(params.expiresAt);
+  const roleLabel = translator.t(params.role === 'owner_admin' ? 'role.owner_admin' : 'role.manager');
+
+  try {
+    const result = await getEmailProvider().send({
+      to: params.to,
+      language,
+      templateKey: 'email.invite.body',
+      values: {
+        inviterName: params.inviterName,
+        organizationName: params.organizationName,
+        appName: translator.t('app.name'),
+        role: roleLabel,
+        link,
+        expiresAt,
+      },
+      subjectKey: 'email.invite.subject',
+      subjectValues: { organizationName: params.organizationName },
+    });
+    if (result.status === 'sent') return { emailed: true };
+    logger.warn({ to: params.to, detail: result.detail }, 'invite email was not delivered');
+    return { emailed: false, emailError: result.detail };
+  } catch (error) {
+    logger.warn({ to: params.to, err: error }, 'invite email send failed');
+    return { emailed: false, emailError: String(error) };
+  }
 }
 
 export type ResolvedSettings = typeof DEFAULT_ORG_SETTINGS & Record<string, unknown>;
@@ -128,8 +194,9 @@ export async function listMembers(prisma: PrismaClient, organizationId: string) 
  * not, a placeholder account is created with a random unusable password. Either
  * way the membership starts as `invited` and the invitee activates it by
  * redeeming the returned single-use token (POST /auth/accept-invite), which sets
- * their password. The token is returned once — it is up to the client to hand it
- * to the invitee (link or message) until email delivery exists.
+ * their password and marks their address verified. The route emails the accept
+ * link to the invitee; the token is also returned once so the inviter can hand
+ * it over directly when mail is not configured.
  */
 const INVITE_TTL_DAYS = 14;
 
@@ -219,7 +286,7 @@ export async function resendInvite(
       after: { inviteResent: true, inviteExpiresAt: expiresAt.toISOString() },
     });
 
-    return { invite: { token, expiresAt, email: membership.user.email } };
+    return { invite: { token, expiresAt, email: membership.user.email, role: membership.role as Role } };
   });
 }
 

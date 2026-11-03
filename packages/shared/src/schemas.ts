@@ -221,6 +221,23 @@ export const acceptInviteSchema = z
   .object({ token: z.string().min(20).max(200), password: passwordSchema })
   .strict();
 
+/** Six-digit email codes (verification + password reset), zero-padded. */
+export const emailCodeSchema = z.string().regex(/^\d{6}$/, 'Enter the 6-digit code');
+
+/** Redeem the code from the verification email. */
+export const verifyEmailSchema = z.object({ email: emailSchema, code: emailCodeSchema }).strict();
+
+/** Ask for a fresh verification code. The answer never reveals whether the account exists. */
+export const resendVerificationSchema = z.object({ email: emailSchema }).strict();
+
+/** Ask for a password-reset code. The answer never reveals whether the account exists. */
+export const forgotPasswordSchema = z.object({ email: emailSchema }).strict();
+
+/** Trade the emailed 6-digit code for a new password. */
+export const resetPasswordSchema = z
+  .object({ email: emailSchema, code: emailCodeSchema, password: passwordSchema })
+  .strict();
+
 /**
  * Invites are staff-only (tenants enroll themselves through the portal) and a
  * member's role is fixed at invite time — there is no role-change surface.
@@ -435,7 +452,9 @@ export const createLeaseSchema = z.object({
   notes: z.string().max(4000).optional(),
 });
 
-export const updateLeaseSchema = createLeaseSchema.partial().omit({ unitId: true, tenantId: true, rentAmount: true });
+export const updateLeaseSchema = createLeaseSchema
+  .partial()
+  .omit({ unitId: true, tenantId: true, rentAmount: true });
 
 export const terminateLeaseSchema = z.object({
   terminatedOn: civilDateSchema,

@@ -25,12 +25,16 @@ Codes used across the API: `VALIDATION_FAILED` (400), `UNAUTHENTICATED` (401),
 
 | Method | Path             | Notes                                                                                       |
 | ------ | ---------------- | ------------------------------------------------------------------------------------------- |
-| POST   | `/auth/register` | Creates a user, an organization and an owner membership in one transaction. Returns tokens. |
-| POST   | `/auth/login`    | `{ email, password }` → `{ tokens, user }`. Locked for 15 minutes after 10 failures.        |
+| POST   | `/auth/register` | Creates a user, an organization and an owner membership in one transaction, then emails a 6-digit verification code. Returns `verificationRequired: true` — no session until the code is redeemed. |
+| POST   | `/auth/login`    | `{ email, password }` → `{ tokens, user }`. Refuses unverified addresses with `EMAIL_NOT_VERIFIED` (403); locked for 15 minutes after 10 failures. |
+| POST   | `/auth/verify-email` | `{ email, code }` — redeems the emailed 6-digit code, marks the address verified and mints the first session. Single use, 24 h expiry. Rate limited. |
+| POST   | `/auth/resend-verification` | `{ email }` — always `{ ok: true }`, never reveals whether the address has an account. Rate limited. |
+| POST   | `/auth/forgot-password` | `{ email }` — emails a 6-digit reset code to staff accounts (any membership). Always `{ ok: true }`; tenant-only users (OTP login) and unknown addresses stay silent. Rate limited. |
+| POST   | `/auth/reset-password` | `{ email, code, password }` — single-use code, 15-minute expiry; revokes every live session and marks the address verified. Rate limited. |
 | POST   | `/auth/refresh`  | Rotates the refresh token. Reusing a rotated token revokes the whole family.                |
 | POST   | `/auth/logout`   | Revokes the presented refresh token.                                                        |
 | GET    | `/auth/me`       | Current user, membership, organization, permissions.                                        |
-| POST   | `/auth/accept-invite` | `{ token, password }` — redeems the single-use invite token, sets the password, activates the membership. Rate limited. |
+| POST   | `/auth/accept-invite` | `{ token, password }` — redeems the single-use invite token, sets the password, activates the membership and marks the address verified. Rate limited. |
 
 ## Health
 
@@ -46,7 +50,7 @@ Codes used across the API: `VALIDATION_FAILED` (400), `UNAUTHENTICATED` (401),
 | GET       | `/organizations`                       | authenticated                             |
 | GET/PATCH | `/organizations/settings`              | `settings.read` / `settings.write`        |
 | GET/POST  | `/organizations/members`               | `members.read` / `members.write`          |
-| POST      | `/organizations/members/:membershipId/resend-invite` | `users.invite` — re-issues the single-use invite token (membership must still be `invited`). |
+| POST      | `/organizations/members/:membershipId/resend-invite` | `users.invite` — re-issues the single-use invite token and emails the accept link. The token also returns once in the response for hand-over when mail is not configured. |
 | PATCH     | `/organizations/members/:membershipId` | `members.write` (role change, deactivate) |
 | GET       | `/audit-logs`                          | `audit.read` — filters: `entityType`, `entityId`, `actorUserId`, `action`, `from`, `to`; paginated. |
 | GET       | `/exports/:kind.csv`                   | `reports.export` — `kind`: `tenants`, `leases`, `charges`, `payments`, `arrears`. Writes an `export` audit row. |

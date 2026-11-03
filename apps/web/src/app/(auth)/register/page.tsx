@@ -19,7 +19,7 @@ import { Alert, Button, Card, CardContent, Input, Label, Select } from '@/compon
  */
 export default function RegisterPage() {
   const router = useRouter();
-  const { signIn, t } = usePreferences();
+  const { t } = usePreferences();
   const [form, setForm] = useState({
     portfolioMode: 'self_owned' as 'self_owned' | 'managed',
     organizationName: '',
@@ -79,15 +79,11 @@ export default function RegisterPage() {
         });
         setRegistered(true);
       }
-      const result = await api.login({ email: form.email, password: form.password });
-      signIn({
-        // Identity only: the tokens stayed on the server, inside HttpOnly
-        // cookies this code cannot read (ADR-0026).
-        user: result.user,
-        organization: result.organization,
-        role: result.role ?? '',
-      });
-      router.replace('/onboarding');
+      // Signup ends on the verify-email door: the API emailed a 6-digit code,
+      // and redeeming it there starts the first session and continues into
+      // onboarding. No session exists before that (ADR-0026 flow).
+      const params = new URLSearchParams({ email: form.email.trim(), next: '/onboarding' });
+      router.replace(`/verify-email?${params.toString()}`);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {
@@ -99,7 +95,9 @@ export default function RegisterPage() {
     <div className="flex min-h-[100dvh] items-center justify-center bg-canvas px-4 py-8">
       <div className="w-full max-w-md">
         <div className="mb-5 text-center sm:mb-6">
-          <h1 className="text-lg font-semibold tracking-tight text-strong sm:text-xl">{t('auth.register_organization')}</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-strong sm:text-xl">
+            {t('auth.register_organization')}
+          </h1>
           <p className="mt-1 text-xs text-muted">{t('app.tagline')}</p>
         </div>
 
@@ -315,7 +313,10 @@ export default function RegisterPage() {
         </Card>
 
         <p className="mt-4 text-center text-xs text-muted">
-          <Link href="/login" className="text-brand-700 dark:text-brand-300 underline-offset-2 hover:underline">
+          <Link
+            href="/login"
+            className="text-brand-700 dark:text-brand-300 underline-offset-2 hover:underline"
+          >
             {t('auth.sign_in')}
           </Link>
         </p>

@@ -8,7 +8,15 @@
  *   Only the last four digits are stored in clear for search/display.
  */
 
-import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from 'node:crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+  randomInt,
+  randomUUID,
+  timingSafeEqual,
+} from 'node:crypto';
 
 import { hash as argon2Hash, verify as argon2Verify } from '@node-rs/argon2';
 
@@ -49,6 +57,33 @@ export function generateRefreshToken(): { token: string; hash: string } {
 
 export function hashRefreshToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
+}
+
+/**
+ * Six-digit email code (email verification, password reset), uniformly random.
+ * `randomInt` is rejection-sampled, so `000000`–`999999` are equally likely.
+ */
+export function generateEmailCode(): string {
+  return String(randomInt(0, 1_000_000)).padStart(6, '0');
+}
+
+/** Email codes are stored hashed like refresh tokens; the raw code only lives in the email. */
+export function hashEmailCode(code: string): string {
+  return hashRefreshToken(code);
+}
+
+/**
+ * Constant-time comparison for two hex digests of the same length. Comparing
+ * SHA-256 outputs with `===` would leak, byte by byte, how much of a guessed
+ * code hash was right.
+ */
+export function secureEqualHex(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  try {
+    return timingSafeEqual(Buffer.from(a, 'hex'), Buffer.from(b, 'hex'));
+  } catch {
+    return false;
+  }
 }
 
 export function newRequestId(): string {
@@ -93,4 +128,3 @@ export function decryptField(payload: string): string {
 export function lastFour(value: string): string {
   return value.replace(/\s+/g, '').slice(-4);
 }
-

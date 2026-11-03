@@ -427,7 +427,8 @@ export async function handleApiProxy(request: Request, deps: ProxyDeps = proxyDe
   );
 }
 
-type SessionAction = 'login' | 'register' | 'refresh' | 'logout' | 'me' | 'portal-request' | 'portal-verify';
+type SessionAction =
+  'login' | 'register' | 'verify-email' | 'refresh' | 'logout' | 'me' | 'portal-request' | 'portal-verify';
 
 async function readJsonBody(request: Request): Promise<Record<string, unknown> | null> {
   try {
@@ -459,7 +460,7 @@ function publicSession(payload: LoginPayload): Record<string, unknown> {
 async function sessionStart(
   request: Request,
   deps: ProxyDeps,
-  action: 'login' | 'register',
+  action: 'login' | 'register' | 'verify-email',
 ): Promise<Response> {
   const body = await readJsonBody(request);
   if (!body) return jsonProblem(400, 'INVALID_BODY', 'Expected a JSON request body.');
@@ -480,7 +481,23 @@ async function sessionStart(
     return toClientResponse(upstream, []);
   }
 
-  const payload = (await upstream.json()) as LoginPayload;
+  const payload = (await upstream.json()) as LoginPayload & {
+    verificationRequired?: boolean;
+    devVerificationCode?: string;
+  };
+
+  // Registration now ends on the verify-email page: no tokens exist yet, so
+  // there is no session to start — the emailed code is the next credential.
+  if (payload.verificationRequired) {
+    return jsonResponse(
+      {
+        verificationRequired: true,
+        ...(payload.devVerificationCode ? { devVerificationCode: payload.devVerificationCode } : {}),
+      },
+      200,
+    );
+  }
+
   if (!payload.tokens?.accessToken) {
     return jsonProblem(502, 'UPSTREAM_INVALID', 'The API did not return a session.');
   }
@@ -620,6 +637,7 @@ export async function handleSession(request: Request, deps: ProxyDeps = proxyDep
   switch (action) {
     case 'login':
     case 'register':
+    case 'verify-email':
       return sessionStart(request, deps, action);
     case 'portal-request':
       return sessionPortalRequest(request, deps);
