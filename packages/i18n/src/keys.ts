@@ -228,6 +228,23 @@ export const EN_CATALOG = {
   'email.password_reset.subject': 'Reset your password',
   'email.password_reset.body':
     'Your password reset code is {code}. It expires in 15 minutes. If you did not request a reset, ignore this email and your password stays unchanged.',
+  // Structured HTML email pieces (the plain-text part keeps using the .body
+  // templates above; these build the formatted HTML version).
+  'email.verification.intro': 'Welcome to {appName}! Enter this code to verify your email address.',
+  'email.verification.expiry':
+    'The code expires in 24 hours. If you did not create this account, you can ignore this email.',
+  'email.verification.cta': 'Verify my email',
+  'email.invite.intro': '{inviterName} invited you to join {organizationName} on {appName} as {role}.',
+  'email.invite.expiry':
+    'This link expires on {expiresAt}. If you were not expecting this invitation, you can ignore this email.',
+  'email.invite.cta': 'Set up your account',
+  'email.password_reset.intro': 'Enter this code to reset your password.',
+  'email.password_reset.expiry':
+    'The code expires in 15 minutes. If you did not request a reset, ignore this email and your password stays unchanged.',
+  'email.password_reset.cta': 'Reset your password',
+  'email.code_caption': 'Your code',
+  'email.link_fallback': 'If the button does not work, copy this link into your browser:',
+  'email.footer_automated': 'This is an automated message from {appName}.',
   // Notification template keys that previously had no catalog text.
   'notification.invite_user': 'You have been invited to join {organizationName}',
   'notification.password_reset': 'Your password reset code is {code}',
@@ -263,6 +280,10 @@ export const EN_CATALOG = {
   'portal.pay_now': 'Pay now',
   'portal.pay_hint': 'Pay your outstanding balance online.',
   'portal.pay_starting': 'Starting payment…',
+  'portal.payment_pending_title': 'Payment in progress',
+  'portal.payment_pending_hint':
+    'We are waiting for {provider} to confirm your payment. If you already paid, check the status here.',
+  'portal.payment_check': 'Check payment status',
   'portal.mock_title': 'Mock checkout',
   'portal.mock_hint': 'This is a simulated payment provider page for development. No real money moves.',
   'portal.mock_confirm': 'Confirm payment',

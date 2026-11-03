@@ -26,6 +26,12 @@ export interface EmailMessage {
    */
   subjectKey?: TranslationKey;
   subjectValues?: Record<string, string | number>;
+  /**
+   * Optional formatted HTML part (built with lib/email-html.ts). When present
+   * it is sent as the email's HTML body alongside the plain text above; when
+   * absent the message goes out as plain text only.
+   */
+  html?: string;
 }
 
 export interface EmailSendResult {
@@ -55,7 +61,7 @@ export function renderEmailSubject(message: EmailMessage): string {
 
 export class MockEmailProvider implements EmailProvider {
   readonly name = 'mock';
-  readonly outbox: { to: string; subject: string; body: string; language: LanguageCode; at: Date }[] = [];
+  readonly outbox: { to: string; subject: string; body: string; html?: string; language: LanguageCode; at: Date }[] = [];
 
   isConfigured(): boolean {
     return true;
@@ -64,7 +70,7 @@ export class MockEmailProvider implements EmailProvider {
   async send(message: EmailMessage): Promise<EmailSendResult> {
     const body = renderEmailBody(message);
     const subject = renderEmailSubject(message);
-    this.outbox.push({ to: message.to, subject, body, language: message.language, at: new Date() });
+    this.outbox.push({ to: message.to, subject, body, html: message.html, language: message.language, at: new Date() });
     if (getConfig().isDevelopment) {
       // Demo affordance: in dev there is no real inbox, so the message must be
       // readable somewhere. Production never logs message bodies.
@@ -125,6 +131,7 @@ export class ResendEmailProvider implements EmailProvider {
           to: [message.to],
           subject,
           text: body,
+          ...(message.html ? { html: message.html } : {}),
         }),
       });
     } catch (error) {

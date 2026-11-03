@@ -60,6 +60,7 @@ export default function PortalDashboardPage() {
   );
 
   const { pending: paying, error: payError, run: runPay } = useAction();
+  const { pending: checking, error: checkError, run: runCheck } = useAction();
 
   /** Start a provider payment for the full outstanding balance, then follow the redirect. */
   async function payNow() {
@@ -67,6 +68,20 @@ export default function PortalDashboardPage() {
       const intent = await api.portalInitiatePayment({});
       if (!intent.redirectUrl) throw new Error(t('portal.pay_no_redirect'));
       window.location.assign(intent.redirectUrl);
+    }).catch(() => undefined);
+  }
+
+  /**
+   * Re-verify a pending payment with the provider and complete it. This is the
+   * completion path when the provider could not redirect the tenant back —
+   * Chapa rejects plain-http origins, so a development checkout gets no
+   * auto-return. The server re-verifies before recording anything.
+   */
+  async function checkPendingPayment(providerRef: string) {
+    await runCheck(async () => {
+      await api.portalCompletePayment(providerRef);
+      payments.reload();
+      me.reload();
     }).catch(() => undefined);
   }
 
@@ -130,11 +145,30 @@ export default function PortalDashboardPage() {
                 </div>
                 {due > 0 ? (
                   <div className="space-y-1">
-                    <Button onClick={payNow} disabled={paying} className="w-full sm:w-auto">
+                    <Button onClick={payNow} disabled={paying || checking} className="w-full sm:w-auto">
                       {paying ? t('portal.pay_starting') : t('portal.pay_now')}
                     </Button>
                     <p className="text-xs text-muted">{t('portal.pay_hint')}</p>
                     {payError ? <Alert tone="danger">{payError}</Alert> : null}
+                  </div>
+                ) : null}
+                {/* A started-but-unconfirmed attempt: the provider never redirected
+                    back (http origin), so offer the server-verified completion here. */}
+                {payments.data?.pending ? (
+                  <div className="space-y-1 rounded-lg border border-line bg-wash p-3">
+                    <p className="text-sm font-medium text-strong">{t('portal.payment_pending_title')}</p>
+                    <p className="text-xs text-muted">
+                      {t('portal.payment_pending_hint', { provider: payments.data.pending.provider })}
+                    </p>
+                    <Button
+                      variant="secondary"
+                      onClick={() => checkPendingPayment(payments.data!.pending!.providerRef)}
+                      disabled={checking || paying}
+                      className="w-full sm:w-auto"
+                    >
+                      {t('portal.payment_check')}
+                    </Button>
+                    {checkError ? <Alert tone="danger">{checkError}</Alert> : null}
                   </div>
                 ) : null}
               </CardContent>

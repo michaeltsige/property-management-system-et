@@ -42,6 +42,7 @@ import type {
   PortalMe,
   PortalAnnouncement,
   PortalNotice,
+  PortalPendingPayment,
   PortalPayment,
   PortalPaymentIntent,
   Property,
@@ -465,7 +466,8 @@ export const api = {
   /** The tenant's rent account statement (charges with what was paid). */
   portalCharges: () => apiFetch<{ items: PortalCharge[] }>('/portal/charges'),
   /** The tenant's payment history. */
-  portalPayments: () => apiFetch<{ items: PortalPayment[] }>('/portal/payments'),
+  portalPayments: () =>
+    apiFetch<{ items: PortalPayment[]; pending?: PortalPendingPayment | null }>('/portal/payments'),
   /** Receipt PDF for one of the tenant's own payments. */
   portalReceiptUrl: (paymentId: string) =>
     `/api/v1/portal/payments/by-id/${encodeURIComponent(paymentId)}/receipt.pdf`,

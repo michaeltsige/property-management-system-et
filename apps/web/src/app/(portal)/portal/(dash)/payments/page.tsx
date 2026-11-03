@@ -6,7 +6,7 @@
  */
 
 import { formatAmount, formatDate } from '@/lib/format';
-import { useAsync } from '@/lib/hooks';
+import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 
 import { api } from '@/lib/api';
@@ -33,6 +33,19 @@ export default function PortalPaymentsPage() {
     () => (isTenant && ready ? api.portalPayments() : Promise.resolve(null)),
     [isTenant, ready],
   );
+  const { pending: checking, error: checkError, run: runCheck } = useAction();
+
+  /**
+   * Re-verify the pending attempt with the provider and complete it — the
+   * completion path when the provider could not redirect the tenant back
+   * (Chapa rejects plain-http origins, so dev checkouts get no auto-return).
+   */
+  async function checkPendingPayment(providerRef: string) {
+    await runCheck(async () => {
+      await api.portalCompletePayment(providerRef);
+      payments.reload();
+    }).catch(() => undefined);
+  }
 
   if (!ready || !isTenant) return null;
   const currency = session.organization.currency;
@@ -40,6 +53,28 @@ export default function PortalPaymentsPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold tracking-tight text-strong">{t('portal.nav.payments')}</h1>
+
+      {/* A started-but-unconfirmed attempt stays visible until it completes. */}
+      {payments.data?.pending ? (
+        <Card>
+          <CardContent className="space-y-2">
+            <p className="text-sm font-medium text-strong">{t('portal.payment_pending_title')}</p>
+            <p className="text-xs text-muted">
+              {formatAmount(payments.data.pending.amountMinor, payments.data.pending.currency, language)} ·{' '}
+              {t('portal.payment_pending_hint', { provider: payments.data.pending.provider })}
+            </p>
+            <Button
+              variant="secondary"
+              onClick={() => checkPendingPayment(payments.data!.pending!.providerRef)}
+              disabled={checking}
+              className="w-full sm:w-auto"
+            >
+              {t('portal.payment_check')}
+            </Button>
+            {checkError ? <Alert tone="danger">{checkError}</Alert> : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       {/* Desktop: history on the left, the transfer-proof upload on the right —
           the two things a tenant comes to this page for, without a second trip.

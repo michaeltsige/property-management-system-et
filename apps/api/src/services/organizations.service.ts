@@ -22,6 +22,7 @@ import { webAppOrigin } from '../config.js';
 import { conflict, notFound } from '../lib/errors.js';
 import { generateRefreshToken, hashPassword } from '../lib/crypto.js';
 import { getEmailProvider } from '../providers/email/index.js';
+import { renderEmailHtml } from '../lib/email-html.js';
 import { logger } from '../lib/logger.js';
 import { recordAudit } from './audit.js';
 
@@ -61,6 +62,24 @@ export async function deliverInviteEmail(params: {
   const roleLabel = translator.t(params.role === 'owner_admin' ? 'role.owner_admin' : 'role.manager');
 
   try {
+    // Formatted HTML part (the branded invite card): the plain-text body below
+    // stays the .body template for text-only clients.
+    const html = renderEmailHtml({
+      heading: translator.t('email.invite.subject', { organizationName: params.organizationName }),
+      paragraphs: [
+        translator.t('email.invite.intro', {
+          inviterName: params.inviterName,
+          organizationName: params.organizationName,
+          appName: translator.t('app.name'),
+          role: roleLabel,
+        }),
+      ],
+      cta: { label: translator.t('email.invite.cta'), href: link },
+      fallbackLink: { caption: translator.t('email.link_fallback'), href: link },
+      note: translator.t('email.invite.expiry', { expiresAt }),
+      footer: translator.t('email.footer_automated', { appName: translator.t('app.name') }),
+      appName: translator.t('app.name'),
+    });
     const result = await getEmailProvider().send({
       to: params.to,
       language,
@@ -75,6 +94,7 @@ export async function deliverInviteEmail(params: {
       },
       subjectKey: 'email.invite.subject',
       subjectValues: { organizationName: params.organizationName },
+      html,
     });
     if (result.status === 'sent') return { emailed: true };
     logger.warn({ to: params.to, detail: result.detail }, 'invite email was not delivered');

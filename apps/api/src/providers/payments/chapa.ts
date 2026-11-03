@@ -79,6 +79,7 @@
 import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 
 import { getConfig } from '../../config.js';
+import { logger } from '../../lib/logger.js';
 
 import {
   ProviderNotConfiguredError,
@@ -167,6 +168,28 @@ function normalizedChapaPhone(phone?: string): string | undefined {
 function normalizedChapaIntlPhone(phone?: string): string | undefined {
   const local = normalizedChapaPhone(phone);
   return local ? `251${local.slice(1)}` : undefined;
+}
+
+/**
+ * Chapa (v1 and v2) only accepts https:// for `callback_url` and `return_url`.
+ * A plain-http (localhost) value — on EITHER field — is rejected with the
+ * misleading message "Callback URL must start with https:// and be a valid
+ * URL" (verified against the live v2 API on 2026-11-03: a request with only an
+ * http return_url fails with exactly that message). Both fields are optional,
+ * so a non-https URL is dropped instead of failing the whole checkout:
+ * completion then falls back to the server-side verify path (the portal's
+ * pending-payment "check status" button, or the webhook when one is
+ * configured). Set API_PUBLIC_URL / PORTAL_RETURN_ORIGIN to https URLs in
+ * production to get the redirect and webhook back.
+ */
+export function httpsUrlOrUndefined(url: string | undefined, context: string): string | undefined {
+  if (!url) return undefined;
+  if (/^https:\/\//i.test(url)) return url;
+  logger.warn(
+    { context, url },
+    'Chapa only accepts https URLs — omitting it; payment completion falls back to server-side verify',
+  );
+  return undefined;
 }
 
 /** v2 reports amounts as integer cents; normalize defensively (integers only). */
@@ -329,13 +352,17 @@ export class ChapaPaymentProvider implements PaymentProviderAdapter {
     const lastName = restName.join(' ') || 'PMS';
     const email = input.customer?.email || `tenant+${txRef.toLowerCase()}@pms.local`;
     const webhookBase = getConfig().API_PUBLIC_URL;
-    const callbackUrl = webhookBase
-      ? `${webhookBase.replace(/\/$/, '')}/api/v1/webhooks/chapa`
-      : undefined;
+    const callbackUrl = httpsUrlOrUndefined(
+      webhookBase ? `${webhookBase.replace(/\/$/, '')}/api/v1/webhooks/chapa` : undefined,
+      'callback_url',
+    );
     // Our own reference travels inside the return URL: the portal return page
     // can then always complete the payment, whether or not Chapa appends its
     // own redirect params (undocumented on v2).
-    const returnUrl = `${chapaSandboxCheckoutUrl(input.returnUrl)}?merchant_reference=${encodeURIComponent(txRef)}`;
+    const returnUrl = httpsUrlOrUndefined(
+      `${chapaSandboxCheckoutUrl(input.returnUrl)}?merchant_reference=${encodeURIComponent(txRef)}`,
+      'return_url',
+    );
     const customization: Record<string, unknown> = {
       title: 'Rent payment',
       ...(input.description ? { description: input.description } : {}),

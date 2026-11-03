@@ -26,7 +26,7 @@ import type { CalendarKind, LanguageCode } from '@pms/calendar';
 import type { CurrencyCode } from '@pms/shared';
 import { createTranslator, type TranslationKey } from '@pms/i18n';
 
-import { getConfig } from '../config.js';
+import { getConfig, webAppOrigin } from '../config.js';
 import { conflict, emailNotVerified, forbidden, notFound, unauthenticated } from '../lib/errors.js';
 import {
   generateEmailCode,
@@ -40,6 +40,7 @@ import {
 import { getPrisma } from '../lib/prisma.js';
 import { logger } from '../lib/logger.js';
 import { getEmailProvider } from '../providers/email/index.js';
+import { renderEmailHtml } from '../lib/email-html.js';
 import { recordAudit } from './audit.js';
 import { signAccessToken } from '../middleware/auth.js';
 
@@ -121,17 +122,53 @@ async function issueEmailCode(userId: string, purpose: EmailCodePurpose): Promis
 async function sendAuthEmail(params: {
   to: string;
   language: string;
+  kind: 'verification' | 'password_reset';
   templateKey: TranslationKey;
   values: Record<string, string | number>;
   subjectKey?: TranslationKey;
 }): Promise<void> {
   try {
+    // The formatted HTML part: a branded card with a code block and a button
+    // that opens the right door with the address prefilled (?email= is read by
+    // both pages). The plain-text part below stays the .body template, so
+    // text-only clients see the same words as before.
+    const language = (params.language as LanguageCode) ?? 'en';
+    const translator = createTranslator({ language });
+    const code = typeof params.values.code === 'string' ? params.values.code : undefined;
+    const appName =
+      typeof params.values.appName === 'string' ? params.values.appName : translator.t('app.name');
+    const doorUrl = (path: string) => `${webAppOrigin()}${path}?email=${encodeURIComponent(params.to)}`;
+    const html =
+      params.kind === 'verification'
+        ? renderEmailHtml({
+            heading: translator.t('email.verification.subject'),
+            paragraphs: [translator.t('email.verification.intro', { appName })],
+            code,
+            codeCaption: translator.t('email.code_caption'),
+            cta: { label: translator.t('email.verification.cta'), href: doorUrl('/verify-email') },
+            fallbackLink: { caption: translator.t('email.link_fallback'), href: doorUrl('/verify-email') },
+            note: translator.t('email.verification.expiry'),
+            footer: translator.t('email.footer_automated', { appName }),
+            appName,
+          })
+        : renderEmailHtml({
+            heading: translator.t('email.password_reset.subject'),
+            paragraphs: [translator.t('email.password_reset.intro')],
+            code,
+            codeCaption: translator.t('email.code_caption'),
+            cta: { label: translator.t('email.password_reset.cta'), href: doorUrl('/reset-password') },
+            fallbackLink: { caption: translator.t('email.link_fallback'), href: doorUrl('/reset-password') },
+            note: translator.t('email.password_reset.expiry'),
+            footer: translator.t('email.footer_automated', { appName }),
+            appName,
+          });
     const result = await getEmailProvider().send({
       to: params.to,
       language: (params.language as LanguageCode) ?? 'en',
       templateKey: params.templateKey,
       values: params.values,
       subjectKey: params.subjectKey,
+      html,
     });
     if (result.status !== 'sent') {
       logger.warn({ to: params.to, detail: result.detail }, 'auth email was not delivered');
@@ -255,6 +292,7 @@ export async function registerOrganization(input: RegisterInput, meta: { request
   await sendAuthEmail({
     to: user.email,
     language: user.language,
+    kind: 'verification',
     templateKey: 'email.verification.body',
     values: { appName: localizedAppName(user.language), code },
     subjectKey: 'email.verification.subject',
@@ -383,7 +421,10 @@ export async function login(
       id: user.id,
       email: user.email,
       fullName: user.fullName,
-      calendar: user.calendar,
+      // null means "use the organization default" (invited users have no
+      // personal override) — the session must carry the effective value, or a
+      // client stringifies null into `?calendar=null` and validation rejects it.
+      calendar: user.calendar ?? membership.organization.calendar,
       language: user.language,
     },
     organization: {
@@ -673,7 +714,10 @@ export async function verifyEmail(
       id: user.id,
       email: user.email,
       fullName: user.fullName,
-      calendar: user.calendar,
+      // null means "use the organization default" (invited users have no
+      // personal override) — the session must carry the effective value, or a
+      // client stringifies null into `?calendar=null` and validation rejects it.
+      calendar: user.calendar ?? membership.organization.calendar,
       language: user.language,
     },
     organization: {
@@ -704,6 +748,7 @@ export async function resendVerification(input: { email: string }) {
     await sendAuthEmail({
       to: user.email,
       language: user.language,
+      kind: 'verification',
       templateKey: 'email.verification.body',
       values: { appName: localizedAppName(user.language), code },
       subjectKey: 'email.verification.subject',
@@ -741,6 +786,7 @@ export async function forgotPassword(input: { email: string }) {
     await sendAuthEmail({
       to: user.email,
       language: user.language,
+      kind: 'password_reset',
       templateKey: 'email.password_reset.body',
       values: { code },
       subjectKey: 'email.password_reset.subject',

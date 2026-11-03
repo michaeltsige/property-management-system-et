@@ -756,7 +756,16 @@ export async function initiatePortalPayment(
     if (error instanceof ProviderNotConfiguredError) {
       throw providerError(error.message, { provider: provider.name });
     }
-    throw error;
+    // Everything else thrown here comes from the adapter itself — credential
+    // problems, provider-side validation ("Callback URL must start with
+    // https://…"), outages. The messages are readable and tenant-safe, so they
+    // surface as 502 PROVIDER_ERROR instead of a generic "unexpected error";
+    // the cause keeps the stack for the logs.
+    throw providerError(
+      error instanceof Error ? error.message : 'The payment provider could not be reached',
+      { provider: provider.name },
+      error,
+    );
   }
 
   const activeLease = await prisma.lease.findFirst({

@@ -182,6 +182,14 @@ describe('completing a portal payment', () => {
       .send({})
       .expect(201);
 
+    // While the attempt is pending, the history endpoint surfaces it — the
+    // portal's "check payment status" affordance reads this (the completion
+    // path when the provider cannot redirect the tenant back).
+    const whilePending = await request(app).get('/api/v1/portal/payments').set(header).expect(200);
+    expect(whilePending.body.pending?.providerRef).toBe(intent.body.providerRef);
+    expect(whilePending.body.pending?.amountMinor).toBe('3000000');
+    expect(whilePending.body.pending?.provider).toBe('mock');
+
     const done = await request(app)
       .post(`/api/v1/portal/payments/${intent.body.providerRef}/complete`)
       .set(header)
@@ -191,6 +199,11 @@ describe('completing a portal payment', () => {
     expect(done.body.receiptNumber).toMatch(/^RCT-\d{4}-\d{6}$/);
     expect(done.body.allocatedMinor).toBe('3000000');
     expect(done.body.unallocatedMinor).toBe('0');
+
+    // Completed: the pending affordance disappears from the history.
+    const afterComplete = await request(app).get('/api/v1/portal/payments').set(header).expect(200);
+    expect(afterComplete.body.pending).toBeNull();
+    expect(afterComplete.body.items.some((p: { id: string }) => p.id === done.body.paymentId)).toBe(true);
 
     const charges = await prisma.charge.findMany({
       where: { organizationId: session.organizationId, tenantId: session.tenantId },

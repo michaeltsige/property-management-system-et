@@ -10,9 +10,11 @@
 import { createHmac } from 'node:crypto';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { loadConfig } from '../config.js';
 import {
   ChapaPaymentProvider,
   chapaApiSurface,
+  httpsUrlOrUndefined,
   majorStringToMinor,
   minorToMajorString,
 } from '../providers/payments/chapa.js';
@@ -47,6 +49,59 @@ describe('amount conversions', () => {
     expect(majorStringToMinor('0.01')).toBe(1);
     expect(majorStringToMinor(400)).toBe(40000);
     expect(majorStringToMinor('1500.5')).toBe(150050);
+  });
+});
+
+describe('https-only URL guard', () => {
+  it('keeps https URLs and drops anything else (Chapa rejects http on both fields)', () => {
+    expect(httpsUrlOrUndefined('https://api.pms.example.com/api/v1/webhooks/chapa', 'test')).toBe(
+      'https://api.pms.example.com/api/v1/webhooks/chapa',
+    );
+    expect(httpsUrlOrUndefined(undefined, 'test')).toBeUndefined();
+    expect(httpsUrlOrUndefined('http://localhost:8080/api/v1/webhooks/chapa', 'test')).toBeUndefined();
+    expect(
+      httpsUrlOrUndefined('http://localhost:3000/portal/pay/chapa?merchant_reference=PMS-x', 'test'),
+    ).toBeUndefined();
+    expect(httpsUrlOrUndefined('ftp://example.com', 'test')).toBeUndefined();
+    expect(httpsUrlOrUndefined('not a url', 'test')).toBeUndefined();
+  });
+
+  it('omits callback_url and return_url from the live v2 body when the configured origins are http', async () => {
+    // Point the public origins at localhost the way a dev .env does; the guard
+    // must drop both instead of letting Chapa reject the whole checkout with
+    // "Callback URL must start with https:// and be a valid URL".
+    const cached = loadConfig({
+      ...process.env,
+      API_PUBLIC_URL: 'http://localhost:8080',
+      PORTAL_RETURN_ORIGIN: 'http://localhost:3000',
+    });
+    try {
+      const fetchMock = stubFetch(() => ({
+        status: 'success',
+        message: 'Payment initiated successfully',
+        data: { checkout_url: 'https://checkout.chapa.global/CH0Vn2VASWCi' },
+      }));
+      const provider = new ChapaPaymentProvider(
+        { secretKey: V2_SECRET, baseUrl: 'https://api.chapa.global/v2' },
+        'live',
+      );
+
+      const initiation = await provider.initiate({
+        organizationId: 'org-1',
+        reference: 'portal-abc',
+        amount: { amountMinor: 150000, currency: 'ETB' },
+      });
+      expect(initiation.redirectUrl).toBe('https://checkout.chapa.global/CH0Vn2VASWCi');
+
+      const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+      const sent = JSON.parse(String(init.body)) as Record<string, unknown>;
+      expect(sent.callback_url).toBeUndefined();
+      expect(sent.return_url).toBeUndefined();
+    } finally {
+      // Restore the config cache the environment describes.
+      loadConfig(process.env);
+      void cached;
+    }
   });
 });
 

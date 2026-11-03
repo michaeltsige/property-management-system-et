@@ -411,6 +411,22 @@ export interface PortalPayment {
   notes: string | null;
 }
 
+/**
+ * The newest still-pending payment attempt, when one exists. It rides along
+ * with the history so the portal can offer "check payment status" — the
+ * completion path when the provider could not redirect the tenant back
+ * (Chapa rejects http origins, so dev checkouts get no auto-return).
+ */
+export interface PortalPendingPayment {
+  id: string;
+  providerRef: string;
+  provider: string;
+  amountMinor: string;
+  currency: string;
+  paidAt: string;
+  reference: string | null;
+}
+
 /** An in-app notice: the client translates templateKey with payload values. */
 export interface PortalNotice {
   id: string;

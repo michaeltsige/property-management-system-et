@@ -247,6 +247,15 @@ this contract, confirmed from the official documentation on 2026-10-16:
   - Return flow — Chapa's redirect params are undocumented on v2, so the
     return_url embeds our `merchant_reference`; the portal return page
     completes from that without depending on undocumented params.
+  - **callback_url and return_url are optional but strictly https-only**
+    (verified against the live v2 API on 2026-11-03): a request with an http
+    `return_url` — even with NO `callback_url` at all — is rejected with the
+    misleading message "Callback URL must start with https:// and be a valid
+    URL" (`error.code: "INVALID_FORMAT"`); the same request with both fields
+    omitted, or both https, succeeds. The adapter therefore drops non-https
+    URLs instead of failing the checkout, and completion falls back to
+    server-side verify (the portal's pending-payment "check status" path, or
+    the webhook when `API_PUBLIC_URL` is https).
   - `GET /v2/payments/{reference}/verify` — accepts either Chapa's reference
     or our merchant_reference; fulfil only on `data.status === "SUCCESS"`
     (uppercase); `data.amount` is integer cents.

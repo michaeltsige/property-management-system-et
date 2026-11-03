@@ -62,6 +62,20 @@ function isLanguageCode(value: string): value is LanguageCode {
   return LANGUAGES.some((option) => option.code === value);
 }
 
+/**
+ * The stored (and server-issued) calendar can be null — it means "use the
+ * organization default" (invited users have no personal override). A stale
+ * localStorage session may still carry that null from an older build, so every
+ * restore coerces it before it can reach a query string as the literal "null"
+ * (which the API's `calendar` enum validation rejects with "Invalid enum
+ * value … received 'null'").
+ */
+function effectiveCalendar(value: unknown, fallback: unknown): CalendarKind {
+  if (value === 'ethiopian' || value === 'gregorian') return value;
+  if (fallback === 'ethiopian' || fallback === 'gregorian') return fallback;
+  return 'ethiopian';
+}
+
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<StoredSession | null>(null);
   const [ready, setReady] = useState(false);
@@ -77,7 +91,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     setSession(stored);
     if (stored) {
       setLanguageState(stored.user.language);
-      setCalendarState(stored.user.calendar);
+      setCalendarState(effectiveCalendar(stored.user.calendar, stored.organization?.calendar));
     } else {
       // No session: the door speaks the device's remembered language (or English).
       const door = window.localStorage.getItem(DOOR_LANGUAGE_KEY);
@@ -194,7 +208,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     saveSession(next);
     setSession(next);
     setLanguageState(next.user.language);
-    setCalendarState(next.user.calendar);
+    setCalendarState(effectiveCalendar(next.user.calendar, next.organization?.calendar));
   }, []);
 
   const signOut = useCallback(() => {

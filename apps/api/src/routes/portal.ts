@@ -362,22 +362,41 @@ portalRouter.get('/portal/payments', requireAuth, requirePermission('portal.pay'
   try {
     const prisma = getPrisma();
     const tenant = await portalTenant(prisma, req);
-    const payments = await prisma.payment.findMany({
-      where: { tenantId: tenant.id, organizationId: tenant.organizationId, status: 'succeeded' },
-      orderBy: { paidAt: 'desc' },
-      take: 60,
-      select: {
-        id: true,
-        amountMinor: true,
-        currency: true,
-        method: true,
-        status: true,
-        paidAt: true,
-        reference: true,
-        receiptNumber: true,
-        notes: true,
-      },
-    });
+    // The newest still-pending attempt rides along: without an https return
+    // URL (Chapa rejects http origins) the provider never redirects the tenant
+    // back, so the portal itself must offer the "check status / complete"
+    // affordance that re-verifies with the provider.
+    const [payments, pending] = await Promise.all([
+      prisma.payment.findMany({
+        where: { tenantId: tenant.id, organizationId: tenant.organizationId, status: 'succeeded' },
+        orderBy: { paidAt: 'desc' },
+        take: 60,
+        select: {
+          id: true,
+          amountMinor: true,
+          currency: true,
+          method: true,
+          status: true,
+          paidAt: true,
+          reference: true,
+          receiptNumber: true,
+          notes: true,
+        },
+      }),
+      prisma.payment.findFirst({
+        where: { tenantId: tenant.id, organizationId: tenant.organizationId, status: 'pending' },
+        orderBy: { paidAt: 'desc' },
+        select: {
+          id: true,
+          providerRef: true,
+          provider: true,
+          amountMinor: true,
+          currency: true,
+          paidAt: true,
+          reference: true,
+        },
+      }),
+    ]);
     res.json({
       items: payments.map((payment) => ({
         id: payment.id,
@@ -390,6 +409,17 @@ portalRouter.get('/portal/payments', requireAuth, requirePermission('portal.pay'
         receiptNumber: payment.receiptNumber,
         notes: payment.notes,
       })),
+      pending: pending
+        ? {
+            id: pending.id,
+            providerRef: pending.providerRef,
+            provider: pending.provider,
+            amountMinor: pending.amountMinor.toString(),
+            currency: pending.currency,
+            paidAt: pending.paidAt.toISOString(),
+            reference: pending.reference,
+          }
+        : null,
     });
   } catch (error) {
     next(error);
