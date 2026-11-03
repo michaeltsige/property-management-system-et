@@ -12,17 +12,31 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   ChapaPaymentProvider,
+  chapaApiSurface,
   majorStringToMinor,
   minorToMajorString,
 } from '../providers/payments/chapa.js';
 
 const SECRET = 'CHASECK-test-0000000000000000';
+const V2_SECRET = 'CHAPA_TEST_PRIV_abcdef123456';
 const WEBHOOK_SECRET = 'whsec-chapa-test';
 
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
+
+function stubFetch(handler: (url: string, init: RequestInit | undefined) => unknown) {
+  const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
+    const body = handler(String(url), init);
+    return new Response(typeof body === 'string' ? body : JSON.stringify(body), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  });
+  vi.stubGlobal('fetch', fetchMock);
+  return fetchMock;
+}
 
 describe('amount conversions', () => {
   it('converts minor units to Chapa major-unit strings and back without float drift', () => {
@@ -142,18 +156,6 @@ describe('chapa sandbox transport (test mode)', () => {
 });
 
 describe('chapa live transport (live mode)', () => {
-  function stubFetch(handler: (url: string, init: RequestInit | undefined) => unknown) {
-    const fetchMock = vi.fn(async (url: string | URL | Request, init?: RequestInit) => {
-      const body = handler(String(url), init);
-      return new Response(typeof body === 'string' ? body : JSON.stringify(body), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    });
-    vi.stubGlobal('fetch', fetchMock);
-    return fetchMock;
-  }
-
   it('is unconfigured without a secret key and refuses to call the API', async () => {
     const provider = new ChapaPaymentProvider({ webhookSecret: WEBHOOK_SECRET }, 'live');
     expect(provider.isConfigured()).toBe(false);
@@ -197,7 +199,10 @@ describe('chapa live transport (live mode)', () => {
     expect(sent.first_name).toBe('Abebe');
     expect(sent.last_name).toBe('Kebede');
     expect(sent.phone_number).toBe('0911234567'); // +251… rewritten to the documented local form
-    expect(sent.return_url).toBe('https://pms.example.com/portal/pay/chapa');
+    expect(sent.return_url).toBe(
+      `https://pms.example.com/portal/pay/chapa?merchant_reference=${initiation.providerRef}`,
+    );
+    expect(sent.tx_ref).toBe(initiation.providerRef);
     expect(String(sent.email)).toContain('@');
   });
 
@@ -231,6 +236,133 @@ describe('chapa live transport (live mode)', () => {
 
   it('refunds and reconciliation are refused in live mode until the endpoints are confirmed', async () => {
     const provider = new ChapaPaymentProvider({ secretKey: SECRET }, 'live');
+    await expect(
+      provider.refund({ providerRef: 'PMS-abc', amount: { amountMinor: 100, currency: 'ETB' }, reason: 'test' }),
+    ).rejects.toThrow('refund');
+    await expect(
+      provider.reconcile({ organizationId: 'org-1', from: new Date(), to: new Date() }),
+    ).rejects.toThrow('statement');
+  });
+});
+
+describe('chapa v2 transport (newer CHAPA_TEST_ keys)', () => {
+  it('routes classic keys to v1 and newer keys to v2', () => {
+    expect(chapaApiSurface('CHASECK_TEST-ABCDEF1234567890')).toBe('v1');
+    expect(chapaApiSurface('CHASECK-ABCDEF1234567890')).toBe('v1');
+    expect(chapaApiSurface(V2_SECRET)).toBe('v2');
+    expect(chapaApiSurface(undefined)).toBe('v2');
+  });
+
+  it('initializes against /payments/hosted with integer cents, an Idempotency-Key and a ≤20 char reference', async () => {
+    const fetchMock = stubFetch(() => ({
+      status: 'success',
+      message: 'Payment initiated successfully',
+      data: { checkout_url: 'https://checkout.chapa.global/CH0Vn2VASWCi' },
+    }));
+    const provider = new ChapaPaymentProvider(
+      { secretKey: V2_SECRET, baseUrl: 'https://api.chapa.global/v2' },
+      'live',
+    );
+
+    const initiation = await provider.initiate({
+      organizationId: 'org-1',
+      reference: 'portal-abc',
+      amount: { amountMinor: 150000, currency: 'ETB' },
+      description: 'Rent payment for Abebe Kebede',
+      returnUrl: 'https://pms.example.com/portal/pay/mock',
+      customer: { fullName: 'Abebe Kebede', phone: '+251911234567', email: undefined },
+    });
+
+    expect(initiation.redirectUrl).toBe('https://checkout.chapa.global/CH0Vn2VASWCi');
+    expect(initiation.providerRef).toMatch(/^PMS-/);
+    expect(initiation.providerRef.length).toBeLessThanOrEqual(20); // v2 merchant_reference cap
+
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api.chapa.global/v2/payments/hosted');
+    const headers = init.headers as Record<string, string>;
+    expect(headers.Authorization).toBe(`Bearer ${V2_SECRET}`);
+    expect(headers['Idempotency-Key']).toBe(initiation.providerRef);
+
+    const sent = JSON.parse(String(init.body)) as Record<string, unknown>;
+    expect(sent.amount).toBe(150000); // integer cents, NOT a major-unit string
+    expect(sent.currency).toBe('ETB');
+    expect(sent.merchant_reference).toBe(initiation.providerRef);
+    const customer = sent.customer as Record<string, unknown>;
+    expect(customer.first_name).toBe('Abebe');
+    expect(customer.last_name).toBe('Kebede');
+    expect(customer.phone_number).toBe('251911234567'); // international form on v2
+    expect(String(customer.email)).toContain('@');
+    expect(String(sent.return_url)).toBe(
+      `https://pms.example.com/portal/pay/chapa?merchant_reference=${initiation.providerRef}`,
+    );
+  });
+
+  it('maps the v2 verify response (uppercase status, integer-cents amount) via the merchant reference', async () => {
+    const fetchMock = stubFetch(() => ({
+      status: 'success',
+      message: 'Verification',
+      data: {
+        status: 'SUCCESS',
+        amount: 150000,
+        currency: 'ETB',
+        chapa_reference: 'CHAPA123456789',
+        created_at: '2026-11-02T09:00:00Z',
+        updated_at: '2026-11-02T09:01:30Z',
+      },
+    }));
+    const provider = new ChapaPaymentProvider(
+      { secretKey: V2_SECRET, baseUrl: 'https://api.chapa.global/v2' },
+      'live',
+    );
+
+    const verification = await provider.verify('PMS-abc123');
+    expect(verification.status).toBe('succeeded');
+    expect(verification.amountMinor).toBe(150000); // cents pass through unconverted
+    expect(verification.currency).toBe('ETB');
+    expect(verification.paidAt?.getUTCSeconds()).toBe(30);
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe('https://api.chapa.global/v2/payments/PMS-abc123/verify');
+  });
+
+  it('maps v2 webhook payloads (merchant_reference, integer cents, payment.* events)', async () => {
+    const provider = new ChapaPaymentProvider(
+      { secretKey: V2_SECRET, webhookSecret: WEBHOOK_SECRET },
+      'live',
+    );
+    const body = JSON.stringify({
+      webhook_type: 'payment',
+      event: 'payment.success',
+      status: 'success',
+      mode: 'test',
+      amount: 40000,
+      currency: 'ETB',
+      merchant_reference: 'PMS-abc123',
+      chapa_reference: 'CHAPA987654321',
+    });
+    const signature = createHmac('sha256', WEBHOOK_SECRET).update(body).digest('hex');
+
+    const event = await provider.handleWebhook(body, { 'x-chapa-signature': signature });
+    expect(event.signatureValid).toBe(true);
+    expect(event.status).toBe('succeeded');
+    expect(event.providerRef).toBe('PMS-abc123');
+    expect(event.amountMinor).toBe(40000); // cents pass through, not major→minor
+    expect(event.reference).toBe('CHAPA987654321');
+
+    const failedBody = JSON.stringify({
+      event: 'payment.failed',
+      merchant_reference: 'PMS-abc123',
+      amount: 40000,
+    });
+    const failedEvent = await provider.handleWebhook(failedBody, {
+      'x-chapa-signature': createHmac('sha256', WEBHOOK_SECRET).update(failedBody).digest('hex'),
+    });
+    expect(failedEvent.signatureValid).toBe(true);
+    expect(failedEvent.status).toBe('failed');
+  });
+
+  it('still refuses refund and reconcile on v2 until those endpoints are confirmed', async () => {
+    const provider = new ChapaPaymentProvider({ secretKey: V2_SECRET }, 'live');
     await expect(
       provider.refund({ providerRef: 'PMS-abc', amount: { amountMinor: 100, currency: 'ETB' }, reason: 'test' }),
     ).rejects.toThrow('refund');

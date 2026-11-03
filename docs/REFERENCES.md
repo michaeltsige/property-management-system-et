@@ -231,6 +231,29 @@ this contract, confirmed from the official documentation on 2026-10-16:
   exact endpoints were not confirmed from the docs at the time of writing, so
   the adapter refuses with a clear message instead of guessing URLs. Refunds
   run from the Chapa dashboard until then.
+- **API v2 — newer dashboard keys (`CHAPA_TEST_…`, labelled "Private Key"),
+  checked 2026-11-02** — docs.chapa.global. Sending a v2-format key to the v1
+  endpoint fails with "Invalid API Key or the business can't accept payments
+  at the moment", so the adapter picks the API surface from the key prefix
+  (`CHASECK…` → v1, anything else → v2):
+  - `POST https://api.chapa.global/v2/payments/hosted` — `Authorization:
+    Bearer <privateKey>` plus a REQUIRED `Idempotency-Key` header (we send the
+    merchant reference). Body: `amount` in integer cents (min 100), `currency`,
+    `merchant_reference` (max 20 chars — v2 provider refs are generated as
+    `PMS-` + 16 hex), `customer` {first_name, last_name, email, phone_number
+    in 251… international form}, `return_url`, `callback_url`,
+    `customization`, optional `meta`. Response
+    `{ status: "success", data: { checkout_url } }`.
+  - Return flow — Chapa's redirect params are undocumented on v2, so the
+    return_url embeds our `merchant_reference`; the portal return page
+    completes from that without depending on undocumented params.
+  - `GET /v2/payments/{reference}/verify` — accepts either Chapa's reference
+    or our merchant_reference; fulfil only on `data.status === "SUCCESS"`
+    (uppercase); `data.amount` is integer cents.
+  - Webhooks — same `x-chapa-signature` HMAC-SHA256 (hex) over the raw body;
+    payload differs: `event: "payment.success" | "payment.failed" | …`,
+    `merchant_reference` (ours), `chapa_reference` (Chapa's), integer-cents
+    `amount`, `mode`.
 - **Test credentials (test mode, checked 2026-11-02)** — Chapa's hosted
   checkout only succeeds with their published test instruments
   (developer.chapa.co/test/testing-cards and developer.chapa.co/test/

@@ -111,7 +111,10 @@ const envSchema = z.object({
   EMAIL_FROM: z.string().default('Property Management <onboarding@resend.dev>'),
   CHAPA_SECRET_KEY: z.string().optional(),
   CHAPA_WEBHOOK_SECRET: z.string().optional(),
-  // Live API base URL override; the official value is https://api.chapa.co/v1.
+  // Live API base URL override. Empty means the documented default for the
+  // key format: https://api.chapa.co/v1 (classic CHASECK… keys) or
+  // https://api.chapa.global/v2 (newer CHAPA_TEST_… "Private Key" keys) —
+  // the adapter picks the surface from the key prefix.
   CHAPA_BASE_URL: optionalUrl,
   TELEBIRR_APP_ID: z.string().optional(),
   TELEBIRR_APP_KEY: z.string().optional(),

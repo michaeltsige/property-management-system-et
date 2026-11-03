@@ -33,6 +33,8 @@ export const webhooksRouter = Router();
 interface ChapaWebhookEnvelope {
   event?: string;
   tx_ref?: string;
+  // v2 payloads name our reference merchant_reference instead of tx_ref.
+  merchant_reference?: string;
   reference?: string;
   status?: string;
 }
@@ -47,7 +49,7 @@ webhooksRouter.post('/webhooks/chapa', async (req, res) => {
   } catch {
     envelope = {};
   }
-  const txRef = envelope.tx_ref ?? '';
+  const txRef = envelope.tx_ref ?? envelope.merchant_reference ?? '';
   if (!txRef) {
     logger.warn({ event: envelope.event }, 'chapa webhook without tx_ref — discarded');
     res.status(400).json({ received: false, reason: 'missing tx_ref' });

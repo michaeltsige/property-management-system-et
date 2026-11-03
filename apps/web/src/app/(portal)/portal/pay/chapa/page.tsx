@@ -8,13 +8,14 @@
  * 1. **Sandbox simulation** (no real Chapa key set): the redirect URL from the
  *    API carries `tx_ref`; the page shows amount + a "Confirm payment" button.
  *    Clicking it calls `/complete`, which runs the in-process mock verify.
- * 2. **Real Chapa return** (CHASECK_TEST-... or live key set): the tenant has
- *    already paid on Chapa's hosted checkout; Chapa redirects back with
- *    `trx_ref` (and `status`, `ref_id` etc.). The page detects `trx_ref` and
- *    auto-calls `/complete` — the server still re-verifies with Chapa's
- *    `/transaction/verify/{tx_ref}` (Chapa's docs: verify is the source of
- *    truth, the webhook is only a trigger), so this is safe even if Chapa's
- *    redirect is tampered with.
+ * 2. **Real Chapa return** (a secret/private key set): the tenant has already
+ *    paid on Chapa's hosted checkout. Classic keys come back with `trx_ref`
+ *    (and `status`, `ref_id` etc.); v2 keys come back to a return_url that
+ *    embeds our `merchant_reference`. The page detects a real return and
+ *    auto-calls `/complete` — the server still re-verifies with Chapa
+ *    (`/transaction/verify/{tx_ref}` on v1, `/payments/{ref}/verify` on v2;
+ *    Chapa's docs: verify is the source of truth, the webhook is only a
+ *    trigger), so this is safe even if Chapa's redirect is tampered with.
  */
 
 import Link from 'next/link';
@@ -33,11 +34,22 @@ import { Alert, Badge, Button, Card, CardContent, Skeleton } from '@/components/
 function ChapaSandboxCheckout() {
   const router = useRouter();
   const params = useSearchParams();
-  // Real Chapa redirects back with `trx_ref`; the sandbox uses `tx_ref`.
-  const providerRef = params.get('tx_ref') ?? params.get('trx_ref') ?? params.get('ref') ?? '';
+  // Real Chapa returns: `trx_ref` (classic v1) and/or our own
+  // `merchant_reference` (v2 — we embed it in the return_url). The sandbox
+  // uses `tx_ref`.
+  const providerRef =
+    params.get('tx_ref') ??
+    params.get('trx_ref') ??
+    params.get('merchant_reference') ??
+    params.get('reference') ??
+    params.get('ref') ??
+    '';
   // Real Chapa return signals auto-complete; the sandbox sim signals manual confirm.
   // (Use `get` instead of `has` so test mocks that only stub `get` keep working.)
-  const isRealChapaReturn = params.get('trx_ref') !== null;
+  const isRealChapaReturn =
+    params.get('trx_ref') !== null ||
+    params.get('merchant_reference') !== null ||
+    params.get('reference') !== null;
   const { session, ready, language, t } = usePreferences();
 
   useEffect(() => {

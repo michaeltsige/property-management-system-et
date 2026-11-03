@@ -102,6 +102,34 @@ describe('chapa sandbox checkout page', () => {
     expect(api.portalPaymentIntent).toHaveBeenCalledWith('PMS-9b8a7c6d5e');
   });
 
+  it('auto-completes a v2 return that carries our merchant_reference', async () => {
+    context.get.mockImplementation((name: string) =>
+      name === 'merchant_reference' ? 'PMS-1a2b3c4d5e6f7089' : null,
+    );
+    vi.mocked(api.portalPaymentIntent).mockResolvedValue({
+      paymentId: 'pay-3',
+      provider: 'chapa',
+      providerRef: 'PMS-1a2b3c4d5e6f7089',
+      amountMinor: '1500000',
+      currency: 'ETB',
+      status: 'pending',
+    });
+    vi.mocked(api.portalCompletePayment).mockResolvedValue({
+      paymentId: 'pay-3',
+      receiptNumber: 'RCT-2019-000003',
+      amountMinor: '1500000',
+      currency: 'ETB',
+      allocatedMinor: '1500000',
+      unallocatedMinor: '0',
+      allocations: [],
+      status: 'succeeded',
+    });
+    render(<ChapaSandboxCheckoutPage />);
+
+    expect(await screen.findByText(EN_CATALOG['portal.payment_success'])).toBeDefined();
+    expect(api.portalCompletePayment).toHaveBeenCalledWith('PMS-1a2b3c4d5e6f7089');
+  });
+
   it('shows a missing reference as an error instead of a checkout', async () => {
     context.get.mockReturnValue(null);
     render(<ChapaSandboxCheckoutPage />);

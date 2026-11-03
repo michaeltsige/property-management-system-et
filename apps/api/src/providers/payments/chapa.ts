@@ -7,13 +7,20 @@
  *   see exactly what tenants will see — then switch to live mode when the real
  *   credentials arrive. The simulation shares one module-level ledger, so
  *   initiate (request 1) and verify/complete (request 2) see the same state.
- * - **Live mode (`live`)**: real HTTP calls to api.chapa.co with the
- *   organization's secret key. The key prefix decides what Chapa does with
- *   the request: `CHASECK_TEST-...` runs in Chapa's test mode (real hosted
- *   checkout, real API surface, but only the published test cards / mobile
- *   numbers succeed — developer.chapa.co/test/testing-cards and
- *   /test/testing-mobile), and `CHASECK-...` is the live key (real money).
- *   Both hit the same endpoint — there is no separate sandbox URL.
+ * - **Live mode (`live`)**: real HTTP calls with the organization's secret
+ *   key. TWO API surfaces exist, picked automatically from the key prefix
+ *   (verified against Chapa's docs on 2026-11-02):
+ *   - Classic keys — `CHASECK_TEST-…` (test) and `CHASECK-…` (live) → **API
+ *     v1**, `https://api.chapa.co/v1`. Chapa's test/live mode is decided by
+ *     the key prefix; only the published test cards / mobile numbers succeed
+ *     on a test key (developer.chapa.co/test/testing-cards,
+ *     /test/testing-mobile).
+ *   - Newer dashboard keys — `CHAPA_TEST_…` (labelled "Private Key") → **API
+ *     v2**, `https://api.chapa.global/v2`. Sending a v2-format key to the v1
+ *     endpoint is rejected with "Invalid API Key or the business can't accept
+ *     payments at the moment" — the mismatch this dual-surface support
+ *     removes.
+ *   Neither surface has a separate sandbox URL.
  *
  * LIVE CONTRACT — confirmed against the official documentation
  * (developer.chapa.co, "Accept Payment" + "Webhooks", last checked 2026-10-16;
@@ -40,6 +47,28 @@
  *   per the docs). Missing/wrong signature → reject before processing.
  * - Webhook acknowledgment: respond 200; Chapa retries every ~10 minutes up to
  *   10 times otherwise.
+ *
+ * V2 CONTRACT — docs.chapa.global ("Hosted Checkout" + "Accept Payment" +
+ * "Webhooks", checked 2026-11-02):
+ *
+ * - `POST {base}/payments/hosted`, `Authorization: Bearer <privateKey>` plus a
+ *   REQUIRED `Idempotency-Key` header (we send the merchant reference, so a
+ *   transport-level retry of the same payment is deduplicated). Body:
+ *   `amount` in INTEGER CENTS, minimum 100 — not v1's major-unit string —
+ *   `currency`, `merchant_reference` (max 20 chars; our refs are generated to
+ *   fit), `customer` { first_name, last_name, email, phone_number in 251…
+ *   international form }, `return_url`, `callback_url`, `customization`,
+ *   optional `meta`. Response `{ status: "success", data: { checkout_url } }`.
+ * - Return flow: Chapa's own redirect params are undocumented for v2, so the
+ *   return_url embeds our `merchant_reference`; the portal return page can
+ *   always complete the payment without depending on undocumented params.
+ * - `GET {base}/payments/{reference}/verify` accepts either Chapa's reference
+ *   or our merchant_reference. Fulfil only when `data.status === "SUCCESS"`
+ *   (uppercase on v2); `data.amount` is integer cents.
+ * - Webhooks: same `x-chapa-signature` HMAC-SHA256 (hex) over the raw body.
+ *   The payload differs from v1: `event: "payment.success" | "payment.failed"
+ *   | …`, `merchant_reference` (our reference), `chapa_reference`, `amount`
+ *   in integer cents, `mode: "live" | "test"`.
  *
  * Deliberately NOT implemented in live mode: `refund` and `reconcile` — the
  * exact refund/statement endpoints were not confirmed from the docs at the time
@@ -75,7 +104,31 @@ export interface ChapaCredentials {
 export type ChapaMode = 'test' | 'live';
 
 const DEFAULT_LIVE_BASE_URL = 'https://api.chapa.co/v1';
+const DEFAULT_V2_BASE_URL = 'https://api.chapa.global/v2';
 const SANDBOX_WEBHOOK_SECRET = 'chapa-sandbox-webhook-secret';
+
+/** Which documented Chapa API surface a secret key speaks. */
+export type ChapaApiSurface = 'v1' | 'v2';
+
+/**
+ * Classic keys (CHASECK_TEST-… / CHASECK-…) speak the documented v1 API; the
+ * newer dashboard keys (CHAPA_TEST_…, labelled "Private Key") speak v2. This
+ * is exactly the split that made a perfectly valid key fail with "Invalid API
+ * Key" when it was sent to the wrong surface.
+ */
+export function chapaApiSurface(secretKey: string | undefined): ChapaApiSurface {
+  return secretKey && secretKey.startsWith('CHASECK') ? 'v1' : 'v2';
+}
+
+/**
+ * A fresh provider reference. v2 caps `merchant_reference` at 20 characters,
+ * so v2 references are generated to fit; v1 (and the sandbox) keep the longer
+ * historical shape.
+ */
+function newProviderRef(surface: ChapaApiSurface): string {
+  const hex = randomUUID().replaceAll('-', '');
+  return surface === 'v2' ? `PMS-${hex.slice(0, 16)}` : `PMS-${hex.slice(0, 20)}`;
+}
 
 /** Module-level sandbox ledger: shared across adapter instances and requests. */
 const sandboxTransactions = new Map<
@@ -110,6 +163,18 @@ function normalizedChapaPhone(phone?: string): string | undefined {
   return /^0(9|7)\d{8}$/.test(local) ? local : undefined;
 }
 
+/** v2 wants the international form: 0911234567 → 251911234567. */
+function normalizedChapaIntlPhone(phone?: string): string | undefined {
+  const local = normalizedChapaPhone(phone);
+  return local ? `251${local.slice(1)}` : undefined;
+}
+
+/** v2 reports amounts as integer cents; normalize defensively (integers only). */
+function v2AmountToMinor(amount: string | number): number | undefined {
+  const parsed = typeof amount === 'number' ? amount : Number(String(amount).trim());
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : undefined;
+}
+
 function originOf(returnUrl?: string): string {
   if (returnUrl) {
     try {
@@ -132,14 +197,27 @@ interface ChapaWebhookPayload {
   type?: string;
   tx_ref?: string;
   reference?: string;
+  // v2 payload names: our reference arrives as merchant_reference, Chapa's as
+  // chapa_reference, and amounts are integer cents.
+  merchant_reference?: string;
+  chapa_reference?: string;
   status?: string;
   amount?: string | number;
   currency?: string;
 }
 
 function mapChapaStatus(event: string | undefined, status: string | undefined): 'succeeded' | 'pending' | 'failed' {
-  if (event === 'charge.success' || status === 'success') return 'succeeded';
-  if (event === 'charge.failed/cancelled' || status === 'failed/cancelled' || status === 'failed') {
+  if (event === 'charge.success' || event === 'payment.success' || status === 'success') {
+    return 'succeeded';
+  }
+  if (
+    event === 'charge.failed/cancelled' ||
+    event === 'payment.failed' ||
+    event === 'payment.cancelled' ||
+    status === 'failed/cancelled' ||
+    status === 'failed' ||
+    status === 'cancelled'
+  ) {
     return 'failed';
   }
   // Refund/reversal events are not completion states in this system's model;
@@ -153,6 +231,7 @@ export class ChapaPaymentProvider implements PaymentProviderAdapter {
   constructor(
     private readonly credentials: ChapaCredentials = {},
     private readonly mode: ChapaMode = credentials.secretKey ? 'live' : 'test',
+    private readonly apiSurface: ChapaApiSurface = chapaApiSurface(credentials.secretKey),
   ) {}
 
   get chapaMode(): ChapaMode {
@@ -183,7 +262,12 @@ export class ChapaPaymentProvider implements PaymentProviderAdapter {
   }
 
   private get liveBaseUrl(): string {
-    return this.credentials.baseUrl ?? getConfig().CHAPA_BASE_URL ?? DEFAULT_LIVE_BASE_URL;
+    // An explicit override (tests, inspector proxies) wins; then the configured
+    // CHAPA_BASE_URL; then the documented default for the key's API surface.
+    if (this.credentials.baseUrl) return this.credentials.baseUrl;
+    const configured = getConfig().CHAPA_BASE_URL;
+    if (configured) return configured;
+    return this.apiSurface === 'v2' ? DEFAULT_V2_BASE_URL : DEFAULT_LIVE_BASE_URL;
   }
 
   private async liveRequest(path: string, init?: RequestInit): Promise<Record<string, unknown>> {
@@ -239,35 +323,65 @@ export class ChapaPaymentProvider implements PaymentProviderAdapter {
 
   private async initiateLive(input: InitiatePaymentInput): Promise<PaymentInitiation> {
     this.assertLiveConfigured();
-    const txRef = `PMS-${randomUUID().replaceAll('-', '').slice(0, 20)}`;
+    const txRef = newProviderRef(this.apiSurface);
     const fullName = input.customer?.fullName?.trim() || 'PMS Tenant';
     const [firstName = 'PMS', ...restName] = fullName.split(' ');
+    const lastName = restName.join(' ') || 'PMS';
+    const email = input.customer?.email || `tenant+${txRef.toLowerCase()}@pms.local`;
     const webhookBase = getConfig().API_PUBLIC_URL;
-
-    const body: Record<string, unknown> = {
-      amount: minorToMajorString(input.amount.amountMinor),
-      currency: input.amount.currency,
-      // Chapa requires a syntactically valid email even when the tenant has none.
-      email: input.customer?.email || `tenant+${txRef.toLowerCase()}@pms.local`,
-      first_name: firstName,
-      last_name: restName.join(' ') || 'PMS',
-      tx_ref: txRef,
-      return_url: chapaSandboxCheckoutUrl(input.returnUrl),
-      customization: {
-        title: 'Rent payment',
-        ...(input.description ? { description: input.description } : {}),
-      },
+    const callbackUrl = webhookBase
+      ? `${webhookBase.replace(/\/$/, '')}/api/v1/webhooks/chapa`
+      : undefined;
+    // Our own reference travels inside the return URL: the portal return page
+    // can then always complete the payment, whether or not Chapa appends its
+    // own redirect params (undocumented on v2).
+    const returnUrl = `${chapaSandboxCheckoutUrl(input.returnUrl)}?merchant_reference=${encodeURIComponent(txRef)}`;
+    const customization: Record<string, unknown> = {
+      title: 'Rent payment',
+      ...(input.description ? { description: input.description } : {}),
     };
-    const phone = normalizedChapaPhone(input.customer?.phone);
-    if (phone) body.phone_number = phone;
-    if (webhookBase) {
-      body.callback_url = `${webhookBase.replace(/\/$/, '')}/api/v1/webhooks/chapa`;
-    }
+    const phoneLocal = normalizedChapaPhone(input.customer?.phone);
+    const phoneIntl = normalizedChapaIntlPhone(input.customer?.phone);
 
-    const response = await this.liveRequest('/transaction/initialize', {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
+    const response =
+      this.apiSurface === 'v2'
+        ? await this.liveRequest('/payments/hosted', {
+            method: 'POST',
+            headers: { 'Idempotency-Key': txRef },
+            body: JSON.stringify({
+              // v2 amounts are INTEGER CENTS (minimum 100), unlike v1's
+              // major-unit decimal string.
+              amount: Math.trunc(input.amount.amountMinor),
+              currency: input.amount.currency,
+              merchant_reference: txRef,
+              customer: {
+                first_name: firstName,
+                last_name: lastName,
+                email,
+                ...(phoneIntl ? { phone_number: phoneIntl } : {}),
+              },
+              return_url: returnUrl,
+              ...(callbackUrl ? { callback_url: callbackUrl } : {}),
+              customization,
+              ...(input.reference ? { meta: { pms_reference: input.reference } } : {}),
+            }),
+          })
+        : await this.liveRequest('/transaction/initialize', {
+            method: 'POST',
+            body: JSON.stringify({
+              amount: minorToMajorString(input.amount.amountMinor),
+              currency: input.amount.currency,
+              // Chapa requires a syntactically valid email even when the tenant has none.
+              email,
+              first_name: firstName,
+              last_name: lastName,
+              tx_ref: txRef,
+              return_url: returnUrl,
+              customization,
+              ...(phoneLocal ? { phone_number: phoneLocal } : {}),
+              ...(callbackUrl ? { callback_url: callbackUrl } : {}),
+            }),
+          });
     const data = (response.data ?? {}) as { checkout_url?: string; url?: string };
     const checkoutUrl = data.checkout_url ?? data.url;
     if (!checkoutUrl) {
@@ -297,9 +411,12 @@ export class ChapaPaymentProvider implements PaymentProviderAdapter {
       };
     }
 
-    const response = await this.liveRequest(
-      `/transaction/verify/${encodeURIComponent(providerRef)}`,
-    );
+    const response =
+      this.apiSurface === 'v2'
+        ? // v2 verify accepts either Chapa's reference or our merchant_reference
+          // (which is what this adapter stores as providerRef).
+          await this.liveRequest(`/payments/${encodeURIComponent(providerRef)}/verify`)
+        : await this.liveRequest(`/transaction/verify/${encodeURIComponent(providerRef)}`);
     const data = (response.data ?? {}) as {
       status?: string;
       amount?: string | number;
@@ -307,12 +424,19 @@ export class ChapaPaymentProvider implements PaymentProviderAdapter {
       created_at?: string;
       updated_at?: string;
     };
-    const status = mapChapaStatus(undefined, data.status === 'success' ? 'success' : data.status);
+    // v2 reports "SUCCESS"/"PENDING"/… (uppercase); v1 uses lowercase words.
+    const status = mapChapaStatus(undefined, data.status?.toLowerCase());
     const paidAtSource = data.updated_at ?? data.created_at;
+    const amountMinor =
+      data.amount === undefined
+        ? undefined
+        : this.apiSurface === 'v2'
+          ? v2AmountToMinor(data.amount) // integer cents already
+          : majorStringToMinor(data.amount); // major-unit decimal string
     return {
       providerRef,
       status,
-      amountMinor: data.amount !== undefined ? majorStringToMinor(data.amount) : undefined,
+      amountMinor,
       currency: data.currency,
       paidAt: paidAtSource ? new Date(paidAtSource) : undefined,
       raw: response,
@@ -342,13 +466,24 @@ export class ChapaPaymentProvider implements PaymentProviderAdapter {
       payload = {};
     }
 
+    // v2 payloads name our reference `merchant_reference` and report integer
+    // cents; v1 uses `tx_ref` and major-unit decimal strings.
+    const isV2Payload =
+      typeof payload.merchant_reference === 'string' || (payload.event ?? '').startsWith('payment.');
+    const amountMinor =
+      payload.amount === undefined
+        ? undefined
+        : isV2Payload
+          ? v2AmountToMinor(payload.amount)
+          : majorStringToMinor(payload.amount);
+
     return {
-      eventId: payload.reference ?? `evt_${randomUUID()}`,
+      eventId: payload.chapa_reference ?? payload.reference ?? `evt_${randomUUID()}`,
       type: payload.event ?? 'unknown',
-      providerRef: payload.tx_ref,
-      reference: payload.reference,
+      providerRef: payload.tx_ref ?? payload.merchant_reference,
+      reference: payload.chapa_reference ?? payload.reference,
       status: mapChapaStatus(payload.event, payload.status),
-      amountMinor: payload.amount !== undefined ? majorStringToMinor(payload.amount) : undefined,
+      amountMinor,
       currency: payload.currency,
       signatureValid,
       raw: payload,
