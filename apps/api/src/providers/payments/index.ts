@@ -8,10 +8,18 @@
  *    AES-256-GCM-encrypted credentials, managed by the org's admins from the
  *    Organization screen. This is what makes "get the business license, save the
  *    merchant credentials, switch provider" a settings edit instead of a deploy.
- * 2. **Platform environment** (fallback): the `PAYMENT_PROVIDER` +
- *    provider-specific environment variables, used when the organization has not
- *    configured its own gateway (the pre-gateway behavior, and the default in
- *    development/CI where the mock adapter serves as the demo).
+ *    A stored **demo (`mock`) row is the one exception**: it cannot outrank real
+ *    platform credentials (see `resolveGatewayTarget`) — the gateway form
+ *    pre-selects the demo, so such a row is far more likely an accidental save
+ *    than a decision to keep running fake money under a real key.
+ * 2. **Platform environment** (fallback): provider-specific environment
+ *    variables, used when the organization has not configured its own gateway.
+ *    Credentials imply intent: a non-empty `CHAPA_SECRET_KEY` selects Chapa on
+ *    its own, even when `PAYMENT_PROVIDER` still carries the copied-from-.env
+ *    .example default `mock` — the #1 "the demo gateway is still running"
+ *    report. `PAYMENT_PROVIDER` only decides between providers that have no
+ *    credentials in the environment (`chapa` + empty key = the documented
+ *    built-in sandbox simulation; `mock` = the demo).
  *
  * Unconfigured providers are still resolvable (so `/ready` and the UI can report
  * their state) but every call throws `ProviderNotConfiguredError` with the exact
@@ -26,8 +34,9 @@ import {
   type PaymentGatewayMode,
 } from '@pms/shared';
 
-import { getConfig } from '../../config.js';
+import { getConfig, type AppConfig } from '../../config.js';
 import { decryptField } from '../../lib/crypto.js';
+import { logger } from '../../lib/logger.js';
 import { ChapaPaymentProvider, type ChapaMode } from './chapa.js';
 import { MockPaymentProvider, mockPaymentProvider } from './mock.js';
 import { TelebirrPaymentProvider } from './telebirr.js';
@@ -40,9 +49,64 @@ export interface OrgGatewayConfig {
   credentials: Record<string, string>;
 }
 
+/**
+ * The provider the platform environment points at. Real credentials imply
+ * intent: a set `CHAPA_SECRET_KEY` means Chapa regardless of what
+ * `PAYMENT_PROVIDER` says (its `mock` default ships uncommented in .env.example
+ * and survives every verbatim copy). `PAYMENT_PROVIDER` only decides among
+ * credential-less modes: `chapa` with an empty key is the documented built-in
+ * sandbox simulation, `telebirr` stays the scaffold, everything else is mock.
+ */
+export function platformEnvProvider(config: AppConfig = getConfig()): ProviderName {
+  if (config.CHAPA_SECRET_KEY) return 'chapa';
+  if (config.PAYMENT_PROVIDER === 'telebirr' || config.PAYMENT_PROVIDER === 'chapa') {
+    return config.PAYMENT_PROVIDER;
+  }
+  return 'mock';
+}
+
+/**
+ * Whether the platform environment actually carries a **real** gateway — one
+ * that talks to an outside provider. Chapa counts only with a secret key: the
+ * credential-free mode is the built-in sandbox simulation, which is still a
+ * demo and must not outrank an explicit organization choice either.
+ */
+export function platformRealProviderActive(config: AppConfig = getConfig()): boolean {
+  const provider = platformEnvProvider(config);
+  if (provider === 'mock') return false;
+  if (provider === 'chapa') return Boolean(config.CHAPA_SECRET_KEY);
+  return getPaymentProvider(provider, config).isConfigured();
+}
+
+/**
+ * The gateway an organization's payments actually run through, as a pure
+ * decision so the status endpoint (`getGatewayStatus`) and the adapter
+ * resolution (`resolveOrgPaymentProvider`) can never disagree.
+ *
+ * - `preferred` wins: the completion path verifies against the provider that
+ *   started the payment, whatever changed since.
+ * - Real platform credentials outrank an **absent** org config and a stored
+ *   **demo (`mock`)** row — the form pre-selects the demo, so that row is an
+ *   accidental save until proven otherwise. A stored real provider (chapa /
+ *   telebirr) is a deliberate choice and still wins.
+ * - Otherwise: the org's row, else the platform environment.
+ */
+export function resolveGatewayTarget(
+  stored: { provider: ProviderName } | null,
+  preferred: ProviderName | undefined,
+  envProvider: ProviderName,
+  envRealConfigured: boolean,
+): ProviderName {
+  if (preferred) return preferred;
+  if (envRealConfigured && (!stored || stored.provider === 'mock')) return envProvider;
+  return stored?.provider ?? envProvider;
+}
+
 /** Environment-derived credentials for one provider (the platform default). */
-function envCredentials(name: ProviderName): Record<string, string> {
-  const config = getConfig();
+export function envCredentials(
+  name: ProviderName,
+  config: AppConfig = getConfig(),
+): Record<string, string> {
   switch (name) {
     case 'chapa':
       return {
@@ -108,9 +172,10 @@ export function buildPaymentProvider(
  * outside an organization context (health, jobs) and as the org fallback.
  */
 export function getPaymentProvider(
-  name: ProviderName = getConfig().PAYMENT_PROVIDER as ProviderName,
+  name: ProviderName = platformEnvProvider(),
+  config: AppConfig = getConfig(),
 ): PaymentProviderAdapter {
-  return buildPaymentProvider(name, envCredentials(name));
+  return buildPaymentProvider(name, envCredentials(name, config));
 }
 
 /**
@@ -190,12 +255,16 @@ export interface OrgPaymentProviderResolution {
 /**
  * Resolve the adapter an organization's payment must run through.
  *
- * - No `preferred`: the org's configured provider, else the platform default.
- * - `preferred` (completion path — the intent records which provider started
- *   it): resolve that provider with the org's credentials when they cover it,
- *   else the platform environment. An intent started under a since-changed
- *   provider therefore verifies against the platform default or fails with a
- *   clear "not configured" error instead of mixing credential sets.
+ * The target comes from `resolveGatewayTarget` (see it for the full precedence:
+ * payment intent → real platform credentials over an absent-or-demo org row →
+ * the org's row → the platform environment), and the credentials come from the
+ * layer that decided:
+ *
+ * - A matching org row runs its own encrypted credentials; incomplete ones
+ *   throw `ProviderNotConfiguredError` naming the missing fields.
+ * - Anything else (no row, a row the platform outranks, or a `preferred`
+ *   completion target) resolves from the platform environment and fails with a
+ *   clear "not configured" error when the env lacks the credentials too.
  */
 export async function resolveOrgPaymentProvider(
   prisma: PrismaClient,
@@ -203,14 +272,28 @@ export async function resolveOrgPaymentProvider(
   preferred?: ProviderName,
 ): Promise<OrgPaymentProviderResolution> {
   const stored = await readOrgGatewayConfig(prisma, organizationId);
-  const envDefault = getConfig().PAYMENT_PROVIDER as ProviderName;
-  const target: ProviderName = preferred ?? stored?.provider ?? envDefault;
+  const target: ProviderName = resolveGatewayTarget(
+    stored,
+    preferred,
+    platformEnvProvider(),
+    platformRealProviderActive(),
+  );
 
   if (stored && stored.provider === target) {
     const missing = missingGatewayCredentials(target, stored.credentials, stored.mode);
     if (missing.length > 0) {
       throw new ProviderNotConfiguredError(target, missing.join(', '));
     }
+    logger.info(
+      {
+        organizationId,
+        provider: target,
+        source: 'organization',
+        mode: stored.mode,
+        preferred: preferred ?? null,
+      },
+      'payment provider resolved',
+    );
     return {
       adapter: buildPaymentProvider(target, stored.credentials, stored.mode),
       provider: target,
@@ -223,6 +306,16 @@ export async function resolveOrgPaymentProvider(
   if (!adapter.isConfigured()) {
     throw new ProviderNotConfiguredError(target, missingGatewayCredentials(target, envCredentials(target)).join(', '));
   }
+  logger.info(
+    {
+      organizationId,
+      provider: target,
+      source: 'platform',
+      storedProvider: stored?.provider ?? null,
+      preferred: preferred ?? null,
+    },
+    'payment provider resolved',
+  );
   return { adapter, provider: target, source: 'platform', mode: null };
 }
 

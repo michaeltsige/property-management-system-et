@@ -23,7 +23,6 @@ import {
   PAYMENT_GATEWAY_SETTING_KEY,
   type PaymentGatewayConfigInput,
   type PaymentGatewayMode,
-  type PaymentGatewayProvider,
   type PaymentGatewayStatus,
 } from '@pms/shared';
 
@@ -31,7 +30,7 @@ import { getConfig } from '../config.js';
 import { decryptField, encryptField } from '../lib/crypto.js';
 import { badRequest } from '../lib/errors.js';
 import { recordAudit } from './audit.js';
-import { missingGatewayCredentials } from '../providers/payments/index.js';
+import { missingGatewayCredentials, envCredentials, platformEnvProvider, platformRealProviderActive, resolveGatewayTarget } from '../providers/payments/index.js';
 import type { ProviderName } from '../providers/payments/index.js';
 
 /** Stored row shape (credential values are `v1:iv:tag:ct` ciphertext). */
@@ -45,10 +44,6 @@ interface StoredGatewayConfig {
 function credentialHint(value: string): string {
   const clean = value.trim();
   return `••••${clean.slice(-4)}`;
-}
-
-function platformDefaultProvider(): PaymentGatewayProvider {
-  return getConfig().PAYMENT_PROVIDER as PaymentGatewayProvider;
 }
 
 async function readStored(prisma: PrismaClient, organizationId: string): Promise<StoredGatewayConfig | null> {
@@ -68,46 +63,83 @@ async function readStored(prisma: PrismaClient, organizationId: string): Promise
 /**
  * The status payload for the Organization screen — no credential values, ever.
  *
- * `mode` is always concrete for Chapa: an organization without a stored config
- * inherits the platform's effective Chapa mode (live when the environment
- * carries a secret key, otherwise the built-in sandbox simulation), so the UI
- * can say honestly what a tenant checkout will do right now.
+ * It reports the **effective** gateway — the same decision payments go through
+ * (`resolveGatewayTarget`), so the screen never lies about what a tenant
+ * checkout will do:
+ *
+ * - The source is `platform` whenever the environment decides (no org row, or a
+ *   stored demo row that real platform credentials outrank).
+ * - `mode` is always concrete for Chapa: an environment-sourced Chapa is live
+ *   when the environment carries a secret key, otherwise it is the built-in
+ *   sandbox simulation.
+ * - `missing`/`configured` account for the environment's own credentials when
+ *   the source is `platform` — previously a platform Chapa with an env key
+ *   wrongly reported `missing: ['secretKey']`. The masked per-field hints still
+ *   come from the organization's own saved values only, so a platform key's
+ *   `••••last4` never crosses an organization boundary.
  */
 export async function getGatewayStatus(
   prisma: PrismaClient,
   organizationId: string,
 ): Promise<PaymentGatewayStatus> {
   const stored = await readStored(prisma, organizationId);
-  const provider: PaymentGatewayProvider = stored?.provider ?? platformDefaultProvider();
+  const provider = resolveGatewayTarget(
+    stored ?? null,
+    undefined,
+    platformEnvProvider(),
+    platformRealProviderActive(),
+  );
+  const source: 'organization' | 'platform' =
+    stored && stored.provider === provider ? 'organization' : 'platform';
   const fields = PAYMENT_GATEWAY_CREDENTIAL_FIELDS[provider];
 
-  const credentials: PaymentGatewayStatus['credentials'] = {};
+  // Plaintext lives only in this function, and only to compute the missing
+  // fields. Only the org's own saved values are decrypted; the platform's env
+  // credentials join solely when the environment is the effective source.
   const plaintext: Record<string, string> = {};
-  for (const field of fields) {
-    const encrypted = stored?.credentials[field.key];
-    if (!encrypted) {
-      credentials[field.key] = { configured: false, hint: null };
-      continue;
+  if (stored && stored.provider === provider) {
+    for (const field of fields) {
+      const encrypted = stored.credentials[field.key];
+      if (!encrypted) continue;
+      try {
+        plaintext[field.key] = decryptField(encrypted);
+      } catch {
+        // Undecryptable (key rotation): report it as unset so the org re-saves.
+      }
     }
-    try {
-      const value = decryptField(encrypted);
-      plaintext[field.key] = value;
-      credentials[field.key] = { configured: true, hint: credentialHint(value) };
-    } catch {
-      // Undecryptable (key rotation): report it as unset so the org re-saves.
-      credentials[field.key] = { configured: false, hint: null };
+  }
+  if (source === 'platform') {
+    for (const [key, value] of Object.entries(envCredentials(provider))) {
+      if (fields.some((field) => field.key === key) && value) plaintext[key] = value;
     }
   }
 
   const platformChapaMode: PaymentGatewayMode | null =
     provider === 'chapa' ? (getConfig().CHAPA_SECRET_KEY ? 'live' : 'test') : null;
-  const mode: PaymentGatewayMode | null = stored?.mode ?? platformChapaMode;
+  const mode: PaymentGatewayMode | null =
+    stored && stored.provider === provider ? stored.mode : platformChapaMode;
 
   const missing = missingGatewayCredentials(provider, plaintext, mode ?? undefined);
 
+  // Masked hints describe the org's own saved credentials only — never the
+  // platform's environment values.
+  const credentials: PaymentGatewayStatus['credentials'] = {};
+  for (const field of fields) {
+    const encrypted = stored && stored.provider === provider ? stored.credentials[field.key] : undefined;
+    if (!encrypted) {
+      credentials[field.key] = { configured: false, hint: null };
+      continue;
+    }
+    try {
+      credentials[field.key] = { configured: true, hint: credentialHint(decryptField(encrypted)) };
+    } catch {
+      credentials[field.key] = { configured: false, hint: null };
+    }
+  }
+
   return {
     provider,
-    source: stored ? 'organization' : 'platform',
+    source,
     mode,
     configured: missing.length === 0,
     missing,

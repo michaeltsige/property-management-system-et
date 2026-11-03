@@ -202,9 +202,13 @@ export function databaseUrl(config: AppConfig = getConfig()): string {
 export function configWarnings(config: AppConfig = getConfig()): string[] {
   const warnings: string[] = [];
   if (config.isProduction) {
-    if (config.PAYMENT_PROVIDER === 'mock')
+    // The effective provider, not the raw switch: a set CHAPA_SECRET_KEY runs
+    // real Chapa even when PAYMENT_PROVIDER still says mock (credentials imply
+    // intent — see platformEnvProvider in the payments registry).
+    const effectiveProvider = config.CHAPA_SECRET_KEY ? 'chapa' : config.PAYMENT_PROVIDER;
+    if (effectiveProvider === 'mock')
       warnings.push('PAYMENT_PROVIDER=mock in production: no real payments can be taken.');
-    if (config.PAYMENT_PROVIDER === 'chapa' && !config.CHAPA_SECRET_KEY)
+    if (effectiveProvider === 'chapa' && !config.CHAPA_SECRET_KEY)
       warnings.push(
         'PAYMENT_PROVIDER=chapa without CHAPA_SECRET_KEY in production: online payments run through the built-in sandbox simulation.',
       );

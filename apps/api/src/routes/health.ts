@@ -10,6 +10,7 @@ import { Router } from 'express';
 
 import { getConfig } from '../config.js';
 import { getPrisma } from '../lib/prisma.js';
+import { platformEnvProvider } from '../providers/payments/index.js';
 
 export const healthRouter = Router();
 
@@ -32,7 +33,9 @@ healthRouter.get('/ready', async (_req, res, next) => {
       status: 'ready',
       database: 'ok',
       jobs: getConfig().JOBS_ENABLED,
-      paymentProvider: getConfig().PAYMENT_PROVIDER,
+      // The effective provider, not the raw PAYMENT_PROVIDER switch: a set
+      // CHAPA_SECRET_KEY runs real Chapa even when the switch still says mock.
+      paymentProvider: platformEnvProvider(),
       smsProvider: getConfig().SMS_PROVIDER,
     });
   } catch (error) {
