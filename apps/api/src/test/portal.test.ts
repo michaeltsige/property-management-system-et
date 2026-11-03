@@ -6,14 +6,19 @@ import { mockSmsProvider } from '../providers/sms/index.js';
 import { authHeader, createOrganizationFixture } from './helpers.js';
 const app = createApp();
 
-async function setupTenant() {
+async function setupTenant(phone = '0911234567') {
   const f = await createOrganizationFixture();
   const tenant = await request(app)
     .post('/api/v1/tenants')
     .set(f.h ?? authHeader(f))
-    .send({ fullName: 'Demo Tenant', phone: '0911234567', language: 'am' })
+    .send({ fullName: 'Demo Tenant', phone, language: 'am' })
     .expect(201);
-  return { ...f, h: authHeader(f), tenantId: tenant.body.tenant.id as string, phone: '+251911234567' };
+  return {
+    ...f,
+    h: authHeader(f),
+    tenantId: tenant.body.tenant.id as string,
+    phone: `+251${phone.slice(1)}`,
+  };
 }
 async function latestCode(tenantId: string): Promise<string> {
   const notification = await getPrisma().notification.findFirstOrThrow({
@@ -57,19 +62,36 @@ describe('tenant portal enrollment', () => {
 });
 
 describe('portal OTP login', () => {
-  it('answers identically for unknown and known numbers without leaking enrollment', async () => {
+  it('tells an unregistered phone plainly and only enrolls after portal enablement', async () => {
+    // Owner decision: an unregistered number gets an explicit 404 (translated
+    // on the portal screen) instead of a fake `ok` that hides the problem.
+    // The second tenant uses its own phone: the per-phone OTP budget is shared
+    // across this file's tests, and 0911234567 is already at its limit.
     const f = await setupTenant();
+    const unenrolled = await setupTenant('0911777666');
+
     const unknown = await request(app)
       .post('/api/v1/portal/request-code')
       .send({ phone: '0911999888' })
-      .expect(200);
-    expect(unknown.body).toEqual({ ok: true });
-    const known = await request(app)
+      .expect(404);
+    expect(unknown.body.error.code).toBe('NOT_FOUND');
+    expect(unknown.body.error.message).toContain('not registered');
+
+    // A created tenant whose portal is not enabled yet is not registered either.
+    const notEnrolled = await request(app)
       .post('/api/v1/portal/request-code')
-      .send({ phone: '0911234567' })
-      .expect(200);
-    expect(known.body).toEqual({ ok: true });
+      .send({ phone: '0911777666' })
+      .expect(404);
+    expect(notEnrolled.body.error.code).toBe('NOT_FOUND');
+
+    // After enrollment the same number gets a code.
+    await request(app).post(`/api/v1/tenants/${unenrolled.tenantId}/portal`).set(unenrolled.h).expect(201);
+    await request(app).post('/api/v1/portal/request-code').send({ phone: '0911777666' }).expect(200);
+    // Nothing was ever sent for the unregistered numbers.
     expect(await getPrisma().notification.count({ where: { organizationId: f.organizationId } })).toBe(0);
+    expect(
+      await getPrisma().notification.count({ where: { organizationId: unenrolled.organizationId } }),
+    ).toBe(1);
   });
   it('dispatches the code through the SMS provider and records the send', async () => {
     // Regression: the OTP notification used to be created `queued` and never
@@ -155,10 +177,7 @@ describe('portal self-service', () => {
   });
   it('serves translation overrides to tenant sessions without a 403', async () => {
     const f = await setupTenant();
-    const response = await request(app)
-      .get('/api/v1/portal/translations?language=am')
-      .set(f.h)
-      .expect(200);
+    const response = await request(app).get('/api/v1/portal/translations?language=am').set(f.h).expect(200);
     expect(Array.isArray(response.body.rows)).toBe(true);
   });
 

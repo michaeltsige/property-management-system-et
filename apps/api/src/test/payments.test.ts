@@ -98,7 +98,7 @@ describe('manual payment recording', () => {
     expect(paid.paidMinor).toBe(first.amountMinor);
   });
 
-  it('records an overpayment as a credit on the lease', async () => {
+  it('registers an overpayment as prepaid rent instead of stranding a credit', async () => {
     const { prisma, fixture, portfolio } = await setup('pay-credit');
 
     const result = await recordPayment(prisma, {
@@ -109,16 +109,28 @@ describe('manual payment recording', () => {
       paidAt: new Date(),
     });
 
-    // The two open charges are 1,500,000 each: 3,000,000 allocated, 2,000,000 left over.
-    expect(result.allocatedMinor).toBe(3_000_000n);
-    expect(result.unallocatedMinor).toBe(2_000_000n);
+    // 3,000,000 clears the two open charges; the remaining 2,000,000 registers
+    // the next cycle(s) as prepaid rent — one paid cycle (1,500,000) and a
+    // 500,000 down payment on the one after.
+    expect(result.allocatedMinor).toBe(5_000_000n);
+    expect(result.unallocatedMinor).toBe(0n);
 
-    // Two charges (3,000,000) minus 5,000,000 paid = a 2,000,000 credit.
+    const prepaid = await prisma.charge.findMany({
+      where: { leaseId: portfolio.leaseId, description: { contains: 'prepaid' } },
+      orderBy: { dueDate: 'asc' },
+    });
+    expect(prepaid).toHaveLength(2);
+    expect(prepaid[0]!.status).toBe('paid');
+    expect(prepaid[0]!.paidMinor).toBe(1_500_000n);
+    expect(prepaid[1]!.status).toBe('partial');
+    expect(prepaid[1]!.paidMinor).toBe(500_000n);
+
+    // Only the half-paid second prepaid cycle is still owed.
     const balance = await balanceMinor(prisma, {
       organizationId: fixture.organizationId,
       leaseId: portfolio.leaseId,
     });
-    expect(balance).toBe(-2_000_000n);
+    expect(balance).toBe(1_000_000n);
   });
 
   it('refuses an explicit allocation larger than the outstanding balance', async () => {

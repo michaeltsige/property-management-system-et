@@ -63,7 +63,9 @@ describe('signup billing defaults', () => {
     // Unsupported currency codes are rejected; ETB/USD/EUR are the supported set.
     { currency: 'GBP' },
     { currency: 'yen' },
-    { billing: { dueDay: 29 } },
+    // Due days run 1..30 (29–30 are valid; charge generation clamps to month
+    // length), so 31 is the first invalid day.
+    { billing: { dueDay: 31 } },
     { billing: { lateFeeBps: 1.5 } },
     { billing: { acceptedPaymentMethods: ['cash', 'cash'] } },
     { billing: { lateFeeMinor: -1 } },
