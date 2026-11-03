@@ -744,7 +744,9 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'notices.deleted': 'Beekssisni haqameera.',
   'notices.uploading_image': 'Suuraa dabarsaa jira…',
   'notices.image_failed': 'Suuraan dabarsamu hin dandeenye — gosaafi safuu faayilii mirkaneessi.',
-  'dashboard.occupancy_by_floor': 'Haa’ina gorroo qabee',
+  'dashboard.occupancy_period': '{period}f',
+  'dashboard.occupancy_full': 'Guutummaatti guutameera',
+  'dashboard.occupancy_empty': 'Attoonni hin jiran — haala qabee ilaaluuf koochiidduu attota dabalaa.',
 
   // Email verification, password reset and invite mail (machine drafts).
   'auth.email_not_verified': 'Maaloo galuu dura imeelii kee mirkaneessi.',

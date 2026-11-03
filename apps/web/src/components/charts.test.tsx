@@ -77,25 +77,64 @@ describe('chart accessibility', () => {
     expect(label).toContain('3,400');
   });
 
-  it('gives the occupancy chart one row per property', () => {
+  it('draws each property as a building, floors top-down, vacancies counted', () => {
     render(
       <OccupancyChart
-        rows={[
-          { name: 'Bole Tower', occupied: 4, vacant: 1 },
+        properties={[
+          {
+            name: 'Bole Tower',
+            occupied: 4,
+            vacant: 1,
+            floors: [
+              { floor: 1, occupied: 2, vacant: 0, total: 2 },
+              { floor: 2, occupied: 2, vacant: 1, total: 3 },
+            ],
+          },
           { name: 'CMC Villas', occupied: 2, vacant: 0 },
         ]}
+        periodLabel="For Tir 2018"
         ariaLabel="Occupancy"
         occupiedLabel="Occupied"
         vacantLabel="Vacant"
-        chartDataLabel="Chart data as a table"
+        floorLabel="Floor"
+        fullLabel="Fully occupied"
+        noUnitsLabel="No units yet"
       />,
     );
 
-    expect(screen.queryByRole('table')).toBeNull();
-    const label = screen.getByRole('img').getAttribute('aria-label') ?? '';
-    expect(label).toContain('Occupancy');
-    expect(label).toContain('Bole Tower');
-    expect(label).toContain('CMC Villas');
+    // One building per property; the incomplete one wears the vacancy count,
+    // the full one the "fully occupied" badge — not a repeat of the stat card.
+    expect(screen.getByText('Bole Tower')).toBeInTheDocument();
+    expect(screen.getByText('CMC Villas')).toBeInTheDocument();
+    expect(screen.getByText('1 Vacant')).toBeInTheDocument();
+    expect(screen.getByText('Fully occupied')).toBeInTheDocument();
+    expect(screen.getByText('For Tir 2018')).toBeInTheDocument();
+
+    // Floors read top-down like an elevation: the highest floor first, and
+    // every row's accessible name carries that floor's numbers.
+    const rows = screen.getAllByRole('listitem');
+    expect(rows[0].getAttribute('aria-label')).toContain('Floor 2: 2 Occupied, 1 Vacant');
+    expect(rows[1].getAttribute('aria-label')).toContain('Floor 1: 2 Occupied, 0 Vacant');
+
+    // A property without floor metadata still draws, as one ground-level row.
+    expect(rows[2].getAttribute('aria-label')).toContain('2 Occupied, 0 Vacant');
+  });
+
+  it('falls back to a quiet note when no property has units', () => {
+    render(
+      <OccupancyChart
+        properties={[{ name: 'Empty Plot', occupied: 0, vacant: 0 }]}
+        ariaLabel="Occupancy"
+        occupiedLabel="Occupied"
+        vacantLabel="Vacant"
+        floorLabel="Floor"
+        fullLabel="Fully occupied"
+        noUnitsLabel="No units yet"
+      />,
+    );
+
+    expect(screen.getByText('No units yet')).toBeInTheDocument();
+    expect(screen.queryByText('Empty Plot')).toBeNull();
   });
 
   it('keeps arrears buckets readable as text', () => {

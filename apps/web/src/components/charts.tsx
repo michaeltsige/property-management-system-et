@@ -352,118 +352,203 @@ export function CollectionsChart({
   );
 }
 
-/** Occupancy by property: a horizontal stacked bar, one row per property. */
+/**
+ * Occupancy as a building elevation — one "unit wall" per property.
+ *
+ * The previous version stacked every property into one horizontal occupied/
+ * vacant bar, which for a one-property portfolio degenerated into a single
+ * bar repeating the number the stat card already showed. The redrawn chart
+ * answers the questions that bar could not:
+ *
+ * - **Where is the vacancy?** Each floor is a row of unit cells (the GitHub
+ *   contribution-graph convention: small rounded squares, one per unit, a
+ *   tooltip on each), stacked top-down like a real elevation. Vacant cells
+ *   are the only gold on the card, so problem floors pop out of the green.
+ * - **How big is each floor?** The row of cells is as long as the floor has
+ *   units, so a floor's footprint reads at a glance — no axis needed.
+ * - **Which period is this?** A quiet "for {period}" caption ties the
+ *   snapshot to the period picker, since occupancy is a point-in-time view.
+ *
+ * The whole drawing is DOM, not canvas: cells inherit the theme tokens (dark
+ * mode for free), every count is real text a screen reader can walk, and the
+ * floor rows carry aria-labels so the chart is navigable without a pointer.
+ */
+export interface OccupancyFloorRow {
+  floor: number | null;
+  occupied: number;
+  vacant: number;
+  total: number;
+}
+
+export interface OccupancyPropertyRow {
+  name: string;
+  occupied: number;
+  vacant: number;
+  /** Per-floor breakdown; when absent, the property renders as one ground row. */
+  floors?: OccupancyFloorRow[];
+}
+
+/** Elevator-panel floor tag: basement B1, ground G, third floor F3. */
+function floorTag(floor: number | null): string {
+  if (floor === null) return '—';
+  if (floor < 0) return `B${Math.abs(floor)}`;
+  if (floor === 0) return 'G';
+  return `F${floor}`;
+}
+
 export function OccupancyChart({
-  rows,
-  floors = [],
-  floorsLabel,
-  floorLabel,
+  properties,
+  periodLabel,
   ariaLabel,
   occupiedLabel,
   vacantLabel,
-  chartDataLabel,
+  floorLabel,
+  fullLabel,
+  noUnitsLabel,
 }: {
-  rows: { name: string; occupied: number; vacant: number }[];
-  /** Per-floor breakdown per property; rendered as a compact strip under the chart. */
-  floors?: { name: string; floors: { floor: number | null; occupied: number; vacant: number; total: number }[] }[];
-  floorsLabel?: string;
-  floorLabel?: string;
+  properties: OccupancyPropertyRow[];
+  /** Caption tying the snapshot to the selected period, e.g. "For Tir 2018". */
+  periodLabel?: string;
   ariaLabel: string;
   occupiedLabel: string;
   vacantLabel: string;
-  chartDataLabel: string;
+  /** The word "Floor", used in tags' tooltips and row labels. */
+  floorLabel: string;
+  /** Badge text for a property with zero vacancies, e.g. "Fully occupied". */
+  fullLabel: string;
+  /** Shown when no property has any units yet. */
+  noUnitsLabel: string;
 }) {
-  const showFloors = floors.some((property) => property.floors.length > 0);
+  const buildings = properties.filter((property) => property.occupied + property.vacant > 0);
+
+  if (buildings.length === 0) {
+    return (
+      <p
+        role="group"
+        aria-label={ariaLabel}
+        className="rounded-lg bg-wash px-4 py-6 text-center text-xs text-muted"
+      >
+        {noUnitsLabel}
+      </p>
+    );
+  }
 
   return (
-    <div>
-      <EChart
-        ariaLabel={ariaLabel}
-        height={Math.max(180, rows.length * 44)}
-        summary={{
-          caption: chartDataLabel,
-          columns: ['', occupiedLabel, vacantLabel],
-          rows: rows.map((row) => [row.name, row.occupied, row.vacant]),
-        }}
-        option={{
-          grid: { left: 8, right: 24, top: 16, bottom: 8, containLabel: true },
-          tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-          legend: {
-            data: [occupiedLabel, vacantLabel],
-            top: 0,
-            right: 0,
-            itemWidth: 10,
-            itemHeight: 10,
-            textStyle: { fontSize: 11, color: CHART_COLORS.axisLabel },
-          },
-          xAxis: { type: 'value', minInterval: 1, axisLabel: AXIS_LABEL, splitLine: { lineStyle: { color: CHART_COLORS.grid } } },
-          yAxis: { type: 'category', data: rows.map((row) => row.name), axisLabel: AXIS_LABEL, axisLine: { lineStyle: { color: CHART_COLORS.axisLine } } },
-          series: [
-            {
-              name: occupiedLabel,
-              type: 'bar',
-              stack: 'units',
-              barWidth: 14,
-              data: rows.map((row) => row.occupied),
-              itemStyle: { color: CHART_COLORS.brand },
-            },
-            {
-              name: vacantLabel,
-              type: 'bar',
-              stack: 'units',
-              barWidth: 14,
-              data: rows.map((row) => row.vacant),
-              itemStyle: { color: CHART_COLORS.grid },
-            },
-          ],
-        }}
-      />
+    <div role="group" aria-label={ariaLabel}>
+      {/* Snapshot caption + the two-state legend, one quiet row. */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[11px] text-muted">
+        {periodLabel ? <span>{periodLabel}</span> : <span aria-hidden="true" />}
+        <span className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className="h-2.5 w-2.5 rounded-[4px] bg-brand-600 dark:bg-brand-400"
+            />
+            {occupiedLabel}
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className="h-2.5 w-2.5 rounded-[4px] bg-gold-400/40 ring-1 ring-inset ring-gold-600/30 dark:bg-gold-400/20 dark:ring-gold-400/30"
+            />
+            {vacantLabel}
+          </span>
+        </span>
+      </div>
 
-      {showFloors && floorsLabel ? (
-        <div className="mt-4 border-t border-line pt-3">
-          <h4 className="text-xs font-semibold text-soft">{floorsLabel}</h4>
-          <div className="mt-2 grid gap-x-6 gap-y-2 sm:grid-cols-2">
-            {floors.map((property) =>
-              property.floors.map((floor) => (
-                <div
-                  key={`${property.name}-${floor.floor ?? 'na'}`}
-                  className="flex items-center justify-between gap-3 text-xs"
-                >
-                  <span className="min-w-16 truncate text-muted">
-                    {property.name}
-                    {floor.floor !== null ? (
-                      <span className="text-faint">
-                        {' '}
-                        · {floorLabel ?? 'Floor'} {floor.floor}
-                      </span>
-                    ) : null}
+      <div className={buildings.length > 1 ? 'grid gap-x-6 gap-y-5 sm:grid-cols-2' : ''}>
+        {buildings.map((property) => {
+          // No floor metadata (older data, villa without floors): the whole
+          // property still draws, as one ground-level row.
+          const floors = (property.floors?.length
+            ? property.floors
+            : [
+                {
+                  floor: null,
+                  occupied: property.occupied,
+                  vacant: property.vacant,
+                  total: property.occupied + property.vacant,
+                },
+              ]
+          )
+            .slice()
+            // Highest floor first, like a real elevation; units without a
+            // floor hang off the bottom of the building.
+            .sort((a, b) => {
+              if (a.floor === null) return 1;
+              if (b.floor === null) return -1;
+              return b.floor - a.floor;
+            });
+
+          return (
+            <section key={property.name} aria-label={property.name}>
+              <header className="mb-2 flex items-baseline justify-between gap-3">
+                <h4 className="min-w-0 truncate text-xs font-semibold text-soft">{property.name}</h4>
+                {property.vacant > 0 ? (
+                  <span className="shrink-0 text-[11px] font-medium text-amber-600 tabular dark:text-amber-400">
+                    {property.vacant} {vacantLabel}
                   </span>
-                  <span
-                    className="flex items-center gap-[3px]"
-                    role="img"
-                    aria-label={`${floor.occupied} ${occupiedLabel}, ${floor.vacant} ${vacantLabel}`}
-                  >
-                    {Array.from({ length: floor.total }, (_, index) => (
-                      <span
-                        key={index}
-                        title={`${index < floor.occupied ? occupiedLabel : vacantLabel}`}
-                        className={
-                          index < floor.occupied
-                            ? 'h-3 w-3 rounded-[3px] bg-brand-600 dark:bg-brand-400'
-                            : 'h-3 w-3 rounded-[3px] bg-wash-strong'
-                        }
-                      />
-                    ))}
+                ) : (
+                  <span className="shrink-0 text-[11px] font-medium text-brand-700 dark:text-brand-300">
+                    {fullLabel}
                   </span>
-                  <span className="tabular text-muted">
-                    {floor.occupied}/{floor.total}
-                  </span>
-                </div>
-              )),
-            )}
-          </div>
-        </div>
-      ) : null}
+                )}
+              </header>
+              <div className="rounded-xl bg-wash px-3 py-2.5">
+                <ul className="space-y-1.5">
+                  {floors.map((floor) => {
+                    const floorText =
+                      floor.floor === null
+                        ? `${property.name} — ${floorLabel}`
+                        : `${floorLabel} ${floor.floor}`;
+                    return (
+                      <li
+                        key={String(floor.floor)}
+                        className="flex items-center gap-2"
+                        aria-label={`${floorText}: ${floor.occupied} ${occupiedLabel}, ${floor.vacant} ${vacantLabel}`}
+                      >
+                        <span
+                          title={floorText}
+                          className="w-6 shrink-0 text-right text-[10px] font-medium text-faint tabular"
+                        >
+                          {floorTag(floor.floor)}
+                        </span>
+                        {/* Cells cluster centered: floors with fewer units read as a
+                            narrower footprint, so the whole drawing reads as a building
+                            elevation being filled rather than left-aligned bars. On
+                            phones (no cap) the row stretches full width instead. */}
+                        <span
+                          aria-hidden="true"
+                          className="flex min-w-0 flex-1 justify-center gap-[3px]"
+                        >
+                          {Array.from({ length: floor.total }, (_, index) => (
+                            <span
+                              key={index}
+                              title={`${floorText} · ${index < floor.occupied ? occupiedLabel : vacantLabel}`}
+                              className={`h-4 min-w-0 flex-1 basis-0 rounded-[4px] transition-colors sm:max-w-5 ${
+                                index < floor.occupied
+                                  ? 'bg-brand-600 dark:bg-brand-400'
+                                  : 'bg-gold-400/40 ring-1 ring-inset ring-gold-600/30 dark:bg-gold-400/20 dark:ring-gold-400/30'
+                              }`}
+                            />
+                          ))}
+                        </span>
+                        <span
+                          className={`w-9 shrink-0 text-right text-[10px] tabular ${
+                            floor.vacant > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-faint'
+                          }`}
+                        >
+                          {floor.occupied}/{floor.total}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </section>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCalendarPeriod } from '@/lib/use-calendar-period';
+import type { CalendarKind } from '@pms/calendar';
 import Link from 'next/link';
 import { useMemo } from 'react';
 import { Building3, CalendarAdd, ProfileAdd, TrendDown, TrendUp, Wallet3 } from '@/components/icons';
@@ -342,23 +343,35 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             {occupancy.loading ? (
-              <Skeleton className="h-48 w-full" />
+              <Skeleton className="h-56 w-full" />
             ) : (
               <OccupancyChart
-                rows={(occupancy.data?.rows ?? []).map((row) => ({
+                properties={(occupancy.data?.rows ?? []).map((row) => ({
                   name: row.name,
                   occupied: row.occupiedUnits,
                   vacant: row.vacantUnits,
+                  floors: row.floors ?? [],
                 }))}
-                floors={(occupancy.data?.rows ?? [])
-                  .filter((row) => (row.floors?.length ?? 0) > 0)
-                  .map((row) => ({ name: row.name, floors: row.floors ?? [] }))}
-                floorsLabel={t('dashboard.occupancy_by_floor')}
-                floorLabel={t('unit.floor')}
+                periodLabel={
+                  occupancy.data?.period
+                    ? t('dashboard.occupancy_period', {
+                        // Format with the response's own calendar: the period key
+                        // is expressed in it (a stale snapshot from the other
+                        // calendar must not hit the wrong month formatter).
+                        period: formatPeriodKey(
+                          occupancy.data.period,
+                          (occupancy.data.calendar as CalendarKind) ?? calendar,
+                          language,
+                        ),
+                      })
+                    : undefined
+                }
                 ariaLabel={t('reports.occupancy')}
                 occupiedLabel={t('unit.status.occupied')}
                 vacantLabel={t('unit.status.vacant')}
-                chartDataLabel={t('a11y.chart_data')}
+                floorLabel={t('unit.floor')}
+                fullLabel={t('dashboard.occupancy_full')}
+                noUnitsLabel={t('dashboard.occupancy_empty')}
               />
             )}
           </CardContent>

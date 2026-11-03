@@ -493,6 +493,10 @@ export const api = {
   arrears: (query = '') => apiFetch<Arrears>(`/reports/arrears${query}`),
   occupancy: (query = '') =>
     apiFetch<{
+      /** The snapshot's period key (yyyy-mm in the response's calendar), for the chart caption. */
+      period: string;
+      /** The calendar that key is expressed in — format the caption with it, not the live UI calendar. */
+      calendar: string;
       rows: OccupancyRow[];
       totals: { totalUnits: number; occupiedUnits: number; vacantUnits: number; occupancyRate: number };
     }>(`/reports/occupancy${query}`),

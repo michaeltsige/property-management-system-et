@@ -711,7 +711,9 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'notices.deleted': 'እቲ ሕብረት ተሰሪዙ ኣሎ።',
   'notices.uploading_image': 'ስእሊ ይለኽፍ ኣሎ…',
   'notices.image_failed': 'እቲ ስእሊ ኣይለኻፈን — ዓይነትን መጠንን ፋይል ኣረጋግጽ።',
-  'dashboard.occupancy_by_floor': 'ዓቕሚ ውህበት ብወረዲ',
+  'dashboard.occupancy_period': 'ን{period}',
+  'dashboard.occupancy_full': 'ምሉእ ብምሉእ ተመሊኡ',
+  'dashboard.occupancy_empty': 'ዝርዝር ኣይነበረን — ዓቕሚ ውህበት ንምርኣይ ኣብ ንብረት ዝርዝር ወስኽ።',
 
   // Email verification, password reset and invite mail (machine drafts).
   'auth.email_not_verified': 'ቅድሚ ንምእታውካ ኢመይልካ ኣረጋግጽ።',

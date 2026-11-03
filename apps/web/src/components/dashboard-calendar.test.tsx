@@ -46,7 +46,12 @@ beforeEach(() => {
     portfolio: { properties: 1 },
     money: {},
   } as never);
-  vi.mocked(api.occupancy).mockResolvedValue({ rows: [] } as never);
+  vi.mocked(api.occupancy).mockResolvedValue({
+    period: '2018-13',
+    calendar: 'ethiopian',
+    rows: [],
+    totals: { totalUnits: 0, occupiedUnits: 0, vacantUnits: 0, occupancyRate: 0 },
+  } as never);
   vi.mocked(api.arrears).mockResolvedValue({ buckets: [] } as never);
 });
 it('renders Pagume in Amharic, then switches calendar while old collections are retained', async () => {

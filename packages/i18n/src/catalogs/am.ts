@@ -712,7 +712,9 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'notices.deleted': 'ማስታወቂያው ተሰርዟል።',
   'notices.uploading_image': 'ምስል በመላክ ላይ…',
   'notices.image_failed': 'ምስሉ መላክ አልተቻለም — የፋይሉን ዓይነትና መጠን ያረጋግጡ።',
-  'dashboard.occupancy_by_floor': 'የመኖሪያ ሁኔታ በፎቅ',
+  'dashboard.occupancy_period': 'ለ{period}',
+  'dashboard.occupancy_full': 'ሙሉ በሙሉ የተመላ',
+  'dashboard.occupancy_empty': 'እስካሁን ምንም ክፍል የለም — መኖሪያ ሁኔታውን ለማየት ክፍሎችን ይጨምሩ።',
 
   // Email verification, password reset and invite mail (machine drafts).
   'auth.email_not_verified': 'እባክዎ ከመግቢያዎ በፊት የኢሜይል አድራሻዎን ያረጋግጡ።',
