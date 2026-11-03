@@ -775,7 +775,7 @@ export const EN_CATALOG = {
   'org.gateway_live_note':
     'Live mode takes real payments through the provider. Double-check the credentials and the settlement account before switching.',
   'org.gateway_platform_source':
-    'No organization gateway configured — the platform default provider is in effect.',
+    "The platform's environment configuration decides which gateway runs — save on this form to override it for this organization.",
   'org.gateway_credentials_hint':
     'Saved values stay encrypted and are never shown again. Type a new value to replace one; leave a field empty to keep it.',
   'org.gateway_missing': 'Missing credentials: {fields}',

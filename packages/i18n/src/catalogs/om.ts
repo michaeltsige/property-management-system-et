@@ -439,7 +439,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
     "Qormaata / saandibakkaa: chekki'aawutiin Chapa appii kana keessatti fakkeeffama — hanga ammaa herrega Chapaan barbaachisa miti. Iccittaa sirreeffii kee ol kaa'i gara live tti jijjiiri.",
   'org.gateway_live_note':
     'Haalli sirreeffamaa kaffaltii dhugaa dhiyeessaa qua. Odeeffannoo seerludaa fi baasii galmeessa mirkaneffadhu, jijjiirraa dura.',
-  'org.gateway_platform_source': "Koofiin dhaabbataa hin qindaa'ine — dhiyeessaan durtii maqarsaa hojjeta.",
+  'org.gateway_platform_source': "Qindaa'inni naannoo maqarsaa goofee kaffaltii agarsiisuu murteessa — dhaabbata kanaaf irratti hijuuf kana irraa olkaa'i.",
   'org.gateway_credentials_hint':
     "Gatiin olkaa'aman mijeessamanii turu, irra deebi'anee hin mul'atu. Bakka buufuuf gatii haaraa barressi; olkaa'uuf duwwaa dhiisi.",
   'org.gateway_missing': 'Meeshaalee dhaban: {fields}',

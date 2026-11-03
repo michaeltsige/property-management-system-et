@@ -424,7 +424,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'org.gateway_test_note':
     'ሙከራ / ሳንድባክስ፦ የቻፓ ቼክአውት በዚህ መተግበሪያ ውስጥ ይለማመዳል — እስካሁን የቻፓ መለያ አያስፈልግም። የሚስጥር ቁልፍዎን ያስቀምጡ እና ወደ Live ይቀይሩ።',
   'org.gateway_live_note': 'የበቀጥታ ሁነታ በእውነተኛ ገንዘብ ክፍያ ያስቀምጣል። ከመቀየርዎ በፊት የመግቢያ ቁልፎቹንና የክፍያ ሂደቱን በጥንቃቄ ያረጋግጡ።',
-  'org.gateway_platform_source': 'የድርጅት ጌትዌይ አልተዋቀረም — የመድረኩ ነባሪ አቅራቢ ተግብሯል።',
+  'org.gateway_platform_source': 'የመድረኩ አካባቢ ውቅርነት የትኛው ጌትዌይ እንደሚሰራ ይወስናል — ለዚህ ድርጅት ለመተካት በዚህ ቅጽ ያስቀምጡ።',
   'org.gateway_credentials_hint': 'የተቀመጡ እሴቶች ተመስጥረው ይቀመጣሉ፣ እንደገና አይታዩም። ለመተካት አዲስ እሴት ይጻፉ፤ ለማቆየት ባዶ ይተዉ።',
   'org.gateway_missing': 'የጎደሉ ማእዘኖች፡ {fields}',
   'org.gateway_incomplete': 'ያልተሟላ',
