@@ -1,3 +1,5 @@
+import { ApiError } from './api';
+
 /**
  * Portal-domain helpers shared by the tenant screens (kept out of page files:
  * Next.js only allows specific exports there, and the math deserves tests of
@@ -26,4 +28,16 @@ export function statementTotals(items: { amountMinor: string; paidMinor: string;
     paidMinor += Number(item.paidMinor);
   }
   return { billedMinor, paidMinor };
+}
+
+/**
+ * Whether a failed payment completion actually means the money is in.
+ *
+ * The portal's payment watch (dashboard / payments page), the checkout return
+ * page and the provider's webhook can all race to complete the same attempt;
+ * the losers get 409 CONFLICT "This payment has already been completed". For
+ * the payer that is success, not an error — callers treat it as one.
+ */
+export function isAlreadyCompletedError(cause: unknown): boolean {
+  return cause instanceof ApiError && /already been completed/i.test(cause.message);
 }

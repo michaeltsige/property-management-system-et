@@ -20,6 +20,7 @@ import { Suspense, useEffect, useState } from 'react';
 
 import { Logo } from '@/components/logo';
 import { api, ApiError } from '@/lib/api';
+import { isAlreadyCompletedError } from '@/lib/portal';
 import { formatAmount } from '@/lib/format';
 import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
@@ -51,8 +52,17 @@ function MockCheckout() {
 
   async function confirm() {
     await run(async () => {
-      const result = await api.portalCompletePayment(providerRef);
-      setCompleted(result);
+      try {
+        setCompleted(await api.portalCompletePayment(providerRef));
+      } catch (cause) {
+        // The portal page's payment watch may have completed this attempt
+        // first — for the payer that is success, not an error.
+        if (isAlreadyCompletedError(cause)) {
+          intent.reload();
+          return;
+        }
+        throw cause;
+      }
     }).catch(() => undefined);
   }
 
