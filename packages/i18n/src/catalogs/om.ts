@@ -43,6 +43,11 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'portal.payment_pending_title': 'Kaffaltii haala hojii irratti',
   'portal.payment_pending_hint': '{provider} kaffaalaa kee mirkaneessuuf eegna. Yoo kaffaalteetta, haala asitti ilaali.',
   'portal.payment_check': 'Haala kaffaalaa ilaali',
+  'portal.payment_watching':
+    "Kaffaalaa tabata baname keessatti xumuri — fuula kun yeroo gabaabaa {provider} gaafataadha.",
+  'portal.payment_completed': 'Kaffaalaa mirkanaaera — galatoomi!',
+  'portal.due_breakdown_title': 'Baasiin hada kana irraa maaliin ijaarame',
+  'portal.due_breakdown_more': '+{count} dabalata galmee kiraa kee irratti',
   'portal.mock_title': 'Mock checkout',
   'portal.mock_hint': "Kun fuula kaffaltii agarsiisaa qopheessuudhaaf. Maallaqa dhugaan hin socho'u.",
   'portal.mock_confirm': 'Kaffaltii mirkaneessi',

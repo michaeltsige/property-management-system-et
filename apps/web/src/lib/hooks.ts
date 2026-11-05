@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { ApiError, fieldErrorsOf } from './api';
+import { api, ApiError, fieldErrorsOf } from './api';
+
+/** How often a pending payment is re-verified with the provider, and for how long. */
+const WATCH_INTERVAL_MS = 5_000;
+const WATCH_MAX_ATTEMPTS = 100;
 
 export interface AsyncState<T> {
   data: T | null;
@@ -116,4 +120,81 @@ export function useAction() {
   }, []);
 
   return { pending, error, message, setMessage, fieldErrors, run };
+}
+
+/**
+ * While a provider payment attempt is pending, re-verify it with the provider
+ * every few seconds and complete it the moment the money is confirmed.
+ *
+ * Chapa (v1 and v2) only redirects the payer back to an https origin, so on an
+ * http deployment the hosted checkout cannot send the tenant home — the
+ * tenant finishes paying in another tab and this watch is what notices.
+ * Before it existed the tenant had to come back and press "check payment
+ * status" by hand. Gives up after WATCH_MAX_ATTEMPTS so an abandoned checkout
+ * does not ping the provider forever; the manual button still works.
+ *
+ * Returns true while the watch is actively polling.
+ */
+export function usePendingPaymentWatch(
+  pending: { providerRef: string } | null | undefined,
+  onConfirmed: () => void,
+): boolean {
+  const providerRef = pending?.providerRef ?? null;
+  const [watching, setWatching] = useState(false);
+  // The callback changes every render (inline arrow); the effect must not.
+  const confirmedRef = useRef(onConfirmed);
+  confirmedRef.current = onConfirmed;
+
+  useEffect(() => {
+    if (!providerRef) {
+      setWatching(false);
+      return;
+    }
+    let cancelled = false;
+    let stopped = false;
+    let attempts = 0;
+    setWatching(true);
+
+    const finish = () => {
+      if (cancelled) return;
+      cancelled = true; // no further state updates or callbacks
+      stopped = true;
+      setWatching(false);
+      confirmedRef.current();
+    };
+
+    const verify = async (): Promise<boolean> => {
+      attempts += 1;
+      try {
+        await api.portalCompletePayment(providerRef);
+        finish();
+        return true;
+      } catch (cause) {
+        // "Already been completed" — a parallel tab or the webhook beat this
+        // watch to it; either way the money is in. Anything else (provider has
+        // not confirmed yet, network blip) keeps the watch running.
+        if (cause instanceof ApiError && /already been completed/i.test(cause.message)) {
+          finish();
+          return true;
+        }
+        return false;
+      }
+    };
+
+    void (async () => {
+      while (!stopped && attempts < WATCH_MAX_ATTEMPTS) {
+        const done = await verify();
+        if (done || stopped) return;
+        await new Promise((resolve) => setTimeout(resolve, WATCH_INTERVAL_MS));
+      }
+      if (!cancelled) setWatching(false);
+    })();
+
+    return () => {
+      stopped = true;
+      cancelled = true;
+    };
+  }, [providerRef]);
+
+  return watching;
 }

@@ -360,6 +360,15 @@ export interface TranslationRow {
   overridden: boolean;
 }
 
+/** One still-open charge behind the tenant's due balance (overview breakdown). */
+export interface PortalDueLine {
+  periodKey: string | null;
+  periodCalendar: string | null;
+  type: string;
+  dueDate: string;
+  outstandingMinor: string;
+}
+
 /** What a signed-in tenant sees on their portal page. */
 export interface PortalMe {
   tenant: {
@@ -382,6 +391,13 @@ export interface PortalMe {
   /** Credit from earlier overpayments, minor units as a decimal string. */
   creditMinor?: string;
   currency?: string;
+  /**
+   * What the balance is made of — one line per still-open charge, oldest
+   * first, capped (the statement page has every line). Empty when paid up.
+   */
+  dueBreakdown?: PortalDueLine[];
+  /** Total still-open charges; larger than dueBreakdown.length means more. */
+  dueBreakdownTotal?: number;
 }
 
 /** One line of the tenant's rent account (their statement). */

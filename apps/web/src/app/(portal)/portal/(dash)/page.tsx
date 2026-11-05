@@ -8,11 +8,11 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Document, PathTool, Profile2User, TickCircle, Warning2 } from '@/components/icons';
 
-import { formatAmount, formatDate, statusTone } from '@/lib/format';
-import { useAction, useAsync } from '@/lib/hooks';
+import { formatAmount, formatDate, formatPeriodKey, statusTone } from '@/lib/format';
+import { useAction, useAsync, usePendingPaymentWatch } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
@@ -61,14 +61,37 @@ export default function PortalDashboardPage() {
 
   const { pending: paying, error: payError, run: runPay } = useAction();
   const { pending: checking, error: checkError, run: runCheck } = useAction();
+  const [justPaid, setJustPaid] = useState(false);
 
-  /** Start a provider payment for the full outstanding balance, then follow the redirect. */
+  /**
+   * Start a provider payment for the full outstanding balance, then open its
+   * hosted checkout in a new tab. The portal stays on this page and watches
+   * the attempt — Chapa (v1 and v2) can only redirect the payer back to an
+   * https origin, so on a local checkout there is no return trip and this tab
+   * is how completion is noticed (the watch below). The empty tab is opened
+   * synchronously inside the click — a window.open that waits for the API
+   * response is popup-blocked — and navigated once the provider responds.
+   */
   async function payNow() {
-    await runPay(async () => {
-      const intent = await api.portalInitiatePayment({});
-      if (!intent.redirectUrl) throw new Error(t('portal.pay_no_redirect'));
-      window.location.assign(intent.redirectUrl);
-    }).catch(() => undefined);
+    const checkoutTab = window.open('', '_blank');
+    try {
+      await runPay(async () => {
+        const intent = await api.portalInitiatePayment({});
+        if (!intent.redirectUrl) throw new Error(t('portal.pay_no_redirect'));
+        setJustPaid(false);
+        if (checkoutTab && !checkoutTab.closed) {
+          checkoutTab.location.replace(intent.redirectUrl);
+        } else {
+          // Popup blocked: same-tab checkout, browser back returns here.
+          window.location.assign(intent.redirectUrl);
+          return;
+        }
+        // Surface the pending attempt right away so the watch starts.
+        payments.reload();
+      });
+    } catch {
+      checkoutTab?.close();
+    }
   }
 
   /**
@@ -85,11 +108,20 @@ export default function PortalDashboardPage() {
     }).catch(() => undefined);
   }
 
+  /** The watch completes the payment on its own; this only reacts to that. */
+  const watching = usePendingPaymentWatch(payments.data?.pending, () => {
+    payments.reload();
+    me.reload();
+    setJustPaid(true);
+  });
+
   if (!ready || !session || !isTenant) return null;
 
   const currency = session.organization.currency;
   const due = me.data ? Number(me.data.dueMinor) : 0;
   const credit = me.data ? Number(me.data.creditMinor ?? '0') : 0;
+  const dueLines = me.data?.dueBreakdown ?? [];
+  const dueMore = Math.max(0, (me.data?.dueBreakdownTotal ?? dueLines.length) - dueLines.length);
   const activeLease = me.data?.leases.find((lease) => lease.status === 'active') ?? me.data?.leases[0];
   const openRequests = (requests.data?.items ?? []).filter(
     (item) => !['completed', 'cancelled'].includes(item.status),
@@ -144,21 +176,64 @@ export default function PortalDashboardPage() {
                   ) : null}
                 </div>
                 {due > 0 ? (
-                  <div className="space-y-1">
-                    <Button onClick={payNow} disabled={paying || checking} className="w-full sm:w-auto">
-                      {paying ? t('portal.pay_starting') : t('portal.pay_now')}
-                    </Button>
-                    <p className="text-xs text-muted">{t('portal.pay_hint')}</p>
-                    {payError ? <Alert tone="danger">{payError}</Alert> : null}
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <Button onClick={payNow} disabled={paying || checking} className="w-full sm:w-auto">
+                        {paying ? t('portal.pay_starting') : t('portal.pay_now')}
+                      </Button>
+                      <p className="text-xs text-muted">{t('portal.pay_hint')}</p>
+                      {payError ? <Alert tone="danger">{payError}</Alert> : null}
+                    </div>
+                    {/* What the balance is made of. Partial payments stack up across
+                        cycles into one number that reads like a miscalculation until
+                        it is itemized — so the lines sit right under the amount. */}
+                    {dueLines.length > 0 ? (
+                      <div className="rounded-lg bg-wash px-3 py-2.5">
+                        <p className="text-[11px] font-medium uppercase tracking-wide text-muted">
+                          {t('portal.due_breakdown_title')}
+                        </p>
+                        <ul className="mt-1.5 space-y-1">
+                          {dueLines.map((line) => (
+                            <li
+                              key={`${line.periodKey ?? line.dueDate}-${line.type}`}
+                              className="flex items-center justify-between gap-3 text-xs"
+                            >
+                              <span className="min-w-0 truncate text-muted">
+                                {line.periodKey
+                                  ? formatPeriodKey(line.periodKey, session.organization.calendar, language)
+                                  : formatDate(line.dueDate, { language, calendar })}
+                                <span className="text-faint">
+                                  {' '}
+                                  · {t(`charge.type.${line.type}` as never)}
+                                </span>
+                              </span>
+                              <span className="tabular shrink-0 font-medium text-strong">
+                                {formatAmount(line.outstandingMinor, currency, language)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                        {dueMore > 0 ? (
+                          <Link
+                            href="/portal/statement"
+                            className="mt-1.5 inline-block text-[11px] font-medium text-brand-700 dark:text-brand-300 hover:underline"
+                          >
+                            {t('portal.due_breakdown_more', { count: dueMore })}
+                          </Link>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 ) : null}
-                {/* A started-but-unconfirmed attempt: the provider never redirected
-                    back (http origin), so offer the server-verified completion here. */}
+                {/* A started-but-unconfirmed attempt: the watch re-verifies it with the
+                    provider every few seconds; the button stays as the manual path. */}
                 {payments.data?.pending ? (
                   <div className="space-y-1 rounded-lg border border-line bg-wash p-3">
                     <p className="text-sm font-medium text-strong">{t('portal.payment_pending_title')}</p>
                     <p className="text-xs text-muted">
-                      {t('portal.payment_pending_hint', { provider: payments.data.pending.provider })}
+                      {watching
+                        ? t('portal.payment_watching', { provider: payments.data.pending.provider })
+                        : t('portal.payment_pending_hint', { provider: payments.data.pending.provider })}
                     </p>
                     <Button
                       variant="secondary"
@@ -170,6 +245,9 @@ export default function PortalDashboardPage() {
                     </Button>
                     {checkError ? <Alert tone="danger">{checkError}</Alert> : null}
                   </div>
+                ) : null}
+                {justPaid && !payments.data?.pending ? (
+                  <Alert tone="success">{t('portal.payment_completed')}</Alert>
                 ) : null}
               </CardContent>
             </Card>

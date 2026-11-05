@@ -313,3 +313,74 @@ describe('completing a portal payment', () => {
     expect(view.body.provider).toBe('mock');
   });
 });
+
+describe('the due balance breakdown', () => {
+  it('itemizes the open charges oldest-first so a stacked balance explains itself', async () => {
+    const { header, prisma, session } = await setupPortalTenant('pay-breakdown', '+251911000110');
+
+    // Pay part of the OLDEST cycle: what is left is one partial charge plus
+    // one fully open charge — the shape the owner reported as a mysterious
+    // "33,600.04" before the balance could show its composition.
+    const oldest = await prisma.charge.findFirstOrThrow({
+      where: { leaseId: session.leaseId, periodKey: '2019-01', type: 'rent' },
+    });
+    const { recordPayment } = await import('../services/payments.js');
+    await recordPayment(prisma, {
+      organizationId: session.organizationId,
+      actorUserId: null,
+      leaseId: session.leaseId,
+      amount: { amountMinor: 500_000, currency: 'ETB' },
+      method: 'cash',
+      paidAt: new Date(),
+      reference: 'BREAKDOWN-1',
+      notes: 'Partial payment for the breakdown test',
+      allocations: [{ chargeId: oldest.id, amount: { amountMinor: 500_000, currency: 'ETB' } }],
+    });
+
+    const me = await request(app).get('/api/v1/portal/me').set(header).expect(200);
+    expect(me.body.dueMinor).toBe('2500000'); // 1,000,000 left on 2019-01 + 1,500,000 on 2019-02
+    expect(me.body.dueBreakdownTotal).toBe(2);
+    expect(me.body.dueBreakdown).toEqual([
+      {
+        periodKey: '2019-01',
+        periodCalendar: 'ethiopian',
+        type: 'rent',
+        dueDate: expect.any(String),
+        outstandingMinor: '1000000',
+      },
+      {
+        periodKey: '2019-02',
+        periodCalendar: 'ethiopian',
+        type: 'rent',
+        dueDate: expect.any(String),
+        outstandingMinor: '1500000',
+      },
+    ]);
+  });
+
+  it('drops fully-paid charges from the breakdown', async () => {
+    const { header, prisma, session } = await setupPortalTenant('pay-breakdown-paid', '+251911000111');
+    const oldest = await prisma.charge.findFirstOrThrow({
+      where: { leaseId: session.leaseId, periodKey: '2019-01', type: 'rent' },
+    });
+    const { recordPayment } = await import('../services/payments.js');
+    await recordPayment(prisma, {
+      organizationId: session.organizationId,
+      actorUserId: null,
+      leaseId: session.leaseId,
+      amount: { amountMinor: 1_500_000, currency: 'ETB' },
+      method: 'cash',
+      paidAt: new Date(),
+      reference: 'BREAKDOWN-2',
+      notes: 'Settles the oldest cycle completely',
+      allocations: [{ chargeId: oldest.id, amount: { amountMinor: 1_500_000, currency: 'ETB' } }],
+    });
+
+    const me = await request(app).get('/api/v1/portal/me').set(header).expect(200);
+    expect(me.body.dueMinor).toBe('1500000');
+    expect(me.body.dueBreakdownTotal).toBe(1);
+    expect(me.body.dueBreakdown).toEqual([
+      expect.objectContaining({ periodKey: '2019-02', outstandingMinor: '1500000' }),
+    ]);
+  });
+});

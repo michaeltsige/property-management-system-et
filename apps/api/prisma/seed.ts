@@ -896,8 +896,11 @@ async function main(): Promise<void> {
         );
       } else if (seed.behavior === 'partial') {
         // 70% on the due date in cash; roughly every third bill gets caught up
-        // two weeks later, the rest keeps drifting as arrears.
-        const part = BigInt(Math.floor(Number(charge.amountMinor) * 0.7));
+        // two weeks later, the rest keeps drifting as arrears. Integer math —
+        // Number(minor) * 0.7 lands on 1,959,999.999… for a 28,000 rent and
+        // floor()s the demo data into 8,400.01 remainders (the ".04" cents the
+        // owner once saw stacked on the portal balance).
+        const part = (charge.amountMinor * 7n) / 10n;
         await payCharge(leaseId, seed.tenantIndex, charge.id, part, charge.dueDate, { method: 'cash' });
         if (index % 3 === 1) {
           await payCharge(

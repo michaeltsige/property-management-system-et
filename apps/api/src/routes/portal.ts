@@ -44,6 +44,13 @@ import {
 
 export const portalRouter = Router();
 
+/**
+ * How many per-charge lines the overview's due balance may list inline. The
+ * full list stays on the statement page; this keeps /portal/me small while the
+ * dashboard can still show what the balance is made of.
+ */
+const PORTAL_DUE_BREAKDOWN_LIMIT = 6;
+
 // --- enrollment (staff side) ------------------------------------------------
 
 portalRouter.post(
@@ -194,9 +201,38 @@ portalRouter.get('/portal/me', requireAuth, requirePermission('portal.use'), asy
         currency: tenant.organization.currency,
         status: { in: ['open', 'partial'] },
       },
-      select: { amountMinor: true, paidMinor: true },
+      select: {
+        amountMinor: true,
+        paidMinor: true,
+        periodKey: true,
+        periodCalendar: true,
+        type: true,
+        dueDate: true,
+      },
     });
     const owedMinor = open.reduce((sum, charge) => sum + (charge.amountMinor - charge.paidMinor), BigInt(0));
+
+    /**
+     * Where the due balance comes from — one line per still-open charge,
+     * oldest first. The overview used to show a single lump ("33,600.00") with
+     * no hint that it is several cycles' partial payments stacked up, which
+     * read like a wrong calculation; the breakdown makes the composition
+     * visible right where the number is.
+     */
+    const dueBreakdownAll = open
+      .map((charge) => ({
+        periodKey: charge.periodKey,
+        periodCalendar: charge.periodCalendar,
+        type: charge.type,
+        dueDate: charge.dueDate.toISOString().slice(0, 10),
+        outstandingMinor: charge.amountMinor - charge.paidMinor,
+      }))
+      .filter((charge) => charge.outstandingMinor > BigInt(0))
+      .sort((a, b) => (a.dueDate < b.dueDate ? -1 : a.dueDate > b.dueDate ? 1 : 0));
+    const dueBreakdown = dueBreakdownAll.slice(0, PORTAL_DUE_BREAKDOWN_LIMIT).map((charge) => ({
+      ...charge,
+      outstandingMinor: charge.outstandingMinor.toString(),
+    }));
 
     // Credit from earlier overpayments lives on the ledger, not on the charges:
     // without netting it here the tenant would be asked to pay twice.
@@ -238,6 +274,10 @@ portalRouter.get('/portal/me', requireAuth, requirePermission('portal.use'), asy
       dueMinor: (netDue > 0n ? netDue : 0n).toString(),
       creditMinor: creditMinor.toString(),
       currency: tenant.organization.currency,
+      // What the balance is made of, oldest first (capped — the statement page
+      // has every line). Empty when nothing is due.
+      dueBreakdown,
+      dueBreakdownTotal: dueBreakdownAll.length,
     });
   } catch (error) {
     next(error);

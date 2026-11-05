@@ -6,7 +6,7 @@
  */
 
 import { formatAmount, formatDate } from '@/lib/format';
-import { useAction, useAsync } from '@/lib/hooks';
+import { useAction, useAsync, usePendingPaymentWatch } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 
 import { api } from '@/lib/api';
@@ -37,8 +37,7 @@ export default function PortalPaymentsPage() {
 
   /**
    * Re-verify the pending attempt with the provider and complete it — the
-   * completion path when the provider could not redirect the tenant back
-   * (Chapa rejects plain-http origins, so dev checkouts get no auto-return).
+   * manual fallback path; the watch below does the same thing automatically.
    */
   async function checkPendingPayment(providerRef: string) {
     await runCheck(async () => {
@@ -46,6 +45,8 @@ export default function PortalPaymentsPage() {
       payments.reload();
     }).catch(() => undefined);
   }
+
+  const watching = usePendingPaymentWatch(payments.data?.pending, () => payments.reload());
 
   if (!ready || !isTenant) return null;
   const currency = session.organization.currency;
@@ -61,7 +62,9 @@ export default function PortalPaymentsPage() {
             <p className="text-sm font-medium text-strong">{t('portal.payment_pending_title')}</p>
             <p className="text-xs text-muted">
               {formatAmount(payments.data.pending.amountMinor, payments.data.pending.currency, language)} ·{' '}
-              {t('portal.payment_pending_hint', { provider: payments.data.pending.provider })}
+              {watching
+                ? t('portal.payment_watching', { provider: payments.data.pending.provider })
+                : t('portal.payment_pending_hint', { provider: payments.data.pending.provider })}
             </p>
             <Button
               variant="secondary"

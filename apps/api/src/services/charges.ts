@@ -282,6 +282,39 @@ export async function generateCharges(
     charges: [],
   };
 
+  // Pre-load which rent charges already exist so re-running a period counts
+  // "already existed" instead of crashing each duplicate into the unique
+  // constraint — Prisma logs every P2002 as a scary-looking error before the
+  // catch below turns it into a skip. Keys are expanded across both calendars:
+  // with a sourceCalendar given, the stored key is the one translated into the
+  // lease's own billing calendar, not the requested one.
+  const existingChargeKeys = new Set<string>();
+  if (leases.length > 0 && options.periodKeys.length > 0) {
+    const keyVariants = new Set<string>();
+    for (const periodKey of options.periodKeys) {
+      for (const calendar of ['ethiopian', 'gregorian'] as const) {
+        try {
+          const parsed = parsePeriodKeyFor(periodKey, calendar);
+          keyVariants.add(parsed.key);
+          keyVariants.add(periodInOtherCalendar({ calendar, ...parsed }).key);
+        } catch {
+          // The key is not representable in this calendar (e.g. month 13 in
+          // Gregorian); its other-calendar form is already covered.
+        }
+      }
+    }
+    const existing = await prisma.charge.findMany({
+      where: {
+        organizationId: options.organizationId,
+        leaseId: { in: leases.map((lease) => lease.id) },
+        type: 'rent',
+        periodKey: { in: [...keyVariants] },
+      },
+      select: { leaseId: true, periodKey: true },
+    });
+    for (const row of existing) existingChargeKeys.add(`${row.leaseId}|${row.periodKey}`);
+  }
+
   // Snapshot stranded credit BEFORE any new charge posts: once a charge lands,
   // the ledger sum may flip positive and the credit becomes invisible to
   // creditByCurrency — the new charge would then sit open while the ledger
@@ -346,6 +379,14 @@ export async function generateCharges(
 
       const amountMinor = amountForCycle(lease as LeaseForCharging, cycleIndex);
       if (amountMinor === 0n) continue;
+
+      // Already generated (the normal re-run case): counted as skipped, not
+      // crashed into the unique constraint. The P2002 catch below remains for
+      // two concurrent generations racing on the same lease.
+      if (existingChargeKeys.has(`${lease.id}|${period.key}`)) {
+        result.skippedExisting += 1;
+        continue;
+      }
 
       // The due date is the cycle start itself — the tenant's own due date, the
       // same day every cycle, not a separate configured day of the calendar month.

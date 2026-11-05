@@ -3,11 +3,13 @@
 import { PlayCircle } from '@/components/icons';
 import { useState } from 'react';
 
+import { utcDateToCivil } from '@pms/calendar';
+
 import { useCalendarPeriod } from '@/lib/use-calendar-period';
 
 import { api } from '@/lib/api';
 import type { Charge } from '@/lib/types';
-import { formatAmount, formatDate, formatPeriodKey, statusTone } from '@/lib/format';
+import { formatAmount, formatPeriodKey, statusTone } from '@/lib/format';
 import { useAction, useAsync } from '@/lib/hooks';
 import { usePreferences } from '@/lib/preferences';
 import { usePropertyContext } from '@/lib/property-context';
@@ -200,7 +202,12 @@ export default function ChargesPage() {
                       <Td className={cn('tabular', outstanding > 0 && 'font-medium text-red-600 dark:text-red-400')}>
                         {formatAmount(String(outstanding), charge.currency, language)}
                       </Td>
-                      <Td>{formatDate(charge.dueDate, { language, calendar })}</Td>
+                      <Td className="tabular">
+                        {/* "Due day of month" is the day of the cycle the charge falls
+                            due — a number, not a date. The month is already named in the
+                            Period column; rendering the full date here repeated it. */}
+                        {utcDateToCivil(new Date(charge.dueDate), charge.periodCalendar).day}
+                      </Td>
                       <Td>
                         <Badge className={cn(statusTone[charge.status])}>
                           {t(`charge.status.${charge.status}` as never)}

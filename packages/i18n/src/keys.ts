@@ -284,6 +284,11 @@ export const EN_CATALOG = {
   'portal.payment_pending_hint':
     'We are waiting for {provider} to confirm your payment. If you already paid, check the status here.',
   'portal.payment_check': 'Check payment status',
+  'portal.payment_watching':
+    'Finish the payment in the tab that just opened — this page confirms with {provider} every few seconds and updates by itself.',
+  'portal.payment_completed': 'Payment confirmed — thank you!',
+  'portal.due_breakdown_title': 'What the balance is made of',
+  'portal.due_breakdown_more': '+{count} more on your rent account',
   'portal.mock_title': 'Mock checkout',
   'portal.mock_hint': 'This is a simulated payment provider page for development. No real money moves.',
   'portal.mock_confirm': 'Confirm payment',
