@@ -103,7 +103,21 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     void api
       .me()
-      .then(() => undefined)
+      .then((me) => {
+        if (cancelled) return;
+        // The principal from the server is the truth about identity: sync the
+        // platform flag (and user id) into the display cache so the rail shows
+        // or hides the console immediately, and a flag flipped server-side
+        // reaches the UI on the next load.
+        updateStoredSession({
+          user: {
+            ...stored.user,
+            id: me.user.userId ?? stored.user.id,
+            isPlatformAdmin: me.user.isPlatformAdmin === true,
+          },
+        });
+        setSession(loadSession());
+      })
       .catch(() => {
         // 401 already cleared the stored session; anything else (API down) keeps
         // the user where they are and lets the next request decide.

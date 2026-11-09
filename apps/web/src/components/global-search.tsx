@@ -118,7 +118,7 @@ export function GlobalSearch() {
           kind: 'unit',
           title: u.label,
           subtitle: u.property?.name ?? t('search.units'),
-          href: '/units',
+          href: `/units/${u.id}`,
         });
     for (const tn of data.tenants)
       if (match(tn.fullName) || match(tn.phone) || match(tn.email))
@@ -127,7 +127,9 @@ export function GlobalSearch() {
           kind: 'tenant',
           title: tn.fullName,
           subtitle: tn.phone ?? tn.email ?? '',
-          href: `/tenants?search=${encodeURIComponent(tn.fullName)}`,
+          // Straight to the tenant's workspace — same as clicking their name
+          // anywhere else; the old search-filter hop lost a step.
+          href: `/tenants/${tn.id}`,
         });
     return out.slice(0, 8);
   }, [query, data, t]);

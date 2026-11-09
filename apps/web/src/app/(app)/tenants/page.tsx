@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { roleHasPermission, type Role } from '@pms/shared';
 import { CsvImport } from '@/components/csv-import';
 import { Add } from '@/components/icons';
@@ -196,7 +197,15 @@ export default function TenantsPage() {
               <tbody>
                 {tenantsInScope.map((tenant) => (
                   <tr key={tenant.id}>
-                    <Td className="font-medium text-strong">{tenant.fullName}</Td>
+                    <Td className="min-w-0">
+                      {/* One click = the tenant's whole account (leases, charges, payments). */}
+                      <Link
+                        href={`/tenants/${tenant.id}`}
+                        className="font-medium text-brand-700 hover:underline dark:text-brand-300"
+                      >
+                        {tenant.fullName}
+                      </Link>
+                    </Td>
                     <Td className="tabular">{tenant.phone ?? '—'}</Td>
                     <Td>{tenant.employer ?? '—'}</Td>
                     <Td>

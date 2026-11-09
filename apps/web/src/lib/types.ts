@@ -68,6 +68,8 @@ export interface Unit {
   currency: string;
   status: string;
   property?: { id: string; name: string };
+  /** Present when an active lease occupies the unit; drives the clickable tenant name. */
+  leases?: { id: string; tenant: { id: string; fullName: string } }[];
 }
 
 export interface Tenant {
@@ -155,6 +157,8 @@ export interface Payment {
   reference: string | null;
   provider: string | null;
   allocations?: { chargeId: string; amountMinor: string }[];
+  /** Included by GET /payments so the table can link to the payer. */
+  tenant?: { id: string; fullName: string } | null;
 }
 
 export interface StatementLine {
@@ -547,4 +551,86 @@ export interface PaymentProof {
   createdAt: string;
   tenant?: { id: string; fullName: string; phone: string | null };
   document?: { id: string; filename: string; mimeType: string; sizeBytes: number };
+}
+
+// ---------------------------------------------------------------------------
+// Platform console (SaaS operator) + tenant detail
+// ---------------------------------------------------------------------------
+
+export interface Subscription {
+  id: string;
+  organizationId: string;
+  plan: string;
+  status: string;
+  unitLimit: number | null;
+  priceMonthlyMinor: string | null;
+  currency: string;
+  periodStart: string;
+  periodEnd: string | null;
+  notes: string | null;
+  updatedAt: string;
+}
+
+export interface PlatformStats {
+  organizations: { total: number; byStatus: Record<string, number>; newLast30Days: number };
+  subscriptions: { byPlanAndStatus: Record<string, number> };
+  portfolio: { units: number; tenants: number; activeLeases: number };
+  mrrMinor: string;
+}
+
+export interface PlatformOrg {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  currency: string;
+  calendar: string;
+  language: string;
+  portfolioMode: string;
+  createdAt: string;
+  subscription: Subscription | null;
+  counts: { members: number; units: number; tenants: number; leases: number; properties: number };
+}
+
+export interface PlatformOrgDetail extends PlatformOrg {
+  members: { id: string; role: string; status: string; email: string; fullName: string; lastLoginAt: string | null }[];
+  recentPayments: { id: string; amountMinor: string; currency: string; method: string; status: string; paidAt: string }[];
+  recentAudit: { id: string; action: string; entityType: string; createdAt: string }[];
+}
+
+/** GET /tenants/:id — the person behind every clickable tenant name. */
+export interface TenantDetail {
+  tenant: Tenant;
+  leases: {
+    id: string;
+    status: string;
+    startDate: string;
+    endDate: string | null;
+    rentAmountMinor: string;
+    currency: string;
+    dueDayOfMonth: number;
+    billingCalendar: CalendarKind;
+    unit: { id: string; label: string; property: { id: string; name: string } };
+  }[];
+  openCharges: {
+    id: string;
+    type: string;
+    description: string | null;
+    periodKey: string | null;
+    dueDate: string;
+    amountMinor: string;
+    paidMinor: string;
+    currency: string;
+    status: string;
+    leaseId: string | null;
+  }[];
+  payments: {
+    id: string;
+    receiptNumber: string | null;
+    amountMinor: string;
+    currency: string;
+    method: string;
+    status: string;
+    paidAt: string;
+  }[];
 }

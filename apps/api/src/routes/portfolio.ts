@@ -38,6 +38,7 @@ import { num, pstr, str } from '../lib/query.js';
 import { getPrisma } from '../lib/prisma.js';
 import { balanceMinor, postLedgerEntry } from '../services/ledger.js';
 import { applyDepositAsAdvanceRentInTx, createDepositChargeInTx } from '../services/charges.js';
+import { assertUnitAllowance } from '../services/subscription.js';
 import { getSettings } from '../services/organizations.service.js';
 import { resolveOwner, checkBuilding } from '../services/hierarchy.js';
 import { recordAudit } from '../services/audit.js';
@@ -329,6 +330,8 @@ portfolioRouter.post(
     try {
       const prisma = getPrisma();
       const organizationId = organizationIdOf(req);
+      // Plan cap first: a 422 with the remaining allowance beats a half-argued 201.
+      await assertUnitAllowance(prisma, organizationId, 1);
       const property = await prisma.property.findFirst({
         where: { id: req.body.propertyId, organizationId, deletedAt: null },
         // The organization's currency is the default for the unit's market rent.
@@ -388,6 +391,14 @@ portfolioRouter.get('/units', requirePermission('units.read'), async (req, res, 
       include: {
         property: { select: { id: true, name: true } },
         building: { select: { id: true, name: true } },
+        // The tenant living in the unit (units page shows a clickable name).
+        // Only active leases count: a terminated lease must not leave a ghost
+        // occupant on a vacant unit.
+        leases: {
+          where: { status: 'active' },
+          select: { id: true, tenant: { select: { id: true, fullName: true } } },
+          take: 1,
+        },
       },
       orderBy: [{ propertyId: 'asc' }, { label: 'asc' }],
     });
@@ -591,6 +602,88 @@ portfolioRouter.get(
         prisma.tenant.count({ where }),
       ]);
       res.json({ tenants, page, pageSize, total });
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
+/**
+ * One tenant, everything about them: leases with their units, open charges and
+ * recent payments. This is the landing page behind every clickable tenant name
+ * (units, tenants, payments, charges, leases, global search), so the operator
+ * can move list → person without a search detour.
+ */
+portfolioRouter.get(
+  '/tenants/:tenantId',
+  requirePermission('tenants.read'),
+  validate({ params: z.object({ tenantId: uuidSchema }) }),
+  async (req, res, next) => {
+    try {
+      const prisma = getPrisma();
+      const organizationId = organizationIdOf(req);
+      const tenantId = pstr(req, 'tenantId');
+
+      const tenant = await prisma.tenant.findFirst({
+        where: { id: tenantId, organizationId, deletedAt: null },
+      });
+      if (!tenant) throw notFound('Tenant not found in this organization');
+
+      const [leases, openCharges, payments] = await Promise.all([
+        prisma.lease.findMany({
+          where: { organizationId, tenantId, deletedAt: null },
+          orderBy: { startDate: 'desc' },
+          select: {
+            id: true,
+            status: true,
+            startDate: true,
+            endDate: true,
+            rentAmountMinor: true,
+            currency: true,
+            dueDayOfMonth: true,
+            billingCalendar: true,
+            unit: { select: { id: true, label: true, property: { select: { id: true, name: true } } } },
+          },
+        }),
+        prisma.charge.findMany({
+          where: { organizationId, tenantId, status: { in: ['open', 'partial'] } },
+          orderBy: { dueDate: 'asc' },
+          take: 50,
+          select: {
+            id: true,
+            type: true,
+            description: true,
+            periodKey: true,
+            dueDate: true,
+            amountMinor: true,
+            paidMinor: true,
+            currency: true,
+            status: true,
+            leaseId: true,
+          },
+        }),
+        prisma.payment.findMany({
+          where: { organizationId, tenantId },
+          orderBy: { paidAt: 'desc' },
+          take: 20,
+          select: {
+            id: true,
+            receiptNumber: true,
+            amountMinor: true,
+            currency: true,
+            method: true,
+            status: true,
+            paidAt: true,
+          },
+        }),
+      ]);
+
+      res.json({
+        tenant,
+        leases,
+        openCharges: openCharges.map((charge) => ({ ...charge, amountMinor: charge.amountMinor.toString(), paidMinor: charge.paidMinor.toString() })),
+        payments: payments.map((payment) => ({ ...payment, amountMinor: payment.amountMinor.toString() })),
+      });
     } catch (error) {
       next(error);
     }

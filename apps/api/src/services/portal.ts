@@ -20,7 +20,7 @@ import { phoneEtSchema } from '@pms/shared';
 
 import type { PrismaClient } from '@prisma/client';
 
-import { badRequest, rateLimited, unauthenticated } from '../lib/errors.js';
+import { badRequest, forbidden, rateLimited, unauthenticated } from '../lib/errors.js';
 import { hashPassword } from '../lib/crypto.js';
 import { logger } from '../lib/logger.js';
 import { getConfig } from '../config.js';
@@ -143,6 +143,13 @@ export async function requestPortalCode(
     return { ok: false, reason: 'not_registered' };
   }
 
+  // A suspended or closed organization's tenants cannot trigger SMS spend or
+  // receive codes. The response is the same "not registered" shape, so the
+  // endpoint says nothing about the organization's state to an outsider.
+  if (tenant.organization.status !== 'active') {
+    return { ok: false, reason: 'not_registered' };
+  }
+
   const last = await prisma.tenantOtp.findFirst({
     where: { tenantId: tenant.id },
     orderBy: { createdAt: 'desc' },
@@ -235,6 +242,11 @@ export async function verifyPortalCode(
   // there), so by the verify step the only thing that can be wrong is the
   // code — saying "phone or code" here just confuses the tenant.
   if (!tenant?.user) throw unauthenticated('The code is incorrect');
+
+  // The org check must come before any code comparison, so a suspended or
+  // closed organization's tenant cannot sign in even with a valid code. Same
+  // message the staff login gives, for consistency.
+  if (tenant.organization.status !== 'active') throw forbidden('This organization is not active');
 
   const otp = await prisma.tenantOtp.findFirst({
     where: { tenantId: tenant.id, consumedAt: null },

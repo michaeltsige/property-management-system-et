@@ -292,6 +292,7 @@ export default function UnitsPage() {
                       <Th>{t('unit.label')}</Th>
                       <Th>{t('units.type')}</Th>
                       <Th>{t('portfolio.block')}</Th>
+                      <Th className="whitespace-nowrap">{t('units.tenant')}</Th>
                       <Th className="whitespace-nowrap">{t('unit.bedrooms')}</Th>
                       <Th className="whitespace-nowrap">{t('unit.bathrooms')}</Th>
                       <Th className="whitespace-nowrap">{t('unit.area_sqm')}</Th>
@@ -310,6 +311,20 @@ export default function UnitsPage() {
                         </Td>
                         <Td>{unit.typeLabel ?? '—'}</Td>
                         <Td>{unit.building?.name ?? t('portfolio.no_block')}</Td>
+                        <Td className="min-w-0">
+                          {/* The occupant, one click from their whole account:
+                              leases, charges, payments. */}
+                          {unit.leases?.[0]?.tenant ? (
+                            <Link
+                              href={`/tenants/${unit.leases[0].tenant.id}`}
+                              className="text-brand-700 hover:underline dark:text-brand-300"
+                            >
+                              {unit.leases[0].tenant.fullName}
+                            </Link>
+                          ) : (
+                            <span className="text-muted">—</span>
+                          )}
+                        </Td>
                         <Td className="tabular">{unit.bedrooms ?? '—'}</Td>
                         <Td className="tabular">{unit.bathrooms ?? '—'}</Td>
                         <Td className="tabular">{unit.areaSqm ?? '—'}</Td>

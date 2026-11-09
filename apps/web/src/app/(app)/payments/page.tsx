@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Add } from '@/components/icons';
 import { useMemo, useState } from 'react';
 
@@ -181,6 +182,7 @@ export default function PaymentsPage() {
               <thead>
                 <tr>
                   <Th>{t('money.receipt_number')}</Th>
+                  <Th>{t('charges.tenant')}</Th>
                   <Th>{t('money.method')}</Th>
                   <Th>{t('money.amount')}</Th>
                   <Th>{t('reports.period')}</Th>
@@ -192,6 +194,18 @@ export default function PaymentsPage() {
                 {rows.map((payment) => (
                   <tr key={payment.id}>
                     <Td className="font-medium tabular text-strong">{payment.receiptNumber ?? '—'}</Td>
+                    <Td className="min-w-0">
+                      {payment.tenant ? (
+                        <Link
+                          href={`/tenants/${payment.tenant.id}`}
+                          className="text-brand-700 hover:underline dark:text-brand-300"
+                        >
+                          {payment.tenant.fullName}
+                        </Link>
+                      ) : (
+                        '—'
+                      )}
+                    </Td>
                     <Td>{t(`payment.method.${payment.method}` as never)}</Td>
                     <Td className="tabular">
                       {formatAmount(payment.amountMinor, payment.currency, language)}

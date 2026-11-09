@@ -143,6 +143,12 @@ const envSchema = z.object({
     .min(1000)
     .default(15 * 60 * 1000),
   RATE_LIMIT_AUTH_MAX: z.coerce.number().int().min(1).default(20),
+
+  // Global per-IP budget for the whole authenticated API. Generous on purpose:
+  // it exists to shed abusive traffic and runaway clients, not to shape normal
+  // usage (the web app polls lists and a busy office shares one IP).
+  RATE_LIMIT_API_WINDOW_MS: z.coerce.number().int().min(1000).default(60 * 1000),
+  RATE_LIMIT_API_MAX: z.coerce.number().int().min(10).default(600),
 });
 
 export type AppConfig = z.infer<typeof envSchema> & {

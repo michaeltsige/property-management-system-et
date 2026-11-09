@@ -61,6 +61,7 @@ export const Menu = wrap('Menu');
 export const SearchNormal1 = wrap('SearchNormal1');
 export const Notification = wrap('Notification');
 export const Global = wrap('Global');
+export const ShieldSecurity = wrap('ShieldSecurity');
 
 /*
  * Screens and components (previously lucide-react — one icon library per app,

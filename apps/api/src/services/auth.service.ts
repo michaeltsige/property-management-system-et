@@ -21,7 +21,7 @@
 import type { z } from 'zod';
 import type { PrismaClient } from '@prisma/client';
 
-import { DEFAULT_ORG_SETTINGS, signupBillingSchema, type Role } from '@pms/shared';
+import { DEFAULT_ORG_SETTINGS, PLAN_DEFS, signupBillingSchema, type Role } from '@pms/shared';
 import type { CalendarKind, LanguageCode } from '@pms/calendar';
 import type { CurrencyCode } from '@pms/shared';
 import { createTranslator, type TranslationKey } from '@pms/i18n';
@@ -286,6 +286,19 @@ export async function registerOrganization(input: RegisterInput, meta: { request
     return { organization, user };
   });
 
+  // Out of the settings transaction: the trial subscription row mirrors the
+  // organization's books currency and carries the trial plan's unit cap.
+  await getPrisma().subscription.create({
+    data: {
+      organizationId: organization.id,
+      plan: 'trial',
+      status: 'trialing',
+      unitLimit: PLAN_DEFS.trial.unitLimit,
+      priceMonthlyMinor: PLAN_DEFS.trial.suggestedMonthlyMinor,
+      currency: organization.currency,
+    },
+  });
+
   // No tokens here: the account activates when the emailed 6-digit code is
   // redeemed (POST /auth/verify-email), which mints the first session.
   const code = await issueEmailCode(user.id, 'verification');
@@ -310,7 +323,7 @@ export async function registerOrganization(input: RegisterInput, meta: { request
 
   return {
     organization: { id: organization.id, name: organization.name, slug: organization.slug },
-    user: { id: user.id, email: user.email, fullName: user.fullName },
+    user: { id: user.id, email: user.email, fullName: user.fullName, isPlatformAdmin },
     verificationRequired: true as const,
     devVerificationCode: devCode(code),
   };
@@ -426,6 +439,7 @@ export async function login(
       // client stringifies null into `?calendar=null` and validation rejects it.
       calendar: user.calendar ?? membership.organization.calendar,
       language: user.language,
+      isPlatformAdmin: user.isPlatformAdmin,
     },
     organization: {
       id: membership.organization.id,

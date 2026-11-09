@@ -69,8 +69,36 @@ model Organization {
   notices Notice[]
   auditLogs     AuditLog[]
   idTypes       TenantIdType[]
+  subscription  Subscription?
 
   @@index([status])
+}
+
+/// The SaaS billing state of one customer organization: what plan they are on,
+/// until when, and how many units the plan allows. Managed by platform admins
+/// (billing is offline/invoice-based for now — Chapa has no auto-recurring).
+/// A missing row means "no billing relationship yet" and is treated as
+/// unlimited, which keeps direct-DB fixtures (tests, seeds) working unchanged.
+model Subscription {
+  id                String   @id @default(uuid()) @db.Uuid
+  organizationId    String   @unique @db.Uuid
+  plan              String   @default("trial") // PLANS: trial | starter | growth | scale
+  status            String   @default("trialing") // SUBSCRIPTION_STATUSES
+  /** Max units; null = unlimited. Enforced when a unit is created. */
+  unitLimit         Int?
+  /** ETB minor units per month; null = not priced (free/internal). */
+  priceMonthlyMinor BigInt?
+  currency          String   @default("ETB")
+  periodStart       DateTime @default(now())
+  periodEnd         DateTime?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([plan])
 }
 
 model User {

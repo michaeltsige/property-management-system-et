@@ -133,7 +133,9 @@ describe('global search', () => {
     await user.type(input, 'abebe');
     const option = await screen.findByRole('option', { name: /Abebe Kebede/ });
     await user.click(option);
-    expect(navPush).toHaveBeenCalledWith('/tenants?search=Abebe%20Kebede');
+    // Tenant hits go straight to the tenant's workspace page, same as clicking
+    // their name anywhere else.
+    expect(navPush).toHaveBeenCalledWith('/tenants/t1');
   });
   it('shows an empty state for unmatched text', async () => {
     vi.mocked(api.units).mockResolvedValue({ units: [] } as never);

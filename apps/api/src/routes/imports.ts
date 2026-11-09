@@ -16,6 +16,7 @@ import { getPrisma } from '../lib/prisma.js';
 import { badRequest, notFound } from '../lib/errors.js';
 import { checkBuilding } from '../services/hierarchy.js';
 import { recordAudit } from '../services/audit.js';
+import { assertUnitAllowance } from '../services/subscription.js';
 
 export const importsRouter = Router();
 for (const kind of ['units', 'tenants'] as const) {
@@ -33,6 +34,20 @@ for (const kind of ['units', 'tenants'] as const) {
           throw badRequest('propertyId is required for unit imports');
         if (kind === 'tenants' && (input.propertyId || input.buildingId))
           throw badRequest('Tenant import does not assign units or leases');
+        if (kind === 'units') {
+          // Plan cap, checked against the CSV row count (the upper bound of
+          // what this import can add). Rows that turn out to be duplicates
+          // only leave the org further under the cap, never over it. A CSV
+          // that fails to parse is left to the transaction, which reports the
+          // row error properly — a malformed file must not 500 here.
+          let rows = 0;
+          try {
+            rows = parsePortfolioCsv(input.csv).length - 1;
+          } catch {
+            rows = 0;
+          }
+          if (rows > 0) await assertUnitAllowance(getPrisma(), organizationId, rows);
+        }
         const result = await getPrisma().$transaction(
           async (tx) => {
             // Serialize import replay/duplicate checks per org; unique labels still cover non-import writers.

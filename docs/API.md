@@ -43,6 +43,31 @@ Codes used across the API: `VALIDATION_FAILED` (400), `UNAUTHENTICATED` (401),
 | GET    | `/health`       | Liveness. No auth.                       |
 | GET    | `/health/ready` | Readiness: database round-trip. No auth. |
 
+## Platform console (SaaS operator)
+
+Every route requires `isPlatformAdmin` (re-read from the database on each
+request; set via `PLATFORM_ADMIN_EMAILS` at signup or `User.isPlatformAdmin`).
+This is the operator surface for the whole customer base — organizations, their
+subscription and their lifecycle. Billing is offline (invoice/bank transfer)
+for now: Chapa has no auto-recurring, so the subscription row records what was
+agreed and the operator maintains it by hand.
+
+| Method | Path                                        | Notes |
+| ------ | ------------------------------------------- | ----- |
+| GET    | `/platform/stats`                           | Organization counts by status, subscriptions by plan, portfolio totals, MRR (sum of monthly prices on active + trialing plans). |
+| GET    | `/platform/orgs?search=`                    | All organizations with member/unit/tenant/lease/property counts and their subscription. |
+| GET    | `/platform/orgs/:organizationId`            | One organization: counts, members, last 5 payments, last 10 audit rows. |
+| POST   | `/platform/orgs/:organizationId/status`     | `{ status: active \| suspended \| closed, reason? }`. Suspend/close revokes every live session of the organization (staff + portal). `closed` requires suspension first and is final (409 otherwise). |
+| PUT    | `/platform/orgs/:organizationId/subscription` | Upsert `{ plan, status, unitLimit?, priceMonthlyMinor?, currency?, periodStart?, periodEnd?, notes? }`. `unitLimit` defaults from the plan; `null`/empty = unlimited. |
+
+Lifecycle enforcement: a non-`active` organization fails every API request
+(membership is re-read per request), staff login/refresh, and portal OTP
+requests (code requests answer "not registered"; verify refuses before code
+comparison). The unit cap (`unitLimit`) is enforced on all three creation
+paths — manual create, bulk create, CSV import — with 422
+`BUSINESS_RULE` when exceeded. An organization with no subscription row is
+unlimited (keeps fixtures/seed data working).
+
 ## Organizations and access
 
 | Method    | Path                                   | Permission                                |
@@ -86,6 +111,7 @@ first).
 | GET/POST | `/units`                          | `units.read` / `units.write`                                                  |
 | PATCH    | `/units/:unitId`                  | `units.write`                                                                 |
 | GET/POST | `/tenants`                        | `tenants.read` / `tenants.write`                                              |
+| GET      | `/tenants/:tenantId`              | `tenants.read` — the tenant plus leases (with unit), open charges, last 20 payments; the page behind every clickable tenant name |
 | PATCH    | `/tenants/:tenantId`              | `tenants.write`                                                               |
 | GET      | `/tenants/:tenantId/id-documents` | `tenants.read` (numbers decrypted; never audited in clear)                    |
 | GET/POST | `/leases`                         | `leases.read` / `leases.write`                                                |

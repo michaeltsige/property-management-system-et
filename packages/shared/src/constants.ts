@@ -30,6 +30,40 @@ export type Role = (typeof ROLES)[number];
 export const ORG_STATUSES = ['active', 'suspended', 'closed'] as const;
 export type OrgStatus = (typeof ORG_STATUSES)[number];
 
+/**
+ * Platform billing plans (SaaS layer: what the landlord pays US, not what the
+ * tenant pays the landlord).
+ *
+ * Pricing model: **per unit, tiered by plan** — the industry convention for
+ * property-management SaaS (Buildium, AppFolio, TenantCloud). Units are stable
+ * and countable, while tenants churn with leases, so per-tenant billing would
+ * both punish high-turnover landlords and tempt owners to under-register
+ * occupants. `unitLimit` is enforced on unit creation; `null` = unlimited.
+ *
+ * Prices are ETB minor units per month and are *suggested defaults* — the
+ * platform admin sets the real price on each subscription row.
+ */
+export const PLANS = ['trial', 'starter', 'growth', 'scale'] as const;
+export type PlanId = (typeof PLANS)[number];
+
+export const SUBSCRIPTION_STATUSES = ['trialing', 'active', 'past_due', 'cancelled'] as const;
+export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
+
+export interface PlanDefinition {
+  /** Max units allowed; null = unlimited. Enforced when a unit is created. */
+  unitLimit: number | null;
+  /** Suggested monthly price in ETB minor units (1 ETB = 100 minor). */
+  suggestedMonthlyMinor: number;
+  label: string;
+}
+
+export const PLAN_DEFS: Record<PlanId, PlanDefinition> = {
+  trial: { unitLimit: 10, suggestedMonthlyMinor: 0, label: 'Trial' },
+  starter: { unitLimit: 50, suggestedMonthlyMinor: 150_000, label: 'Starter' },
+  growth: { unitLimit: 200, suggestedMonthlyMinor: 400_000, label: 'Growth' },
+  scale: { unitLimit: null, suggestedMonthlyMinor: 900_000, label: 'Scale' },
+};
+
 export const MEMBERSHIP_STATUSES = ['invited', 'active', 'disabled'] as const;
 export type MembershipStatus = (typeof MEMBERSHIP_STATUSES)[number];
 

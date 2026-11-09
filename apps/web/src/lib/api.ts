@@ -36,6 +36,9 @@ import type {
   OccupancyRow,
   Payment,
   PaymentProof,
+  PlatformOrg,
+  PlatformOrgDetail,
+  PlatformStats,
   PortalCompletedPayment,
   PortalCharge,
   PortalDocument,
@@ -48,8 +51,10 @@ import type {
   Property,
   RentRoll,
   StatementLine,
+  Subscription,
   Summary,
   Tenant,
+  TenantDetail,
   TenantIdType,
   TranslationRow,
   Unit,
@@ -72,6 +77,8 @@ export interface StoredSession {
     fullName: string;
     language: LanguageCode;
     calendar: 'ethiopian' | 'gregorian';
+    /** Platform operator flag; re-verified from /auth/me on every load. */
+    isPlatformAdmin?: boolean;
   };
   organization: {
     id: string;
@@ -316,7 +323,18 @@ export const api = {
   resetPassword: (body: { email: string; code: string; password: string }) =>
     apiFetch<{ ok: true }>('/auth/reset-password', { method: 'POST', body }),
   logout: () => apiFetch<void>('/api/session/logout', { method: 'POST', body: {} }),
-  me: () => apiFetch<{ user: StoredSession['user'] & { role?: string } }>('/api/session/me'),
+  me: () =>
+    apiFetch<{
+      user: {
+        userId: string;
+        email: string;
+        fullName: string;
+        role: string;
+        isPlatformAdmin: boolean;
+        calendar?: string;
+        language?: string;
+      };
+    }>('/api/session/me'),
   /** Ask for an OTP; the answer is identical for known and unknown numbers. */
   portalRequestCode: (body: { phone: string }) =>
     apiFetch<{ ok: boolean }>('/api/session/portal-request', { method: 'POST', body }),
@@ -368,6 +386,8 @@ export const api = {
   createUnit: (body: unknown) => apiFetch<{ unit: Unit }>('/units', { method: 'POST', body }),
   tenants: (search?: string) =>
     apiFetch<{ tenants: Tenant[] }>(`/tenants${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  /** One tenant with leases, open charges and payments — the tenant detail page. */
+  tenant: (id: string) => apiFetch<TenantDetail>(`/tenants/${encodeURIComponent(id)}`),
   createTenant: (body: unknown) => apiFetch<{ tenant: Tenant }>('/tenants', { method: 'POST', body }),
   enableTenantPortal: (tenantId: string) =>
     apiFetch<{ enrolled: boolean; replayed?: boolean }>(`/tenants/${tenantId}/portal`, {
@@ -567,4 +587,33 @@ export const api = {
   },
   importTranslations: (csv: string) =>
     apiFetch<{ imported: number }>('/translations/import', { method: 'POST', body: { csv } }),
+
+  // --- platform console (SaaS operator) -------------------------------------
+  platformStats: () => apiFetch<PlatformStats>('/platform/stats'),
+  platformOrgs: (search?: string) =>
+    apiFetch<{ organizations: PlatformOrg[]; total: number }>(
+      `/platform/orgs${search ? `?search=${encodeURIComponent(search)}` : ''}`,
+    ),
+  platformOrg: (id: string) =>
+    apiFetch<{ organization: PlatformOrgDetail }>(`/platform/orgs/${encodeURIComponent(id)}`),
+  platformSetOrgStatus: (id: string, body: { status: 'active' | 'suspended' | 'closed'; reason?: string }) =>
+    apiFetch<{ organization: { id: string; status: string } }>(
+      `/platform/orgs/${encodeURIComponent(id)}/status`,
+      { method: 'POST', body },
+    ),
+  platformUpdateSubscription: (
+    id: string,
+    body: {
+      plan: string;
+      status: string;
+      unitLimit?: number | null;
+      priceMonthlyMinor?: number | null;
+      periodEnd?: string | null;
+      notes?: string | null;
+    },
+  ) =>
+    apiFetch<{ subscription: Subscription }>(`/platform/orgs/${encodeURIComponent(id)}/subscription`, {
+      method: 'PUT',
+      body,
+    }),
 };

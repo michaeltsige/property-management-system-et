@@ -7,6 +7,7 @@ import { getPrisma } from '../lib/prisma.js';
 import { conflict, notFound } from '../lib/errors.js';
 import { checkBuilding } from '../services/hierarchy.js';
 import { recordAudit } from '../services/audit.js';
+import { assertUnitAllowance } from '../services/subscription.js';
 
 export const bulkUnitsRouter = Router();
 bulkUnitsRouter.post(
@@ -27,6 +28,8 @@ bulkUnitsRouter.post(
         throw conflict(error instanceof Error ? error.message : 'Invalid naming pattern');
       }
       const labels = generated.map((u) => u.label);
+      // Plan cap: the whole batch must fit, or none of it is created.
+      await assertUnitAllowance(getPrisma(), organizationId, generated.length);
       const units = await getPrisma().$transaction(
         async (tx) => {
           const property = await tx.property.findFirst({

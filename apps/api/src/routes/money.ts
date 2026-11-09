@@ -329,7 +329,12 @@ moneyRouter.get(
           orderBy: { paidAt: 'desc' },
           skip: (page - 1) * pageSize,
           take: pageSize,
-          include: { allocations: true },
+          include: {
+            allocations: true,
+            // Who paid: the payments page renders the name as a link to the
+            // tenant's detail page.
+            tenant: { select: { id: true, fullName: true } },
+          },
         }),
         prisma.payment.count({ where }),
       ]);

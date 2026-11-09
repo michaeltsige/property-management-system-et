@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { PlayCircle } from '@/components/icons';
 import { useState } from 'react';
 
@@ -179,8 +180,17 @@ export default function ChargesPage() {
                         {formatPeriodKey(charge.periodKey, charge.periodCalendar, language)}
                         <span className="block text-[11px] text-muted">{charge.description}</span>
                       </Td>
-                      <Td className="font-medium text-strong">
-                        {charge.tenant?.fullName ?? '—'}
+                      <Td className="min-w-0">
+                        {charge.tenant ? (
+                          <Link
+                            href={`/tenants/${charge.tenant.id}`}
+                            className="font-medium text-brand-700 hover:underline dark:text-brand-300"
+                          >
+                            {charge.tenant.fullName}
+                          </Link>
+                        ) : (
+                          '—'
+                        )}
                       </Td>
                       <Td>
                         {charge.lease ? (

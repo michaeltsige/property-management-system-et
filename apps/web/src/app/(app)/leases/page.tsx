@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { Add } from '@/components/icons';
 import { useEffect, useRef, useState } from 'react';
 
@@ -215,8 +216,13 @@ export default function LeasesPage() {
                       <span className="font-medium text-strong">{lease.unit.label}</span>
                       <span className="block text-[11px] text-muted">{lease.unit.property.name}</span>
                     </Td>
-                    <Td>
-                      {lease.tenant.fullName}
+                    <Td className="min-w-0">
+                      <Link
+                        href={`/tenants/${lease.tenant.id}`}
+                        className="font-medium text-brand-700 hover:underline dark:text-brand-300"
+                      >
+                        {lease.tenant.fullName}
+                      </Link>
                       {lease.tenant.phone ? (
                         <span className="block text-[11px] text-muted tabular">{lease.tenant.phone}</span>
                       ) : null}

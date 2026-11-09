@@ -19,13 +19,16 @@ import {
   MANUAL_PAYMENT_METHODS,
   NOTIFICATION_CHANNELS,
   NOTIFICATION_TEMPLATE_KEYS,
+  ORG_STATUSES,
   PAYMENT_GATEWAY_MODES,
   PAYMENT_GATEWAY_PROVIDERS,
   PAYMENT_METHODS,
   PAYMENT_PROOF_STATUSES,
   NOTICE_AUDIENCES,
+  PLANS,
   PROPERTY_TYPES,
   RENT_DUE_DAY_MAX,
+  SUBSCRIPTION_STATUSES,
   TAX_RULE_CODES,
   UNIT_STATUSES,
   WORK_ORDER_PRIORITIES,
@@ -215,6 +218,36 @@ export const portalVerifySchema = z
   .strict();
 
 export const refreshTokenSchema = z.object({ refreshToken: z.string().min(20) });
+
+// ---------------------------------------------------------------------------
+// Platform administration (SaaS operator console)
+// ---------------------------------------------------------------------------
+
+/** Set an organization's lifecycle state. `closed` is final — no reopen. */
+export const platformOrgStatusSchema = z
+  .object({ status: z.enum(ORG_STATUSES), reason: z.string().trim().max(500).optional() })
+  .strict();
+
+/**
+ * Upsert a subscription row. The platform admin manages billing offline for
+ * now (Chapa has no auto-recurring), so every field is set by hand here.
+ * `unitLimit` defaults from `PLAN_DEFS[plan]` when omitted; `null` = unlimited.
+ */
+export const platformSubscriptionSchema = z
+  .object({
+    plan: z.enum(PLANS),
+    status: z.enum(SUBSCRIPTION_STATUSES),
+    unitLimit: z.number().int().min(1).max(1_000_000).nullable().optional(),
+    /** ETB minor units per month. */
+    priceMonthlyMinor: z.number().int().nonnegative().safe().nullable().optional(),
+    currency: currencyCodeSchema.optional(),
+    periodStart: isoDateSchema.optional(),
+    periodEnd: isoDateSchema.nullable().optional(),
+    notes: z.string().trim().max(500).nullable().optional(),
+  })
+  .strict();
+
+export type PlatformSubscriptionInput = z.infer<typeof platformSubscriptionSchema>;
 
 /** Redeem a staff invitation: single-use token + the password to activate with. */
 export const acceptInviteSchema = z

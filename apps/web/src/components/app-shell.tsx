@@ -53,6 +53,7 @@ import {
   ReceiptItem,
   Setting2,
   Setting3,
+  ShieldSecurity,
   Wallet3,
 } from './icons';
 
@@ -122,18 +123,34 @@ const NAV_GROUPS: { labelKey: string; items: NavItem[] }[] = [
 ];
 
 /**
+ * The SaaS operator console — visible only when the session's platform flag is
+ * set (it is re-verified against the API on every load). Groups are data, so
+ * the active-href helper below simply flattens whatever is rendered.
+ */
+const PLATFORM_NAV_GROUP: { labelKey: string; items: NavItem[] } = {
+  labelKey: 'nav.group.platform',
+  items: [{ href: '/platform', labelKey: 'nav.platform', icon: ShieldSecurity }],
+};
+
+function navGroupsFor(isPlatformAdmin: boolean) {
+  return isPlatformAdmin ? [...NAV_GROUPS, PLATFORM_NAV_GROUP] : NAV_GROUPS;
+}
+
+/**
  * The longest href that matches the current path wins, so `/settings/translations`
  * marks the translations entry (not both settings entries) as the current page.
  */
-export function activeHrefFor(pathname: string): string | undefined {
-  return NAV_GROUPS.flatMap((group) => group.items)
+export function activeHrefFor(pathname: string, isPlatformAdmin = false): string | undefined {
+  return navGroupsFor(isPlatformAdmin)
+    .flatMap((group) => group.items)
     .filter((item) => pathname === item.href || pathname.startsWith(`${item.href}/`))
     .sort((a, b) => b.href.length - a.href.length)[0]?.href;
 }
 
 function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () => void }) {
-  const { t } = usePreferences();
-  const activeHref = activeHrefFor(pathname);
+  const { t, session } = usePreferences();
+  const isPlatformAdmin = session?.user.isPlatformAdmin === true;
+  const activeHref = activeHrefFor(pathname, isPlatformAdmin);
 
   return (
     <nav
@@ -141,7 +158,7 @@ function NavLinks({ pathname, onNavigate }: { pathname: string; onNavigate?: () 
       className="flex-1 space-y-5 overflow-y-auto py-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       <TaskPanel />
-      {NAV_GROUPS.map((group) => (
+      {navGroupsFor(isPlatformAdmin).map((group) => (
         <div key={group.labelKey}>
           {/* Lowercase quiet group label, per the reference rail: hierarchy via
               size and tone, not caps. */}

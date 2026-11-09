@@ -19,20 +19,29 @@ import { moneyRouter } from './money.js';
 import { noticesRouter } from './notices.js';
 import { operationsRouter } from './operations.js';
 import { organizationsRouter } from './organizations.js';
+import { platformRouter } from './platform.js';
 import { portalRouter } from './portal.js';
 import { portfolioRouter } from './portfolio.js';
 import { reportsRouter } from './reports.js';
 import { translationsRouter } from './translations.js';
 import { webhooksRouter } from './webhooks.js';
+import { apiRateLimiter } from '../middleware/rate-limit.js';
 
 export const apiRouter = Router();
 
+// Health stays outside the limiter: uptime probes must answer even while the
+// limiter is shedding an abusive client.
 apiRouter.use('/health', healthRouter);
+
+// Global per-IP budget for everything below (auth has its own stricter one).
+apiRouter.use(apiRateLimiter());
+
 apiRouter.use('/auth', authRouter);
 apiRouter.use('/', webhooksRouter);
 apiRouter.use('/', onboardingRouter);
 apiRouter.use('/', portalRouter);
 apiRouter.use('/organizations', organizationsRouter);
+apiRouter.use('/', platformRouter);
 apiRouter.use('/translations', translationsRouter);
 apiRouter.use('/', auditRouter);
 apiRouter.use('/', exportsRouter);

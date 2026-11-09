@@ -33,3 +33,23 @@ export function requirePermission(...permissions: Permission[]) {
   };
 }
 
+/**
+ * Platform-operator-only surface (the SaaS console: organizations, lifecycle,
+ * subscriptions). Unlike `requirePermission`, there is no bypass — the flag
+ * IS the permission, and it comes from the database on every request.
+ */
+export function requirePlatformAdmin() {
+  return (req: Request, _res: Response, next: NextFunction): void => {
+    const principal = req.auth;
+    if (!principal) {
+      next(unauthenticated());
+      return;
+    }
+    if (!principal.isPlatformAdmin) {
+      next(forbidden('Platform administrator access required'));
+      return;
+    }
+    next();
+  };
+}
+
