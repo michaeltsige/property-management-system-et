@@ -85,8 +85,8 @@ and expose that — the API honours both). Environment:
 | `CORS_ORIGINS`        | `https://<web-host>`                                         |
 | `APP_ORIGIN`          | `https://<web-host>`                                         |
 | `PAYMENT_PROVIDER`    | `mock` (demo) or `chapa`                                     |
-| `JOBS_ENABLED`        | `false` (no worker on the free tier)                         |
-| `NODE_ENV`            | `production`                                                 |
+| `JOBS_ENABLED`        | `false` (scheduled sweeps only; portal OTP works without it) |
+| `NODE_ENV`            | `production` — or `development` to log demo OTP bodies       |
 
 Health check: `GET /api/v1/health` (liveness, no DB) — the panel should use it.
 
@@ -106,13 +106,42 @@ no CORS changes are needed beyond the table above.
 ### 4.3 What this path cannot do
 
 - **No scheduled jobs** (`JOBS_ENABLED=false`): nightly charge generation,
-  overdue sweeps and lease-expiry sweeps do not run. Demo data is unaffected.
-- **No tenant-portal OTP**: portal login codes are delivered by the
-  `notifications.send` worker job — without a worker, tenants cannot log in.
-  The admin side is fully usable. Add the worker (Path B) when tenants matter.
+  overdue sweeps and lease-expiry sweeps do not run. Demo data is unaffected,
+  and tenant login is unaffected — the API dispatches portal OTP on request
+  (since #45), no worker involved. Add the worker (Path B) when nightly
+  billing sweeps matter.
 - **Ephemeral uploads**: the free tier's 0.3 GB disk is not durable storage.
   Payment proofs and documents live on `STORAGE_DRIVER=local` at best until
   you switch to S3 (`STORAGE_DRIVER=s3`; Cloudflare R2 has a 10 GB free tier).
+
+### 4.4 Reading the demo OTP — no phone needed
+
+Portal login sends a 6-digit code over SMS. Real SMS is not implemented yet
+(the Ethio Telecom adapter is a stub until a sender name/short code is
+approved), so a demo runs on the built-in mock provider. Two ways to read
+the code:
+
+1. **Terminal** — set `NODE_ENV=development` on the demo API and watch the
+   app logs in the panel. The mock provider logs every message body in full:
+
+   ```text
+   DEV demo: mock SMS body  to=+2519…  body="… code 482913 …"
+   ```
+
+   In `production` the body is deliberately not logged (privacy rule).
+2. **Neon SQL console** — works in any mode. Every OTP is stored in the
+   `Notification` table with the code in its payload:
+
+   ```sql
+   SELECT "recipientPhone", payload->>'code' AS otp, status, "sentAt"
+   FROM "Notification"
+   WHERE channel = 'sms'
+   ORDER BY "createdAt" DESC
+   LIMIT 5;
+   ```
+
+   The code is hashed where login verifies it; the plaintext copy lives only
+   in the notification payload — it is what gets rendered into the SMS body.
 
 ## 5. Path B — full stack on JustRunMy (~$2–3/mo)
 
@@ -124,7 +153,8 @@ Three apps from the images, sized inside the account caps (1 vCPU / 2 GB RAM):
 | worker | `pms-worker`    | 0.25 GB  | —    | `JOBS_ENABLED=true`, DB URL, cron env   |
 | web    | `pms-web`       | 0.5 GB   | 3000 | `API_PROXY_TARGET`                      |
 
-With the worker present, portal OTP and all schedules work. Rough cost:
+With the worker present, all scheduled sweeps run. (Portal OTP never needed
+the worker — the API dispatches it on request; see §4.4.) Rough cost:
 ~1.2 GB RAM + ~0.5 vCPU + disk — a few dollars per month at the listed rates.
 
 ## 6. Webhooks and going live with Chapa
