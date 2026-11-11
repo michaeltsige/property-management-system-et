@@ -369,7 +369,6 @@ export default function DashboardPage() {
                 ariaLabel={t('reports.occupancy')}
                 occupiedLabel={t('unit.status.occupied')}
                 vacantLabel={t('unit.status.vacant')}
-                floorLabel={t('unit.floor')}
                 fullLabel={t('dashboard.occupancy_full')}
                 noUnitsLabel={t('dashboard.occupancy_empty')}
               />

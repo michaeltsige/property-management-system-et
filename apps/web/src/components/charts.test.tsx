@@ -77,47 +77,35 @@ describe('chart accessibility', () => {
     expect(label).toContain('3,400');
   });
 
-  it('draws each property as a building, floors top-down, vacancies counted', () => {
+  it('draws one bar per property, emptiest first, counts spelled out', () => {
     render(
       <OccupancyChart
         properties={[
-          {
-            name: 'Bole Tower',
-            occupied: 4,
-            vacant: 1,
-            floors: [
-              { floor: 1, occupied: 2, vacant: 0, total: 2 },
-              { floor: 2, occupied: 2, vacant: 1, total: 3 },
-            ],
-          },
-          { name: 'CMC Villas', occupied: 2, vacant: 0 },
+          { name: 'Bole Tower', occupied: 9, vacant: 3 },
+          { name: 'CMC Villas', occupied: 5, vacant: 0 },
         ]}
         periodLabel="For Tir 2018"
         ariaLabel="Occupancy"
         occupiedLabel="Occupied"
         vacantLabel="Vacant"
-        floorLabel="Floor"
         fullLabel="Fully occupied"
         noUnitsLabel="No units yet"
       />,
     );
 
-    // One building per property; the incomplete one wears the vacancy count,
-    // the full one the "fully occupied" badge — not a repeat of the stat card.
-    expect(screen.getByText('Bole Tower')).toBeInTheDocument();
-    expect(screen.getByText('CMC Villas')).toBeInTheDocument();
-    expect(screen.getByText('1 Vacant')).toBeInTheDocument();
-    expect(screen.getByText('Fully occupied')).toBeInTheDocument();
-    expect(screen.getByText('For Tir 2018')).toBeInTheDocument();
-
-    // Floors read top-down like an elevation: the highest floor first, and
-    // every row's accessible name carries that floor's numbers.
+    // The building with vacancy sorts to the top and wears the amber count;
+    // the full one gets the "fully occupied" badge instead of a repeat of
+    // the stat card's number.
     const rows = screen.getAllByRole('listitem');
-    expect(rows[0].getAttribute('aria-label')).toContain('Floor 2: 2 Occupied, 1 Vacant');
-    expect(rows[1].getAttribute('aria-label')).toContain('Floor 1: 2 Occupied, 0 Vacant');
+    expect(rows[0].getAttribute('aria-label')).toContain('Bole Tower: 9 Occupied, 3 Vacant (75%)');
+    expect(rows[1].getAttribute('aria-label')).toContain('CMC Villas: 5 Occupied, 0 Vacant (100%)');
+    expect(screen.getByText('3 Vacant')).toBeInTheDocument();
+    expect(screen.getByText('Fully occupied')).toBeInTheDocument();
 
-    // A property without floor metadata still draws, as one ground-level row.
-    expect(rows[2].getAttribute('aria-label')).toContain('2 Occupied, 0 Vacant');
+    // Every row shows the exact numbers as text, not just a bar.
+    expect(screen.getByText('9/12 · 75%')).toBeInTheDocument();
+    expect(screen.getByText('5/5 · 100%')).toBeInTheDocument();
+    expect(screen.getByText('For Tir 2018')).toBeInTheDocument();
   });
 
   it('falls back to a quiet note when no property has units', () => {
@@ -127,7 +115,6 @@ describe('chart accessibility', () => {
         ariaLabel="Occupancy"
         occupiedLabel="Occupied"
         vacantLabel="Vacant"
-        floorLabel="Floor"
         fullLabel="Fully occupied"
         noUnitsLabel="No units yet"
       />,
