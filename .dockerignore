@@ -2,9 +2,10 @@
 # by the build stage (pnpm install + pnpm build), so shipping it is pure waste.
 .git
 .gitignore
-.env
-.env.*
-!.env.example
+# Secrets at every level (root .env, apps/api/.env, ...); keep the examples.
+**/.env
+**/.env.*
+!**/.env.example
 node_modules
 **/node_modules
 **/.next
@@ -15,8 +16,10 @@ node_modules
 **/.turbo
 coverage
 **/coverage
-storage
-**/storage
+# Runtime upload dirs only — anchored like .gitignore, so this does NOT
+# swallow the storage driver source at apps/api/src/storage/.
+/storage
+/apps/api/storage
 *.log
 .DS_Store
 docs/screenshots
