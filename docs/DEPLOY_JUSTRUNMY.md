@@ -110,9 +110,13 @@ no CORS changes are needed beyond the table above.
   and tenant login is unaffected — the API dispatches portal OTP on request
   (since #45), no worker involved. Add the worker (Path B) when nightly
   billing sweeps matter.
-- **Ephemeral uploads**: the free tier's 0.3 GB disk is not durable storage.
-  Payment proofs and documents live on `STORAGE_DRIVER=local` at best until
-  you switch to S3 (`STORAGE_DRIVER=s3`; Cloudflare R2 has a 10 GB free tier).
+- **Uploads**: the panel offers persistent volumes (verified on the platform) —
+  attach one at **`/app/storage`** (the local driver's `STORAGE_LOCAL_DIR`
+  default; the API's workdir is `/app`) and payment proofs and documents
+  survive redeploys. Free-tier volume space is tight, and volume files are
+  still not backed up anywhere (Neon's PITR covers only the database), so a
+  real deployment should move to S3-compatible storage
+  (`STORAGE_DRIVER=s3`; Cloudflare R2 has a 10 GB free tier).
 
 ### 4.4 Reading the demo OTP — no phone needed
 
@@ -180,7 +184,8 @@ the worker — the API dispatches it on request; see §4.4.) Rough cost:
 
 The pricing page does not document these — confirm in the panel or their
 Discord before relying on them: free-tier sleep/idle behaviour and cold starts;
-persistent volumes (assume **no** — treat the container disk as ephemeral);
+persistent volumes (verified: the panel offers them — attach one at
+`/app/storage` for durable uploads; volume files have **no** backup coverage);
 custom-domain mapping for the automatic HTTPS; private networking between apps
 (this guide assumes apps talk over their **public** HTTPS URLs, which works
 regardless).
