@@ -703,6 +703,13 @@ async function main(): Promise<void> {
   const periodKeys = Array.from({ length: -BACKFILL_SHIFT + 1 }, (_, index) =>
     periodKeyOf(BACKFILL_SHIFT + index),
   );
+  // Periods that actually carry rent: Pagume (EC month 13) is never billed, and
+  // every extra charge below anchors on an existing rent charge. Which shift
+  // Pagume lands on depends on the month the seed runs in — Hidar puts it at
+  // −3, Tikimt at −2 — so filter by month, never by shift.
+  const billedPeriodKeys = periodKeys.filter(
+    (key) => parsePeriodKey(key, 'ethiopian').month !== 13,
+  );
   const billingLeaseIds = leases.filter(({ seed }) => seed.behavior !== 'none').map(({ id }) => id);
   const generation = await generateCharges(prisma, {
     organizationId: organization.id,
@@ -714,7 +721,7 @@ async function main(): Promise<void> {
   // Extra charges the generator does not create, each with its ledger entry so
   // the ledger reconciles with the charge rows:
   const kebedeLease = leases.find(({ seed }) => seed.tenantIndex === 5)!;
-  for (const periodKey of periodKeys.filter((key) => key >= periodKeyOf(-5))) {
+  for (const periodKey of billedPeriodKeys.slice(-6)) {
     const rentCharge = await prisma.charge.findFirstOrThrow({
       where: { leaseId: kebedeLease.id, periodKey, type: 'rent' },
     });
@@ -750,10 +757,11 @@ async function main(): Promise<void> {
     });
   }
 
-  // Hanna (delinquent): a one-off late fee two periods ago, still open.
+  // Hanna (delinquent): a one-off late fee a few billed periods back, still open.
   const hannaLease = leases.find(({ seed }) => seed.tenantIndex === 4)!;
+  const lateFeePeriodKey = billedPeriodKeys[billedPeriodKeys.length - 4]!;
   const hannaLateFeeRent = await prisma.charge.findFirstOrThrow({
-    where: { leaseId: hannaLease.id, periodKey: periodKeyOf(-3), type: 'rent' },
+    where: { leaseId: hannaLease.id, periodKey: lateFeePeriodKey, type: 'rent' },
   });
   const lateFee = await prisma.charge.create({
     data: {
@@ -763,7 +771,7 @@ async function main(): Promise<void> {
       unitId: hannaLease.seed.unit.id,
       type: 'late_fee',
       description: 'Late payment fee — 2% of monthly rent',
-      periodKey: periodKeyOf(-3),
+      periodKey: lateFeePeriodKey,
       periodCalendar: 'ethiopian',
       periodStart: hannaLateFeeRent.periodStart,
       periodEnd: hannaLateFeeRent.periodEnd,
@@ -783,14 +791,15 @@ async function main(): Promise<void> {
     amountMinor: 31_000n,
     currency: 'ETB',
     occurredAt: lateFee.dueDate,
-    memo: `Late fee ${periodKeyOf(-3)}`,
+    memo: `Late fee ${lateFeePeriodKey}`,
     createdById: ownerUser.id,
   });
 
   // Tewodros: a parking charge the manager waived — shows the waiver flow.
   const tewodrosLease = leases.find(({ seed }) => seed.tenantIndex === 9)!;
+  const parkingPeriodKey = billedPeriodKeys[billedPeriodKeys.length - 2]!;
   const tewodrosRent = await prisma.charge.findFirstOrThrow({
-    where: { leaseId: tewodrosLease.id, periodKey: periodKeyOf(-1), type: 'rent' },
+    where: { leaseId: tewodrosLease.id, periodKey: parkingPeriodKey, type: 'rent' },
   });
   await prisma.charge.create({
     data: {
@@ -800,7 +809,7 @@ async function main(): Promise<void> {
       unitId: tewodrosLease.seed.unit.id,
       type: 'parking',
       description: 'Reserved parking — basement bay 4',
-      periodKey: periodKeyOf(-1),
+      periodKey: parkingPeriodKey,
       periodCalendar: 'ethiopian',
       periodStart: tewodrosRent.periodStart,
       periodEnd: tewodrosRent.periodEnd,
