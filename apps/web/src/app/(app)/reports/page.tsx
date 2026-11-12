@@ -185,7 +185,7 @@ export default function ReportsPage() {
                       <Th>{t('nav.properties')}</Th>
                       <Th>{t('unit.label')}</Th>
                       <Th>{t('nav.tenants')}</Th>
-                      <Th>{t('money.rent_due')}</Th>
+                      <Th>{t('money.billed')}</Th>
                       <Th>{t('money.paid')}</Th>
                       <Th>{t('money.outstanding')}</Th>
                       <Th>{t('reports.period')}</Th>

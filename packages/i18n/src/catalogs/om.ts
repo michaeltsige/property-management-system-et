@@ -377,6 +377,7 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'money.balance_credit_hint': 'Baayii absiiraa: kireefii dursee kaffalee qabu.',
   'money.outstanding': 'Kaffalame hin gaafatu',
   'money.paid': 'Kaffalameera',
+  'money.billed': 'Galmeessame',
   'money.rent_due': 'Kiree kaffalamu',
   'money.overdue': 'Yeroon darbee',
   'money.method': 'Mala kaffaltii',
@@ -706,6 +707,8 @@ export const OM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'charges.tenant': 'Kirayaa',
   'charges.unit': "Bu'aa / qabeenya",
   'charges.search': "Kirayaa, bu'aa ykn qabeenya barbaadi",
+  'charges.generate': 'Kaffalaa uumi',
+  'charges.empty_hint': '{period}f kaffalaa hin galmeessine — ji’a kana kaffaluuf kaffalaa uumi.',
 
   // 2026-10-23 UI batch; non-English text is an unreviewed machine draft.
   'bulk.per_floor_counts': 'Gorrooti kutaa qabee (dabalata filannoo)',

@@ -363,6 +363,7 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'money.balance_credit_hint': 'ናይ መንእታ ቀሪ ሕሳብ፡ ተኻራዪ ቅድሚ ክፍሊቱ ዝኸፍሎ።',
   'money.outstanding': 'ዘይተኸፍለ',
   'money.paid': 'ተኸፊሉ',
+  'money.billed': 'ዝተመዝገበ',
   'money.rent_due': 'ክራይ ዝኽፈል',
   'money.overdue': 'ግዜኡ ዝሓለፈ',
   'money.method': 'መገዲ ክፍሊት',
@@ -676,6 +677,8 @@ export const TI_CATALOG: Partial<Record<TranslationKey, string>> = {
   'charges.tenant': 'ከራሲ',
   'charges.unit': 'ክፍሊ / ቤት ንብረት',
   'charges.search': 'ከራሲ፣ ክፍሊ ወይ ቤት ንብረት ርከብ',
+  'charges.generate': 'ክፍያታት ፍጠር',
+  'charges.empty_hint': 'ን{period} ድሕሪ ሕጂ ክፍያ ኣይተመዝገበን — ክራይ እዚ ወርሕታ ክኽፈል ክፍያታት ፍጠርዎ።',
 
   // 2026-10-23 UI batch; non-English text is an unreviewed machine draft.
   'bulk.per_floor_counts': 'በነፍሲ ወከል ወረዲ ክፍሊ ብዝሒ (ምርጫ ምስተካክል)',

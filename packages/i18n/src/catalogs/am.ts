@@ -364,6 +364,7 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'money.balance_credit_hint': 'አሉታዊ ቀሪ ሒሳብ፡ ተከራዩን የመሰየመው ብድር ነው።',
   'money.outstanding': 'ያልተከፈለ',
   'money.paid': 'የተከፈለ',
+  'money.billed': 'የተከበረ',
   'money.rent_due': 'የሚከፈል ኪራይ',
   'money.overdue': 'ጊዜው ያለፈው',
   'money.method': 'የክፍያ መንገድ',
@@ -677,6 +678,8 @@ export const AM_CATALOG: Partial<Record<TranslationKey, string>> = {
   'charges.tenant': 'ተከራይ',
   'charges.unit': 'ክፍል / ንብረት',
   'charges.search': 'ተከራይ፣ ክፍል ወይም ንብረት ፈልግ',
+  'charges.generate': 'ክፍያዎችን ፍጠር',
+  'charges.empty_hint': 'ለ{period} እስካሁን ክፍያ አልተከበረም — የዚህን ወር ኪራይ ለመክፈል ክፍያዎችን ይፍጠሩ።',
 
   // 2026-10-23 UI batch; non-English text is an unreviewed machine draft.
   'bulk.per_floor_counts': 'በእያንዳንዱ ፎቅ የሚገኙ ክፍሎች ብዛት (አማራጭ ማስተካከያ)',

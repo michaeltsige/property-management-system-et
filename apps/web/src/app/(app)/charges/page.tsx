@@ -122,7 +122,7 @@ export default function ChargesPage() {
               className="h-9 w-full sm:w-44"
             />
             <Button leadingIcon={<PlayCircle className="h-4 w-4" />} onClick={() => void generate()} disabled={pending}>
-              {pending ? t('app.loading') : t('money.rent_due')}
+              {pending ? t('app.loading') : t('charges.generate')}
             </Button>
             <ExportCsvButton
               kind="charges"
@@ -153,7 +153,9 @@ export default function ChargesPage() {
           ) : rows.length === 0 ? (
             <EmptyState
               title={t('common.no_results')}
-              description={`${t('money.rent_due')} — ${formatPeriodKey(periodKey, calendar, language)}`}
+              description={t('charges.empty_hint', {
+                period: formatPeriodKey(periodKey, calendar, language),
+              })}
             />
           ) : (
             <Table>
