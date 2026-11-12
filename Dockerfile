@@ -22,6 +22,13 @@ ENV NODE_ENV=production \
     COREPACK_ENABLE_DOWNLOAD_PROMPT=0 \
     NEXT_TELEMETRY_DISABLED=1
 RUN corepack enable
+
+# Prisma detects the query engine ABI by asking the openssl CLI for its
+# version; slim images ship libssl but no openssl binary, so detection fails
+# and it defaults to openssl-1.1.x engines — wrong for bookworm (OpenSSL 3),
+# which crashes the client at runtime. Install it in every stage that either
+# generates the client or dlopens its engine.
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl
 WORKDIR /repo
 
 # 1) install from the lockfile (dev deps included — the build needs them)
@@ -30,6 +37,9 @@ COPY packages/calendar/package.json packages/calendar/
 COPY packages/shared/package.json packages/shared/
 COPY packages/i18n/package.json packages/i18n/
 COPY apps/api/package.json apps/api/
+# The api package's postinstall is `prisma generate`, which needs the schema
+# on disk at install time — copy it (with migrations + seed) before pnpm runs.
+COPY apps/api/prisma apps/api/prisma/
 COPY apps/web/package.json apps/web/
 RUN corepack pnpm install --frozen-lockfile
 
@@ -64,6 +74,7 @@ RUN npm i -g "prisma@$(node -p "require('./apps/api/node_modules/@prisma/client/
 # ---------------------------------------------------------------------------
 FROM node:20-bookworm-slim AS api
 ENV NODE_ENV=production
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl
 WORKDIR /app
 COPY --from=build /out/api ./
 EXPOSE 4000
@@ -76,6 +87,7 @@ CMD ["node", "dist/server.js"]
 # ---------------------------------------------------------------------------
 FROM node:20-bookworm-slim AS worker
 ENV NODE_ENV=production
+RUN apt-get update -y && apt-get install -y --no-install-recommends openssl
 WORKDIR /app
 COPY --from=build /out/api ./
 CMD ["node", "dist/worker.js"]
