@@ -162,14 +162,18 @@ after 10 failures, and `/auth/*` is rate limited per IP. Roles (`owner_admin`,
 _Cost:_ a compromised access token is valid for up to 15 minutes; the alternative
 (session lookups per request) trades that for database load.
 
-## ADR-0012 — Noto Sans Ethiopic loaded from Google Fonts for now
+## ADR-0012 — Web fonts are self-hosted (Plus Jakarta Sans + Noto Sans Ethiopic)
 
-**Accepted, deferred work.**
+**Accepted, implemented 2026-11-13.**
 
-Ethiopic script needs a font that has it; `Noto Sans Ethiopic` (SIL OFL 1.1) is
-referenced from Google Fonts in `apps/web/src/app/globals.css`. Self-hosting the
-font (with the OFL text in `THIRD_PARTY_NOTICES.md`) is the Phase 2 task, required
-before any offline or on-premise deployment.
+Ethiopic script needs a font that has it. Both web faces now ship in the repo at
+`apps/web/src/fonts/` (variable-weight WOFF2, Google Fonts cuts, SIL OFL 1.1)
+and load through `next/font/local` in `app/layout.tsx` — the build makes no
+request to fonts.googleapis.com, so a filtered or flaky network can no longer
+break `next build` with `ETIMEDOUT`, and the running app makes no third-party
+font request. OFL texts live next to the files and in `THIRD_PARTY_NOTICES.md`.
+Self-hosting was the Phase 2 task required before any offline or on-premise
+deployment — this closes that prerequisite.
 
 ## ADR-0013 — Storage interface with a local driver first
 

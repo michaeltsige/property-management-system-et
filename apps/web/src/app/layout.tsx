@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Plus_Jakarta_Sans } from 'next/font/google';
+import localFont from 'next/font/local';
 
 import { PreferencesProvider } from '@/lib/preferences';
 import { OrgSettingsProvider } from '@/lib/org-settings';
@@ -17,11 +17,27 @@ const THEME_BOOTSTRAP = `(function(){try{var s=localStorage.getItem('pms.theme')
 
 /**
  * Plus Jakarta Sans is the one UI face — the owner picked it from the sidebar
- * typeface trial (the "Properties" entry). Ge'ez script has no glyphs in it,
- * so the stack in globals.css falls through to Noto Sans Ethiopic; Amharic and
- * Tigrinya still render everywhere.
+ * typeface trial (the "Properties" entry). Both faces are SELF-HOSTED from
+ * src/fonts (ADR-0012): the build never touches fonts.googleapis.com, so
+ * `pnpm dev:all` and Docker builds succeed on any network, and the running
+ * app makes no third-party font request. Ge'ez script has no glyphs in
+ * Jakarta, so the stack in globals.css falls through to Noto Sans Ethiopic;
+ * Amharic and Tigrinya still render everywhere.
  */
-const jakarta = Plus_Jakarta_Sans({ subsets: ['latin'], variable: '--font-jakarta', display: 'swap' });
+const jakarta = localFont({
+  src: '../fonts/PlusJakartaSans-Variable-latin.woff2',
+  weight: '200 800',
+  variable: '--font-jakarta',
+  display: 'swap',
+});
+
+/** Self-hosted Ge'ez face — variable weight 100–900, Ethiopic subset. */
+const ethiopic = localFont({
+  src: '../fonts/NotoSansEthiopic-Variable-ethiopic.woff2',
+  weight: '100 900',
+  variable: '--font-ethiopic',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'Property Management',
@@ -58,7 +74,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // suppressHydrationWarning: the bootstrap script may add `.dark` to <html>
     // before React hydrates — that attribute difference is the one we want.
     <html lang="en" suppressHydrationWarning>
-      <body className={jakarta.variable}>
+      <body className={`${jakarta.variable} ${ethiopic.variable}`}>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
         <PreferencesProvider>
           <OrgSettingsProvider>{children}</OrgSettingsProvider>

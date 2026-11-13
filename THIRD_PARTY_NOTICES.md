@@ -46,10 +46,11 @@ component API and conventions (MIT). The implementations here are written for th
 project (smaller, no runtime theming layer); where a component is a close
 derivation of the upstream source, this file is the attribution.
 
-**Noto Sans Ethiopic** (SIL Open Font License 1.1) is referenced from Google Fonts
-in `apps/web/src/app/globals.css` for development convenience. Production
-deployments should self-host the font and include the OFL license text — see
-`docs/DECISIONS.md` (ADR-0012).
+**Plus Jakarta Sans** and **Noto Sans Ethiopic** (both SIL Open Font License 1.1)
+are bundled at `apps/web/src/fonts/` and loaded via `next/font/local` — no
+third-party font request at build time or runtime (ADR-0012). The OFL license
+texts ship next to the files (`OFL.PlusJakartaSans.txt`,
+`OFL.NotoSansEthiopic.txt`).
 
 **Noto Sans Ethiopic** static instances (Regular and Bold, Google Fonts cut with
 Basic Latin coverage) are bundled at `apps/api/assets/fonts/` under the SIL Open
